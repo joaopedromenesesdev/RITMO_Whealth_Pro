@@ -1,0 +1,122 @@
+.container_inputs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  align-items: stretch;
+  max-width: 100%;
+  width: 100%;
+  margin: 30px 0;
+  padding: 0;
+}
+
+/* ===== BLOCO (CARD) ===== */
+.bloco {
+  background: white;
+  padding: 25px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(11, 83, 184, 0.05);
+}
+
+/* INPUT COM R$ */
+.input-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-box span {
+  position: absolute;
+  left: 15px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.input-box input {
+  padding-left: 45px !important;
+}
+
+/* ===== TOTAL ===== */
+.total-container {
+  text-align: center;
+  margin: 40px auto;
+  padding: 30px;
+  background: white;
+  max-width: 400px;
+  border-radius: 20px;
+  box-shadow: var(--shadow-lg);
+  border-bottom: 5px solid var(--primary);
+}
+
+.total-container h2 {
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+#total {
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--primary-dark);
+  margin: 0;
+}
+
+/* ===== GRÁFICOS ===== */
+.graficos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  max-width: 1400px;
+  margin: 40px auto;
+  padding: 0 20px;
+  justify-content: center;
+}
+
+/* Card styling for each graph */
+.graficos .card {
+  flex: 1 1 calc(50% - 20px);
+  max-width: 640px;
+  min-width: 320px;
+  background: white;
+  padding: 26px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .graficos {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .graficos .card {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+}
+
+.card h3 {
+  font-size: 17px;
+  color: var(--primary);
+  margin-bottom: 15px;
+}
+
+.grafico {
+  height: 340px;
+  width: 100%;
+  position: relative;
+}
+
+/* Ensure inputs stack on small screens */
+@media (max-width: 768px) {
+
+  .container_inputs,
+  .graficos {
+    grid-template-columns: 1fr;
+  }
+}

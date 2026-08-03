@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pace Capital — Acessar Plataforma</title>
+  <meta name="description" content="Acesse a plataforma de planejamento patrimonial da Pace Capital.">
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="style/login.css">
+  <link rel="icon" type="image/png" href="img/favicon.png">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script/supabase_config.js"></script>
+</head>
+<body>
+
+  <div class="login-wrapper">
+    <div class="login-card">
+
+      <!-- Logo -->
+      <div class="login-logo">Pace<span>Capital</span></div>
+
+      <!-- Cabeçalho -->
+      <div class="login-header">
+        <h2 id="login-title">Bem-vindo de volta</h2>
+        <p id="login-subtitle">Entre com suas credenciais para acessar seus planejamentos.</p>
+      </div>
+
+      <!-- Alerta -->
+      <div id="auth-alert" class="auth-alert hidden"></div>
+
+      <!-- Formulário -->
+      <form id="auth-form">
+
+        <!-- Nome (só no cadastro) -->
+        <div class="input-group hidden" id="group-fullname">
+          <label for="fullname">Nome completo</label>
+          <div class="input-container">
+            <i data-lucide="user"></i>
+            <input type="text" id="fullname" placeholder="Seu nome completo" autocomplete="name">
+          </div>
+        </div>
+
+        <!-- E-mail -->
+        <div class="input-group">
+          <label for="email">E-mail</label>
+          <div class="input-container">
+            <i data-lucide="mail"></i>
+            <input type="email" id="email" required placeholder="seu@email.com.br" autocomplete="email">
+          </div>
+        </div>
+
+        <!-- Senha -->
+        <div class="input-group">
+          <label for="password">Senha</label>
+          <div class="input-container">
+            <i data-lucide="lock"></i>
+            <input type="password" id="password" required placeholder="••••••••" autocomplete="current-password">
+          </div>
+        </div>
+
+        <!-- Botão -->
+        <button type="submit" id="btn-submit" class="btn-primary-auth">
+          <span id="btn-text">Entrar na plataforma</span>
+          <span class="spinner hidden" id="btn-spinner"></span>
+        </button>
+
+      </form>
+
+      <!-- Toggle (Oculto por padrão para impedir cadastros públicos) -->
+      <div class="auth-toggle hidden">
+        <span id="toggle-text">Não tem uma conta?</span>
+        <a href="javascript:void(0)" id="toggle-link">Criar conta</a>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="script/auth.js"></script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>

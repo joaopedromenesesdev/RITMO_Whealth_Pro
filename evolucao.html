@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pace Capital — Evolução Patrimonial</title>
+
+  <link rel="stylesheet" href="style/style.css">
+  <link rel="stylesheet" href="style/evolucao.css">
+
+  <!-- Chart & Icons -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="script/global_ui.js"></script>
+  <script src="script/state.js"></script>
+
+  <!-- Supabase & Autenticação -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script/supabase_config.js"></script>
+  <script src="script/auth.js"></script>
+  <script src="script/db.js"></script>
+</head>
+
+  <!-- NAVBAR -->
+  <div class="navbar">
+    <div class="logo">Pace<span>Capital</span></div>
+
+    <div class="menu">
+      <a href="index.html">Dashboard</a>
+      <a href="patrimonio.html">Patrimônio</a>
+      <a href="familiar.html">Estrutura Familiar</a>
+      <a href="evolucao.html" class="active">Evolução Patrimonial</a>
+      <a href="tributario.html">Prejuízo Tributário</a>
+    </div>
+  </div>
+
+  <!-- WIZARD STEPPER GLOBAL -->
+  <div id="global-stepper-container"></div>
+  <script>document.addEventListener('DOMContentLoaded', () => window.renderizarStepperGlobal(3));</script>
+
+  <div class="container_global">
+    <h1 class="reveal">Evolução Patrimonial</h1>
+
+    <!-- DASHBOARD DE INSIGHTS (O "WOW" FACTOR) -->
+    <div class="insights-grid reveal delay-1">
+      <div class="insight-card">
+        <div class="insight-icon"><i data-lucide="trending-up"></i></div>
+        <div class="insight-content">
+          <label>Patrimônio Final</label>
+          <h2 id="insight_final">R$ 0</h2>
+        </div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon"><i data-lucide="target"></i></div>
+        <div class="insight-content">
+          <label>Multiplicador</label>
+          <h2 id="insight_multiplicador">0.0x</h2>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- CONTAINER PRINCIPAL -->
+    <div class="container_evolucao">
+
+      <!-- COLUNA ESQUERDA: CONTROLES INTERATIVOS -->
+      <div class="esquerda card-premium reveal delay-2">
+        <div id="aviso_sem_patrimonio" class="aviso" style="display:none;">
+          ⚠️ Nenhum patrimônio encontrado.<br>
+          <a href="patrimonio.html">Preencha a página de Patrimônio primeiro →</a>
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <label>Patrimônio Inicial</label>
+            <span class="value-display" id="display_inicial">R$ 0</span>
+          </div>
+          <input type="text" id="valor_inicial" disabled class="input-minimal">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <label>Rentabilidade Anual (%)</label>
+          </div>
+          <input type="text" id="taxa" class="input-premium" value="10,00" placeholder="0,00">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <label>Aporte Mensal (R$)</label>
+          </div>
+          <input type="text" id="aporte_mensal" class="input-premium" value="0,00" placeholder="0,00">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <label>Tempo de Projeção (Anos)</label>
+          </div>
+          <input type="number" id="anos" class="input-premium" value="10" min="1" max="100">
+        </div>
+
+        <hr style="opacity: 0.1; margin: 20px 0;">
+        
+        <div style="background: rgba(11, 83, 184, 0.03); padding: 15px; border-radius: 12px; border: 1px solid rgba(11, 83, 184, 0.1);">
+          <label style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--primary); margin-bottom: 15px; display: block; font-weight: 700;">
+            <i data-lucide="bar-chart-3" style="width: 12px; height: 12px; vertical-align: middle; margin-right: 5px;"></i> Premissas de Mercado
+          </label>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div class="control-group" style="margin: 0;">
+              <label style="font-size: 12px; color: var(--text-muted);">CDI Anual (%)</label>
+              <input type="text" id="cdi_manual" class="input-premium" style="font-size: 14px; padding: 8px 12px;" placeholder="0,00" value="0,00">
+            </div>
+            <div class="control-group" style="margin: 0;">
+              <label style="font-size: 12px; color: var(--text-muted);">IPCA Anual (%)</label>
+              <input type="text" id="ipca_manual" class="input-premium" style="font-size: 14px; padding: 8px 12px;" placeholder="0,00" value="0,00">
+            </div>
+          </div>
+          <p style="font-size: 10px; color: var(--text-muted); margin-top: 10px; opacity: 0.7;">* Valores iniciais obtidos via Focus/Banco Central.</p>
+        </div>
+
+
+        <div class="botoes">
+          <button onclick="calcular()" class="btn-main">Recalcular</button>
+          <button class="btn-secundario" onclick="resetar()">Limpar</button>
+        </div>
+      </div>
+
+      <!-- COLUNA DIREITA: GRÁFICO IMERSIVO -->
+      <div class="direita card-premium reveal delay-3">
+        <div class="chart-header">
+          <h3>Projeção de Longo Prazo</h3>
+          <div class="chart-legend-custom">
+            <div class="legend-item"><span class="dot sua-projecao"></span> Projeção</div>
+            <div class="legend-item"><span class="dot cdi"></span> <span id="legenda_cdi_valor">CDI</span></div>
+            <div class="legend-item"><span class="dot ipca"></span> <span id="legenda_ipca_valor">IPCA</span></div>
+          </div>
+        </div>
+        <div class="grafico-container">
+          <canvas id="graficoEvolucao"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- NAVEGAÇÃO -->
+    <div style="text-align:center; margin: 60px 0;" class="reveal delay-4">
+      <a href="tributario.html" class="btn-next">
+        <span>Próximo Passo: Prejuízo Tributário</span>
+        <i data-lucide="arrow-right"></i>
+      </a>
+    </div>
+  </div>
+
+  <script src="script/script_evolucao.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
+
+</body>
+
+</html>

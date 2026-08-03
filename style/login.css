@@ -1,0 +1,263 @@
+/* ════════════════════════════════════
+   login.css — Pace Capital
+   Layout Centrado (Clean & Premium)
+════════════════════════════════════ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ── Fundo da página (azul escuro médio) ── */
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a1b37 0%, #142f5c 50%, #22467d 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ── Wrapper ── */
+.login-wrapper {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+}
+
+/* ── Card central (fundo levemente acinzentado) ── */
+.login-card {
+  width: 100%;
+  max-width: 440px;
+  background: #f4f7fc;
+  border: 1px solid #e2e8f2;
+  border-radius: 20px;
+  padding: 44px 40px;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.4),
+    0 6px 16px rgba(0, 0, 0, 0.25);
+  animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Logo ── */
+.login-logo {
+  font-family: 'Outfit', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: #000080;
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.login-logo span {
+  font-weight: 300;
+  color: #367CDD;
+}
+
+/* ── Cabeçalho ── */
+.login-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.login-header h2 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a2b49;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.3px;
+}
+
+.login-header p {
+  font-size: 14px;
+  color: #5f738c;
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* ── Alerta ── */
+.auth-alert {
+  padding: 12px 15px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  animation: fadeIn 0.3s ease;
+}
+
+.auth-alert.success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.auth-alert.error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ── Inputs ── */
+.input-group {
+  margin-bottom: 18px;
+}
+
+.input-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: #5f738c;
+  margin-bottom: 7px;
+}
+
+.input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-container i {
+  position: absolute;
+  left: 14px;
+  color: #b0bdd0;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  transition: color 0.2s ease;
+}
+
+.input-container input {
+  width: 100%;
+  padding: 12px 16px 12px 42px;
+  font-size: 14.5px;
+  font-family: 'Inter', sans-serif;
+  color: #1a2b49;
+  background: #ffffff;
+  border: 1.5px solid #dce5f0;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.input-container input::placeholder {
+  color: #c4cdd9;
+}
+
+.input-container input:focus {
+  border-color: #0B53B8;
+  box-shadow: 0 0 0 3px rgba(11, 83, 184, 0.1);
+}
+
+.input-container input:focus~i {
+  color: #0B53B8;
+}
+
+/* ── Botão ── */
+.btn-primary-auth {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #0B53B8 0%, #000080 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: 'Outfit', sans-serif;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  box-shadow: 0 4px 14px rgba(11, 83, 184, 0.25);
+}
+
+.btn-primary-auth:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 20px rgba(11, 83, 184, 0.35);
+}
+
+.btn-primary-auth:active {
+  transform: translateY(0);
+}
+
+/* ── Spinner ── */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Toggle ── */
+.auth-toggle {
+  text-align: center;
+  margin-top: 24px;
+  font-size: 14px;
+  color: #5f738c;
+}
+
+.auth-toggle a {
+  color: #0B53B8;
+  text-decoration: none;
+  font-weight: 600;
+  margin-left: 5px;
+  transition: color 0.2s ease;
+}
+
+.auth-toggle a:hover {
+  color: #000080;
+}
+
+/* ── Animações ── */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── Responsivo ── */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 36px 24px;
+  }
+}

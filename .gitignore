@@ -1,0 +1,13 @@
+# Gemini / AI
+.gemini/
+antigravity/
+brain/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs and temp
+*.log
+temp/
+tmp/

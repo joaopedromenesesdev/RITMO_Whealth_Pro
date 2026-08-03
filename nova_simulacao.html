@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pace Capital — Planejamento Patrimonial</title>
+
+  <link rel="stylesheet" href="style/style.css">
+  <link rel="icon" type="image/png" href="img/favicon.png">
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;600;700&family=Playfair+Display:ital,wght@0,700;1,700&display=swap"
+    rel="stylesheet">
+
+  <!-- Supabase & Autenticação -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script/supabase_config.js"></script>
+  <script src="script/auth.js"></script>
+
+  <style>
+    /* ── Reset de página para a landing ── */
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background-image: url('img/pace_logo_bg.jpg');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      font-family: 'Inter', sans-serif;
+      position: relative;
+      z-index: 0;
+    }
+
+    body::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, rgba(0, 11, 94, 0.85) 0%, rgba(11, 83, 184, 0.6) 100%);
+      backdrop-filter: blur(4px);
+      /* Reduzi o desfoque de 20px para 8px aqui */
+      z-index: -1;
+    }
+
+    /* ── Card central ── */
+    .landing-card {
+      background: rgba(255, 255, 255, 0.97);
+      border-radius: 28px;
+      padding: 56px 52px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 40px 100px rgba(0, 0, 50, 0.35);
+      opacity: 0;
+      animation: cardEntrar 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      animation-delay: 4.6s;
+    }
+
+    @keyframes cardEntrar {
+      from {
+        opacity: 0;
+        transform: translateY(60px) scale(0.95);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* ── Logo ── */
+    .landing-logo {
+      font-family: 'Inter', sans-serif;
+      font-size: 26px;
+      font-weight: 800;
+      color: #0B53B8;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+
+    .landing-logo span {
+      font-weight: 200;
+      opacity: 0.7;
+    }
+
+    .landing-subtitle {
+      font-size: 13px;
+      color: #7a96b8;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 40px;
+    }
+
+    /* ── Linha separadora ── */
+    .landing-divider {
+      height: 1px;
+      background: linear-gradient(90deg, #0B53B8, rgba(11, 83, 184, 0.1));
+      margin-bottom: 36px;
+    }
+
+    /* ── Título ── */
+    .landing-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      color: #000b5e;
+      margin: 0 0 8px;
+      font-weight: 700;
+    }
+
+    .landing-desc {
+      font-size: 14px;
+      color: #7a96b8;
+      margin-bottom: 32px;
+      line-height: 1.6;
+    }
+
+    /* ── Form fields ── */
+    .field {
+      margin-bottom: 20px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: #7a96b8;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 8px;
+    }
+
+    .field input {
+      width: 100%;
+      padding: 14px 18px;
+      border: 1.5px solid #e1e8f0;
+      border-radius: 12px;
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      color: #0d1f3c;
+      background: #f8faff;
+      box-sizing: border-box;
+      transition: all 0.25s ease;
+      outline: none;
+      margin: 0;
+    }
+
+    .field input:focus {
+      border-color: #0B53B8;
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(11, 83, 184, 0.10);
+    }
+
+    .field input::placeholder {
+      color: #b0c0d8;
+    }
+
+    /* ── Botão ── */
+    .btn-iniciar {
+      width: 100%;
+      padding: 16px;
+      margin-top: 8px;
+      background: linear-gradient(135deg, #0B53B8, #000b5e);
+      color: white;
+      border: none;
+      border-radius: 100px;
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 8px 24px rgba(11, 83, 184, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-iniciar::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -60%;
+      width: 40%;
+      height: 200%;
+      background: rgba(255, 255, 255, 0.15);
+      transform: skewX(-20deg);
+      transition: left 0.5s ease;
+    }
+
+    .btn-iniciar:hover::after {
+      left: 130%;
+    }
+
+    .btn-iniciar:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 14px 36px rgba(11, 83, 184, 0.40);
+    }
+
+    .btn-iniciar:active {
+      transform: translateY(-1px);
+    }
+
+    /* ── Erro ── */
+    .erro-msg {
+      display: none;
+      background: rgba(229, 57, 53, 0.08);
+      border: 1px solid rgba(229, 57, 53, 0.3);
+      color: #c62828;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+
+    /* ── Footer da landing ── */
+    .landing-footer {
+      text-align: center;
+      margin-top: 32px;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.45);
+    }
+
+    /* ── Cinematic Intro ── */
+    #cinematic-intro {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000b21;
+      overflow: hidden;
+      transition: opacity 2.5s cubic-bezier(0.25, 1, 0.5, 1),
+        transform 2.5s cubic-bezier(0.25, 1, 0.5, 1),
+        filter 2.5s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .intro-bg {
+      position: absolute;
+      top: -10%;
+      left: -10%;
+      width: 120%;
+      height: 120%;
+      background-image: url('img/background.jpg');
+      background-size: cover;
+      background-position: center;
+      animation: slowZoom 8s linear forwards;
+      opacity: 0.55;
+      filter: grayscale(20%) contrast(1.2) brightness(0.85);
+    }
+
+    @keyframes slowZoom {
+      0% {
+        transform: scale(1);
+      }
+
+      100% {
+        transform: scale(1.15);
+      }
+    }
+
+    .intro-overlay-dark {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at center, rgba(11, 83, 184, 0.15) 0%, #000b21 85%);
+      z-index: 1;
+    }
+
+    .intro-content {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .intro-logo {
+      font-size: 52px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 800;
+      letter-spacing: 2px;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      opacity: 0;
+      transform: translateY(30px);
+      animation: fadeUp 1.5s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
+      text-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .intro-logo span {
+      font-weight: 200;
+    }
+
+    .intro-line {
+      width: 0px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #D4AF37, transparent);
+      margin: 25px 0;
+      animation: lineExpand 1.5s cubic-bezier(0.16, 1, 0.3, 1) 1.2s forwards;
+    }
+
+    .intro-text {
+      font-family: 'Playfair Display', serif;
+      font-size: 34px;
+      font-weight: 300;
+      letter-spacing: 6px;
+      color: #ffffff;
+      text-transform: uppercase;
+      opacity: 0;
+      transform: translateY(35px);
+      animation: fadeUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) 1.8s forwards;
+      text-shadow: 0 5px 20px rgba(212, 175, 55, 0.2);
+    }
+
+    .intro-text2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 34px;
+      font-weight: 300;
+      letter-spacing: 6px;
+      color: #ffffff;
+      text-transform: uppercase;
+      opacity: 0;
+      transform: translateY(35px);
+      animation: fadeUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) 1.8s forwards;
+      text-shadow: 0 5px 20px rgba(212, 175, 55, 0.2);
+    }
+
+    .intro-subtext {
+      margin-top: 20px;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      letter-spacing: 8px;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.7);
+      text-transform: uppercase;
+      opacity: 0;
+      animation: fadeIn 1.5s ease 2.5s forwards;
+    }
+
+    @keyframes fadeUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes lineExpand {
+      to {
+        width: 400px;
+      }
+    }
+
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+      }
+    }
+
+    .intro-hidden {
+      opacity: 0 !important;
+      pointer-events: none;
+      transform: scale(1.15);
+      filter: blur(20px);
+      visibility: hidden;
+      transition: visibility 0s 2.5s, opacity 2.5s ease-out, transform 2.5s ease-out, filter 2.5s ease-out;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Cinematic Intro -->
+  <div id="cinematic-intro">
+    <div class="intro-bg"></div>
+    <div class="intro-overlay-dark"></div>
+    <div class="intro-content">
+      <div class="intro-logo">Pace<span>Capital</span></div>
+      <div class="intro-line"></div>
+      <div class="intro-text">No seu tempo</div>
+      <div class="intro-text2">No seu ritmo</div>
+      <div class="intro-subtext">Wealth Management</div>
+    </div>
+  </div>
+
+  <div>
+    <!-- Card principal -->
+    <div class="landing-card">
+
+      <div class="landing-logo">Pace<span>Capital</span></div>
+      <div class="landing-subtitle">Planejamento Patrimonial · Pace</div>
+
+      <div class="landing-divider"></div>
+
+      <h1 class="landing-title">Nova Simulação</h1>
+      <p class="landing-desc">Preencha os dados da reunião para iniciar o planejamento patrimonial do cliente.</p>
+
+      <div class="erro-msg" id="erro-msg">
+        ⚠️ Por favor, preencha o nome do assessor e do cliente.
+      </div>
+
+      <div class="field">
+        <label>Nome do Assessor</label>
+        <input type="text" id="nome_assessor" placeholder="Ex: João Silva" autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label>Nome do Cliente</label>
+        <input type="text" id="nome_cliente" placeholder="Ex: Carlos Mendonça" autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label>Data da Reunião</label>
+        <input type="date" id="data_reuniao">
+      </div>
+
+      <button class="btn-iniciar" onclick="iniciarSimulacao()">
+        Iniciar Simulação →
+      </button>
+
+    </div>
+
+    <div class="landing-footer">
+      Pace Capital · Planejamento Patrimonial
+    </div>
+  </div>
+
+  <script>
+    // Limpa dados de simulações anteriores ao iniciar um novo relatório
+    sessionStorage.clear();
+
+    // Controle da Intro Cinematográfica
+    window.addEventListener('load', () => {
+      // Deixa a intro tocar por 4.5 segundos e depois some
+      setTimeout(() => {
+        document.getElementById('cinematic-intro').classList.add('intro-hidden');
+      }, 4500);
+    });
+
+    // Preenche a data de hoje por padrão
+    document.getElementById('data_reuniao').valueAsDate = new Date();
+
+    // Recupera nome do assessor salvo (praticidade entre reuniões)
+    const assessorSalvo = localStorage.getItem('nome_assessor');
+    if (assessorSalvo) {
+      document.getElementById('nome_assessor').value = assessorSalvo;
+    }
+
+    // Enter navega entre campos
+    document.querySelectorAll('input').forEach((input, i, arr) => {
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (i < arr.length - 1) arr[i + 1].focus();
+          else iniciarSimulacao();
+        }
+      });
+    });
+
+    function iniciarSimulacao() {
+      const assessor = document.getElementById('nome_assessor').value.trim();
+      const cliente = document.getElementById('nome_cliente').value.trim();
+      const data = document.getElementById('data_reuniao').value;
+      const erroEl = document.getElementById('erro-msg');
+
+      if (!assessor || !cliente) {
+        erroEl.style.display = 'block';
+        if (!assessor) document.getElementById('nome_assessor').focus();
+        else document.getElementById('nome_cliente').focus();
+        return;
+      }
+
+      erroEl.style.display = 'none';
+
+      // Persiste o assessor para a próxima sessão (conveniência)
+      localStorage.setItem('nome_assessor', assessor);
+
+      // Salva os dados da reunião no sessionStorage
+      // Compatível com o campo familia.nome já usado pelo tributario.js
+      const familiaExistente = JSON.parse(sessionStorage.getItem('familia')) || {};
+      familiaExistente.nome = cliente;
+      sessionStorage.setItem('familia', JSON.stringify(familiaExistente));
+
+      sessionStorage.setItem('nome_assessor', assessor);
+      sessionStorage.setItem('data_reuniao',
+        data ? new Date(data + 'T12:00:00').toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR')
+      );
+
+      window.location.href = 'patrimonio.html';
+    }
+  </script>
+
+</body>
+
+</html>

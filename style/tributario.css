@@ -1,0 +1,1093 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap');
+
+:root {
+  --primary: #0B53B8;
+  --primary-dark: #000080;
+  --secondary: #367CDD;
+  --accent: #e53935;
+  --bg-dashboard: #f0f4f9;
+  --card-bg: rgba(255, 255, 255, 0.95);
+  --text-main: #1a2b49;
+  --text-muted: #5f738c;
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 30px rgba(11, 83, 184, 0.1);
+}
+
+body {
+  background-color: var(--bg-dashboard);
+  color: var(--text-main);
+  font-family: 'Inter', sans-serif;
+  font-weight: 300;
+}
+
+/* ===== DASHBOARD LAYOUT ===== */
+.tributario-dashboard {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 25px;
+  max-width: 100%;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 25px;
+}
+
+/* ===== SIDEBAR / CONFIG ===== */
+.tributario-sidebar .card-glass {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(25px) saturate(200%);
+  -webkit-backdrop-filter: blur(25px) saturate(200%);
+  padding: 30px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 15px 50px rgba(11, 83, 184, 0.08);
+  position: sticky;
+  top: 20px;
+  transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.tributario-sidebar .card-glass:hover {
+  transform: translateY(-5px);
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 30px 60px rgba(11, 83, 184, 0.12);
+}
+
+.tributario-sidebar h3 {
+  font-size: 18px;
+  margin-top: 0;
+  margin-bottom: 20px;
+  padding: 0;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.resumo-data {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.info-row span {
+  color: var(--text-muted);
+}
+
+.info-row strong {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.separator {
+  border: none;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.05);
+  margin: 20px 0;
+}
+
+.input-group {
+  margin-bottom: 15px;
+}
+
+.input-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text-muted);
+}
+
+.input-with-suffix {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.gold-card-shimmer {
+  position: relative;
+  background: var(--accent-gold);
+  padding: 2px;
+  border-radius: 15px;
+  margin-bottom: 25px;
+  box-shadow: 0 10px 30px rgba(179, 135, 40, 0.2);
+  overflow: hidden;
+}
+
+.gold-card-shimmer::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(to right,
+      transparent,
+      rgba(255, 255, 255, 0.4),
+      transparent);
+  transform: rotate(30deg);
+  animation: shimmer 4s infinite linear;
+  pointer-events: none;
+}
+
+.gold-inner {
+  background: white;
+  padding: 20px;
+  border-radius: 13px;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.narrativa-ia {
+  margin: 15px 0;
+  padding: 20px;
+  background: #fcfdfe;
+  border: 1px solid #eef2f8;
+  border-radius: 16px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #444;
+  max-height: 480px;
+  /* Limite para não estourar a página */
+  overflow: hidden;
+}
+
+.footer-relatorio {
+  position: absolute;
+  bottom: 15mm;
+  left: 15mm;
+  right: 15mm;
+  padding-top: 10px;
+  font-size: 10px;
+  color: #aaa;
+  display: flex;
+  justify-content: space-between;
+}
+
+.input-with-suffix input {
+  padding: 10px 12px;
+  border: 1.5px solid #e1e8f0;
+  border-radius: 10px;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--primary);
+  transition: 0.2s;
+}
+
+.input-with-suffix input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(11, 83, 184, 0.1);
+}
+
+.input-with-suffix span {
+  position: absolute;
+  right: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* ===== MAIN CONTENT ===== */
+.tributario-main {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.impacto-container {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  padding: 40px;
+  border-radius: 30px;
+  box-shadow: 0 20px 60px rgba(11, 83, 184, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.header-main h2 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+  color: var(--primary-dark);
+  border: none;
+}
+
+.header-main p {
+  color: var(--text-muted);
+  font-size: 16px;
+  margin-bottom: 40px;
+}
+
+.comparativo-cards {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.card-impacto {
+  flex: 1;
+  padding: 30px;
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s;
+}
+
+#nome_cliente_capa {
+  font-size: 32px;
+  font-weight: 700;
+  margin: 10px 0;
+  letter-spacing: -0.5px;
+}
+
+.capa-footer p {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  opacity: 0.5;
+  margin: 0;
+}
+
+.card-impacto:hover {
+  transform: translateY(-5px);
+}
+
+.card-hoje {
+  background: linear-gradient(135deg, #f8faff 0%, #eef3ff 100%);
+  border: 1px solid #d0dfff;
+}
+
+.card-futuro {
+  background: linear-gradient(135deg, #0B53B8 0%, #000080 100%);
+  color: white;
+}
+
+.label-periodo {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 15px;
+  opacity: 0.8;
+}
+
+.valor-principal {
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.percentual-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 100px;
+  font-weight: 700;
+  font-size: 14px;
+  background: rgba(229, 57, 53, 0.1);
+  color: var(--accent);
+  margin-bottom: 15px;
+}
+
+.percentual-badge.secondary {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.sub-info {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.divisor-impacto {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 24px;
+  color: var(--primary);
+  opacity: 0.3;
+}
+
+.footer-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px;
+  background: #f8faff;
+  border-radius: 12px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ===== PDF CONTAINER (HIDDEN ON UI BUT STYLED) ===== */
+.pdf-container {
+  padding-bottom: 50px;
+}
+
+.pagina {
+  position: relative;
+  box-sizing: border-box;
+  background: white;
+  width: 210mm;
+  min-height: 297mm;
+  padding: 15mm;
+  margin: 20px auto;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  font-family: 'Outfit', sans-serif !important;
+}
+
+.pagina * {
+  font-family: 'Outfit', sans-serif !important;
+}
+
+
+/* REUSE PDF STYLES FROM BEFORE */
+/* ===== PDF EXPORT FIXES ===== */
+body.pdf-exporting {
+  width: 794px !important;
+  margin: 0 auto !important;
+  background: white !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  text-rendering: optimizeLegibility !important;
+}
+
+body.pdf-exporting .pagina {
+  margin: 0 !important;
+  margin-bottom: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  width: 794px !important;
+  min-height: 1123px !important; /* Permitir que a página cresça se houver muitos gráficos */
+  overflow: visible !important; /* Garantir que o html2canvas capture o conteúdo que transborda */
+  border: none !important;
+  position: relative !important;
+  display: block !important;
+}
+
+body.pdf-exporting .pdf-container {
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 794px !important;
+}
+
+body.pdf-exporting .nova-pagina {
+  page-break-before: always !important;
+  margin-top: 0 !important;
+}
+
+body.pdf-exporting .capa {
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 794px !important;
+  height: 1123px !important;
+  background: #000b21 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.capa {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: #000b21;
+  position: relative;
+  color: white;
+  text-align: center;
+  overflow: hidden;
+}
+
+.capa::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, #D4AF37, transparent);
+  opacity: 0.6;
+}
+
+.capa h1 {
+  font-size: 42px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin: 15px 0;
+  color: white;
+}
+
+.capa h2 {
+  margin-top: 10px;
+  font-weight: 300;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 4px;
+}
+
+.capa-divider {
+  width: 60px;
+  height: 2px;
+  background: #D4AF37;
+  margin: 20px auto;
+  /* centered horizontally */
+  opacity: 0.8;
+}
+
+.capa-bg-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(11, 83, 184, 0.15) 0%, transparent 70%);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+
+.capa-footer {
+  position: absolute;
+  bottom: 80px;
+  width: 100%;
+}
+
+.logo-capa {
+  font-size: 38px;
+  font-weight: 700;
+  margin-bottom: 40px;
+  letter-spacing: -1px;
+}
+
+.logo-capa span {
+  font-weight: 300;
+  opacity: 0.8;
+}
+
+.box-resumo {
+  background: white;
+  padding: 50px 30px;
+  border-radius: 24px;
+  margin: 40px auto;
+  text-align: center;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.02);
+  width: 100%;
+  max-width: 650px;
+  display: block;
+}
+
+.resumo-item {
+  margin-bottom: 35px;
+  width: 100%;
+  display: block;
+  text-align: center;
+}
+
+.resumo-item p {
+  font-family: 'Outfit', sans-serif !important;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #5f738c;
+  margin: 0 0 10px 0;
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+#total_pdf,
+#total_projetado_pdf,
+#prejuizo_atual_pdf,
+#prejuizo_projetado_pdf {
+  font-family: 'Outfit', sans-serif !important;
+  display: block;
+  width: 100%;
+  text-align: center;
+  margin: 0;
+}
+
+#total_pdf {
+  color: #000080;
+  font-size: 52px;
+  font-weight: 700;
+  letter-spacing: -2px;
+}
+
+#total_projetado_pdf {
+  color: #000080;
+  font-size: 42px;
+  font-weight: 700;
+}
+
+.destaque-prejuizo h2 {
+  color: #E53935 !important;
+  font-size: 42px !important;
+  font-weight: 800 !important;
+}
+
+.graficos-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center; /* Centraliza se houver menos itens */
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.grafico-item {
+  width: 45%; /* Um pouco menor para caber melhor lado a lado */
+  margin-bottom: 25px;
+  background: #fcfdfe;
+  padding: 15px;
+  border-radius: 12px;
+  border: 1px solid #f0f4f9;
+}
+
+/* Quando houver 3 ou mais gráficos, ficam um embaixo do outro, grandes e centralizados */
+.grid-coluna-unica .grafico-item {
+  width: 92% !important;
+  margin: 0 auto 20px auto !important; /* Reduzido de 40px para 20px para caber mais gráficos */
+  padding: 20px !important; /* Reduzido levemente */
+}
+
+.grafico-pdf-sm {
+  width: 100%;
+  height: 130px; /* Reduzido para garantir o encaixe na folha A4 */
+}
+
+.estrutura-familiar-pdf {
+  margin: 30px 0;
+  padding: 20px;
+  background: #f9fbff;
+  border-radius: 8px;
+  border-left: 4px solid #0B53B8;
+}
+
+@media (max-width: 1024px) {
+  .tributario-dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .comparativo-cards {
+    flex-direction: column;
+  }
+}
+
+/* ===== MODAL PREVIEW ===== */
+.modal-preview {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+}
+
+.modal-content {
+  background: #f0f4f9;
+  width: 100%;
+  max-width: 1000px;
+  height: 90vh;
+  border-radius: 30px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.5);
+}
+
+.header-relatorio {
+  text-align: center;
+  border-bottom: 2px solid #f0f0f0;
+  padding-bottom: 15px;
+  margin-bottom: 30px;
+}
+
+.logo-relatorio {
+  font-weight: 800;
+  font-size: 24px;
+  color: var(--primary-dark);
+  margin-bottom: 8px;
+  font-family: 'Playfair Display', serif;
+}
+
+.tag-relatorio {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 600;
+  display: inline-block;
+}
+
+.modal-header {
+  padding: 20px 40px;
+  background: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e1e8f0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--primary-dark);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 15px;
+}
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 40px;
+  display: flex;
+  justify-content: center;
+  background: #f0f4f9;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#area-relatorio-clone {
+  transform-origin: top center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+}
+
+/* ===== GRID DE GRÁFICOS NO RELATÓRIO ===== */
+.pagina *,
+.pagina *::before,
+.pagina *::after {
+  box-sizing: border-box !important;
+}
+
+.graficos-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-top: 15px;
+  width: 100%;
+}
+
+
+.grafico-item h3 {
+  font-size: 12px;
+  margin-bottom: 5px;
+  color: #333;
+  font-family: 'Playfair Display', serif !important;
+}
+
+.grafico-pdf-sm {
+  width: 100%;
+  height: 130px;
+  position: relative;
+}
+
+.grafico-pdf-sm canvas {
+  max-width: 100% !important;
+  max-height: 100% !important;
+}
+
+/* ===== ESTILOS EXCLUSIVOS DO RELATÓRIO PDF (PÁGINA 4 - DISTRIBUIÇÃO DE ATIVOS) ===== */
+#area-relatorio .graficos-grid,
+#area-relatorio-clone .graficos-grid {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  margin-top: 15px !important;
+  width: 100% !important;
+}
+
+#area-relatorio .grafico-item,
+#area-relatorio-clone .grafico-item {
+  width: 100% !important;
+  max-width: 100% !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 14px !important;
+  padding: 14px 20px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03) !important;
+  margin: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+#area-relatorio .grafico-item[style*="display: none"],
+#area-relatorio-clone .grafico-item[style*="display: none"] {
+  display: none !important;
+}
+
+#area-relatorio .grafico-item h4,
+#area-relatorio-clone .grafico-item h4 {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: #0F2C59 !important;
+  margin: 0 0 8px 0 !important;
+  text-align: left !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  padding-bottom: 6px !important;
+}
+
+.pdf-chart-row {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  margin-top: 6px !important;
+}
+
+.pdf-chart-ring-col {
+  width: 160px !important;
+  height: 145px !important;
+  flex-shrink: 0 !important;
+  position: relative !important;
+}
+
+.pdf-chart-ring-col canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.pdf-chart-legend-col {
+  flex: 1 !important;
+  padding-left: 170px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+}
+
+.pdf-legend-list {
+  list-style: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+
+.pdf-legend-list li {
+  display: flex !important;
+  align-items: center !important;
+  gap: 9px !important;
+  font-size: 12px !important;
+  color: #334155 !important;
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 500 !important;
+}
+
+.pdf-legend-dot {
+  width: 9px !important;
+  height: 9px !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
+}
+
+.pdf-legend-text {
+  font-size: 12px !important;
+  color: #475569 !important;
+}
+
+.pdf-legend-pct {
+  color: #0F2C59 !important;
+  font-weight: 700 !important;
+  margin-left: 3px !important;
+}
+
+.btn-secundario {
+  background: #e1e8f0 !important;
+  color: var(--text-main) !important;
+  box-shadow: none !important;
+}
+
+.btn-secundario:hover {
+  background: #d0dbe8 !important;
+}
+
+/* ===== SEÇÃO DE REDUÇÃO TRIBUTÁRIA ===== */
+.reducao-container {
+  margin-top: 20px;
+}
+
+.reducao-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  margin-bottom: 5px;
+}
+
+.reducao-intro {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+.reducao-card {
+  display: flex;
+  gap: 30px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(11, 83, 184, 0.15);
+  border-radius: 20px;
+  padding: 25px;
+  box-shadow: 0 10px 25px rgba(11, 83, 184, 0.04);
+}
+
+.reducao-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.input-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 12px;
+  display: block;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.currency-symbol {
+  position: absolute;
+  left: 15px;
+  font-weight: 700;
+  color: var(--text-muted);
+  font-size: 15px;
+}
+
+.input-wrapper input {
+  width: 100%;
+  padding: 12px 12px 12px 45px;
+  border: 1.5px solid #e1e8f0;
+  border-radius: 12px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--primary);
+  background: #ffffff;
+  outline: none;
+  transition: 0.2s ease-in-out;
+}
+
+.input-wrapper input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(11, 83, 184, 0.1);
+  background: #ffffff;
+}
+
+.exemption-limit {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.results-col {
+  border-left: 1px solid rgba(0, 0, 0, 0.06);
+  padding-left: 30px;
+}
+
+.results-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 15px;
+}
+
+.results-values {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.result-label {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.result-badge {
+  background: rgba(11, 83, 184, 0.08);
+  color: var(--primary);
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.result-badge-danger {
+  background: rgba(229, 57, 53, 0.1);
+  color: #E53935;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.result-badge-total {
+  background: rgba(29, 111, 66, 0.1);
+  color: #1D6F42;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+/* Card de Doação à Vista */
+.reducao-card + .reducao-card {
+  margin-top: 16px;
+}
+
+.reducao-card-avista {
+  border-color: rgba(229, 57, 53, 0.2);
+  background: rgba(255, 251, 250, 0.95);
+}
+
+.avista-descricao {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.avista-valor-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(229, 57, 53, 0.05);
+  border: 1px solid rgba(229, 57, 53, 0.15);
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+
+.avista-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  flex: 1;
+}
+
+.avista-valor {
+  font-size: 18px;
+  font-weight: 700;
+  color: #E53935;
+}
+
+/* Card de Previdência */
+.reducao-card-previdencia {
+  border-color: rgba(111, 66, 193, 0.25);
+  background: rgba(253, 251, 255, 0.95);
+}
+
+.previdencia-descricao {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+/* Card de Seguro Sucessão */
+.reducao-card-seguro {
+  border-color: rgba(0, 184, 217, 0.25);
+  background: rgba(250, 254, 255, 0.95);
+}
+
+.seguro-descricao {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .reducao-card {
+    flex-direction: column;
+    gap: 20px;
+  }
+  .results-col {
+    border-left: none;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    padding-left: 0;
+    padding-top: 20px;
+  }
+}
+
+/* ===== REGRAS DE IMPRESSÃO (PDF NATIVO) ===== */
+@media print {
+  /* Esconde tudo que não é o relatório */
+  body * {
+    visibility: hidden !important;
+  }
+  
+  /* Força a visibilidade apenas do container do relatório e seus filhos */
+  #area-relatorio, 
+  #area-relatorio *,
+  .pdf-container,
+  .pdf-container * {
+    visibility: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Faz o wrapper de altura zero ficar visível na impressão */
+  div[style*="height: 0"] {
+    height: auto !important;
+    overflow: visible !important;
+    position: static !important;
+  }
+
+  #area-relatorio {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 210mm !important;
+    display: block !important;
+    z-index: 9999 !important;
+  }
+
+  .pagina {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    page-break-after: always !important;
+    width: 210mm !important;
+    min-height: 297mm !important;
+    padding: 15mm !important;
+    background: white !important;
+  }
+
+  /* Esconde o modal e outros overlays */
+  .navbar, .navbar *, .stepper-wrapper, .container_global, .modal-preview, .modal-preview *, .modal-colar, .modal-colar * {
+    display: none !important;
+  }
+}
