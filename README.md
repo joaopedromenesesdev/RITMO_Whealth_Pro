@@ -1,4 +1,4 @@
-# 💼 Pace Capital — Wealth Planner Pro
+# 🏛️ Valorum
 
 [![Status](https://img.shields.io/badge/Status-Ativo-emerald.svg)]()
 [![Stack](https://img.shields.io/badge/Tech-HTML5%20%7C%20JavaScript%20ES6%2B%20%7C%20CSS3-blue.svg)]()

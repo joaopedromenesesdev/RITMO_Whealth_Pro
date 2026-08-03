@@ -1,4 +1,4 @@
- @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;700&family=Playfair+Display:ital,wght@0,700;1,700&display=swap');
+ @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Inter:wght@100;300;400;700&family=Playfair+Display:ital,wght@0,700;1,700&display=swap');
 
  :root {
    --primary: #0B53B8;
@@ -207,16 +207,27 @@
  }
 
  .logo {
-   font-size: 24px;
-   font-weight: 700;
-   letter-spacing: -0.5px;
-   line-height: 1;
- }
+  font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  line-height: 1;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+  background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 60%, #cbd5e1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+}
 
- .logo span {
-   font-weight: 300;
-   opacity: 0.9;
- }
+.logo span {
+  font-weight: 300;
+  opacity: 0.88;
+}
 
  .menu {
    display: flex;

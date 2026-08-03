@@ -306,7 +306,7 @@ document.getElementById("regime").addEventListener("change", function() {
       aviso.style = "margin-top: 10px; padding: 15px; background: rgba(11,83,184,0.05); border-left: 4px solid var(--primary); font-size: 14px; color: var(--text-main); border-radius: 4px;";
       this.parentElement.appendChild(aviso);
     }
-    aviso.innerHTML = `<i class="icon-info" style="color: var(--primary)"></i> <strong>Inteligência Pace:</strong> Sob este regime, o sistema aplicará automaticamente a regra de meação (50% isento de ITCMD) no cálculo do prejuízo tributário final.`;
+    aviso.innerHTML = `<i class="icon-info" style="color: var(--primary)"></i> <strong>Inteligência Valorum:</strong> Sob este regime, o sistema aplicará automaticamente a regra de meação (50% isento de ITCMD) no cálculo do prejuízo tributário final.`;
   } else {
     const aviso = document.getElementById("aviso_regime");
     if (aviso) aviso.remove();
