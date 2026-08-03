@@ -1092,9 +1092,17 @@ body.pdf-exporting .capa {
   }
 
   /* Esconde o modal, botões no-print e outros overlays */
-  .navbar, .navbar *, .stepper-wrapper, .container_global, .modal-preview, .modal-preview *, .modal-colar, .modal-colar *, .no-print, .btn-delete-nota {
+  .navbar, .navbar *, .stepper-wrapper, .container_global, .modal-preview, .modal-preview *, .modal-colar, .modal-colar *, .no-print, .btn-delete-nota, .btn-add-nota-pagina {
     display: none !important;
   }
+}
+
+/* Esconde botões operacionais durante a exportação para o PDF */
+body.pdf-exporting .no-print,
+body.pdf-exporting .btn-add-nota-pagina,
+body.pdf-exporting .btn-delete-nota,
+body.pdf-exporting .add-note-toolbar {
+  display: none !important;
 }
 
 /* ===== ESTILOS DE OBSERVAÇÕES E NOTAS DO ASSESSOR ===== */
