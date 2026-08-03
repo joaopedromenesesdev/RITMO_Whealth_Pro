@@ -1817,7 +1817,13 @@ async function gerarPDF() {
       logging: false,
       backgroundColor: "#ffffff",
       windowWidth: document.documentElement.offsetWidth,
-      windowHeight: elemento.scrollHeight
+      windowHeight: elemento.scrollHeight,
+      ignoreElements: (el) => {
+        return el.classList.contains("no-print") ||
+               el.classList.contains("btn-add-nota-pagina") ||
+               el.classList.contains("btn-delete-nota") ||
+               el.classList.contains("add-note-toolbar");
+      }
     });
 
     // Restaura o modal
