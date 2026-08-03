@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard Patrimonial</title>
+
+  <link rel="stylesheet" href="style/patrimonio.css">
+  <link rel="icon" type="image/png" href="img/favicon.png">
+  <link rel="stylesheet" href="style/style.css">
+
+  <!-- Chart -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+  <script src="script/global_ui.js"></script>
+  <script src="script/state.js"></script>
+
+  <!-- Supabase & Autenticação -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script/supabase_config.js"></script>
+  <script src="script/auth.js"></script>
+  <script src="script/db.js"></script>
+
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <!-- NAVBAR -->
+  <div class="navbar">
+    <div class="logo">Pace<span>Capital</span></div>
+
+    <div class="menu">
+      <a href="index.html">Dashboard</a>
+      <a href="patrimonio.html" class="active">Patrimônio</a>
+      <a href="familiar.html">Estrutura Familiar</a>
+      <a href="evolucao.html">Evolução Patrimonial</a>
+      <a href="tributario.html">Prejuízo Tributário</a>
+    </div>
+  </div>
+
+  <!-- WIZARD STEPPER GLOBAL -->
+  <div id="global-stepper-container"></div>
+  <script>document.addEventListener('DOMContentLoaded', () => window.renderizarStepperGlobal(1));</script>
+
+  <div class="container_global">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+      <h1 class="reveal" style="margin: 0;">Análise Patrimonial</h1>
+    </div>
+
+    <!-- INPUTS -->
+    <div class="container_inputs">
+
+      <!-- APLICAÇÕES -->
+      <div class="bloco card-premium reveal delay-1">
+        <h2>Aplicações Onshore</h2>
+
+        <div class="input-group">
+          <label>Renda Fixa</label>
+          <div class="input-box"><span>R$</span><input type="text" id="rf"></div>
+        </div>
+
+        <div class="input-group">
+          <label>Renda Variável</label>
+          <div class="input-box"><span>R$</span><input type="text" id="rv"></div>
+        </div>
+
+        <div class="input-group">
+          <label>Fundos de Investimento</label>
+          <div class="input-box"><span>R$</span><input type="text" id="inter"></div>
+        </div>
+
+        <div class="input-group">
+          <label>Fundo de Previdência</label>
+          <div class="input-box"><span>R$</span><input type="text" id="prev"></div>
+        </div>
+      </div>
+
+      <!-- IMÓVEIS -->
+      <div class="bloco card-premium reveal delay-2">
+        <h2>Bens Imóveis</h2>
+
+        <div class="input-group">
+          <label>Apartamento</label>
+          <div class="input-box"><span>R$</span><input type="text" id="apt"></div>
+        </div>
+
+        <div class="input-group">
+          <label>Casa</label>
+          <div class="input-box"><span>R$</span><input type="text" id="casa"></div>
+        </div>
+
+        <div class="input-group">
+          <label>Terreno</label>
+          <div class="input-box"><span>R$</span><input type="text" id="terr"></div>
+        </div>
+
+        <div class="input-group">
+          <label>Imóvel Comercial/Imóvel Rural</label>
+          <div class="input-box"><span>R$</span><input type="text" id="galp"></div>
+        </div>
+
+        <div class="input-group">
+          <label>Bens Particulares</label>
+          <div class="input-box"><span>R$</span><input type="text" id="bens_particulares"></div>
+        </div>
+      </div>
+
+      <!-- BENS E EMPRESAS -->
+      <div class="bloco card-premium reveal delay-3" style="display: flex; flex-direction: column; gap: 20px;">
+        <div>
+          <h2>Aplicações Offshore</h2>
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <label style="margin:0;">Investimentos no Exterior</label>
+            <div id="offshore_toggle"
+              style="display:flex; background:rgba(11,83,184,0.08); border-radius:20px; padding:2px; gap:2px; cursor:pointer; user-select:none;"
+              onclick="alternarMoedaOffshore()">
+              <span id="toggle_brl"
+                style="padding:3px 12px; border-radius:16px; font-size:12px; font-weight:600; background:#0B53B8; color:#fff; transition:all .2s;">R$</span>
+              <span id="toggle_usd"
+                style="padding:3px 12px; border-radius:16px; font-size:12px; font-weight:600; color:#0B53B8; transition:all .2s;">USD</span>
+            </div>
+          </div>
+          <div class="input-box">
+            <span id="offshore_prefix">R$</span>
+            <input type="text" id="offshore" oninput="formatar(this); atualizarBadgeOffshore(); salvarPatrimonio();">
+          </div>
+          <div id="offshore_badge"
+            style="display:none; margin-top:8px; padding:8px 12px; background:linear-gradient(135deg,rgba(11,83,184,0.08),rgba(29,111,66,0.06)); border-radius:10px; border:1px solid rgba(11,83,184,0.15);">
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:4px;">
+              <span id="offshore_ptax_label" style="font-size:12px; color:#555;">💱 Cotação PTAX: <strong
+                  id="offshore_ptax_valor">carregando...</strong></span>
+              <span id="offshore_convertido" style="font-size:13px; font-weight:700; color:#0B53B8;"></span>
+            </div>
+          </div>
+        </div>
+
+        <hr style="opacity: 0.1; margin: 5px 0;">
+
+        <div>
+          <h2>Bens Móveis</h2>
+          <div class="input-group">
+            <label>Bens Gerais</label>
+            <div class="input-box"><span>R$</span><input type="text" id="bens"></div>
+          </div>
+        </div>
+
+        <hr style="opacity: 0.1; margin: 10px 0;">
+
+        <div>
+          <h2>Empresas / Holding</h2>
+          <div class="input-group">
+            <label>Possui empresas?</label>
+            <select id="tem_empresas">
+              <option value="">Selecione</option>
+              <option value="nao">Não</option>
+              <option value="sim">Sim</option>
+            </select>
+          </div>
+
+          <div id="area_empresas" style="display:none;">
+            <label>Qtd. de empresas</label>
+            <input type="number" id="qtd_empresas" min="1">
+            <div id="inputs_empresas"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- TOTAL -->
+    <div class="total-container">
+      <h2>Patrimônio Total</h2>
+      <p id="total">R$ 0</p>
+    </div>
+
+    <!-- 🔥 BOTÃO -->
+    <div style="text-align:center; margin: 40px 0;">
+      <a href="familiar.html">
+        <button>
+          Próximo Passo: Estrutura Familiar
+        </button>
+      </a>
+    </div>
+
+    <!-- GRÁFICOS -->
+    <p class="reveal" style="font-size: 12px; color: var(--text-muted); text-align: center; margin: 30px 0 -20px 0;">
+      💡 Clique nas fatias para detalhar os ativos
+    </p>
+    <div class="graficos">
+      <div class="card card-premium">
+        <h3>Composição Geral</h3>
+        <div class="grafico"><canvas id="g1"></canvas></div>
+      </div>
+
+      <div class="card card-premium">
+        <h3>Aplicações</h3>
+        <div class="grafico"><canvas id="g2"></canvas></div>
+      </div>
+
+      <div class="card card-premium">
+        <h3>Imóveis</h3>
+        <div class="grafico"><canvas id="g3"></canvas></div>
+      </div>
+
+      <div class="card card-premium">
+        <h3>Participação Societária</h3>
+        <div class="grafico"><canvas id="g4"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script/patrimonio.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pace Capital — Dashboard de Relatórios</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Estilos Globais e Específicos -->
+  <link rel="stylesheet" href="style/style.css">
+  <link rel="stylesheet" href="style/dashboard.css">
+  <link rel="icon" type="image/png" href="img/favicon.png">
+
+  <!-- Lucide Icons & Global UI helpers -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="script/global_ui.js"></script>
+  <script src="script/state.js"></script>
+
+  <!-- Banco de Dados (Supabase + Local Fallback) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script/supabase_config.js"></script>
+  <script src="script/auth.js"></script>
+  <script src="script/db.js"></script>
+</head>
+<body>  <!-- NAVBAR -->
+  <div class="navbar">
+    <div class="logo">Pace<span>Capital</span></div>
+
+    <div class="menu">
+      <a href="index.html" class="active">Dashboard</a>
+      <a href="patrimonio.html">Patrimônio</a>
+      <a href="familiar.html">Estrutura Familiar</a>
+      <a href="evolucao.html">Evolução Patrimonial</a>
+      <a href="tributario.html">Prejuízo Tributário</a>
+    </div>
+  </div>
+
+  <!-- MAIN CONTAINER -->
+  <div class="dashboard-container">
+    
+    <!-- HEADER -->
+    <div class="dashboard-header reveal delay-1">
+      <div class="dashboard-title-area">
+        <h1>Planejamentos Patrimoniais</h1>
+        <p>Acompanhe, gerencie e filtre as simulações e relatórios gerados para seus clientes.</p>
+      </div>
+      <a href="nova_simulacao.html" class="btn-new-report">
+        <i data-lucide="plus-circle"></i>
+        Novo Relatório
+      </a>
+    </div>
+
+    <!-- METRICS GRID -->
+    <div class="metrics-grid reveal delay-2">
+      <!-- Qtd Relatórios -->
+      <div class="metric-card">
+        <div class="metric-icon">
+          <i data-lucide="file-bar-chart"></i>
+        </div>
+        <div class="metric-info">
+          <label>Total de Relatórios</label>
+          <h2 id="metric_qtd_relatorios">0</h2>
+        </div>
+      </div>
+      
+      <!-- Patrimônio Acumulado -->
+      <div class="metric-card">
+        <div class="metric-icon green">
+          <i data-lucide="wallet"></i>
+        </div>
+        <div class="metric-info">
+          <label>Patrimônio Mapeado</label>
+          <h2 id="metric_patrimonio_total">R$ 0</h2>
+        </div>
+      </div>
+
+      <!-- Prejuízo Sucessório Médio -->
+      <div class="metric-card">
+        <div class="metric-icon orange">
+          <i data-lucide="alert-circle"></i>
+        </div>
+        <div class="metric-info">
+          <label>Prejuízo Médio</label>
+          <h2 id="metric_prejuizo_medio">R$ 0</h2>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILTERS BAR -->
+    <div class="filters-bar reveal delay-3">
+      <!-- Campo Busca -->
+      <div class="filter-group search-group">
+        <label>Buscar Planejamento</label>
+        <input type="text" id="filtro_busca" class="filter-control" placeholder="Ex: Nome do Cliente ou Assessor..." autocomplete="off">
+      </div>
+
+      <!-- Faixa Patrimônio -->
+      <div class="filter-group">
+        <label>Faixa Patrimonial</label>
+        <select id="filtro_patrimonio" class="filter-control">
+          <option value="todos">Todos os Valores</option>
+          <option value="ate_5m">Até R$ 5 Milhões</option>
+          <option value="5m_20m">R$ 5M a R$ 20 Milhões</option>
+          <option value="mais_20m">Acima de R$ 20 Milhões</option>
+        </select>
+      </div>
+
+      <!-- Ordenação -->
+      <div class="filter-group">
+        <label>Ordenar Por</label>
+        <select id="filtro_ordenacao" class="filter-control">
+          <option value="recentes">Mais Recentes</option>
+          <option value="antigos">Mais Antigos</option>
+          <option value="patrimonio_maior">Maior Patrimônio</option>
+          <option value="patrimonio_menor">Menor Patrimônio</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- REPORTS GRID CONTAINER -->
+    <div id="reports_container" class="reports-grid reveal delay-4">
+      <!-- Os cartões de relatórios serão injetados via JS -->
+    </div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="script/dashboard.js"></script>
+
+</body>
+</html>

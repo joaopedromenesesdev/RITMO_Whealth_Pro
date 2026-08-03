@@ -1,0 +1,55 @@
+/* ===== TÍTULO CENTRALIZADO ===== */
+.titulo-familiar {
+  text-align: center;
+  margin-top: 30px;
+}
+
+.container_familia {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 35px;
+  max-width: 100%;
+  width: 100%;
+  margin: 40px auto;
+  padding: 0 25px;
+}
+
+/* ===== BLOCO (CARD) ===== */
+.bloco {
+  background: white;
+  padding: 35px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(11, 83, 184, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bloco h2 {
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 1.5px solid rgba(11, 83, 184, 0.1);
+}
+
+/* ÁREAS DINÂMICAS */
+#area_filhos, #dados_casamento, #dados_pais, #dados_colaterais, #sucessao_conjuge {
+  background: #f8faff;
+  padding: 20px;
+  border-radius: 12px;
+  margin-top: 10px;
+  border: 1px dashed rgba(11, 83, 184, 0.2);
+}
+
+#idades_filhos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+@media (max-width: 768px) {
+  .container_familia {
+    grid-template-columns: 1fr;
+  }
+}
