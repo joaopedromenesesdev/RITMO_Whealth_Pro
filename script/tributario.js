@@ -46,6 +46,7 @@ window.onload = function () {
   renderizarGraficoEvolucao();
   renderizarEstruturaFamiliar();
   initPrejuizo();
+  renderizarNotasRelatorio(document);
 
   // Verifica se deve abrir o preview do PDF automaticamente
   const urlParams = new URLSearchParams(window.location.search);
@@ -1576,6 +1577,147 @@ async function abrirPreview() {
     // Forçamos o recálculo da partilha no clone
     recalculaGraficosEspeciaisPDF(totalAtual, regime, clone);
   }
+
+  // Renderiza as caixas de observações no clone do preview
+  renderizarNotasRelatorio(clone);
+}
+
+// ==========================================
+// GESTÃO DE NOTAS E OBSERVAÇÕES DO ASSESSOR
+// ==========================================
+
+function obterNotasRelatorio() {
+  try {
+    const raw = sessionStorage.getItem("relatorio_notas_assessor");
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    console.error("Erro ao carregar notas do relatório:", e);
+    return [];
+  }
+}
+
+function salvarNotasRelatorio(notas) {
+  try {
+    sessionStorage.setItem("relatorio_notas_assessor", JSON.stringify(notas));
+    const dadosSimulacao = JSON.parse(sessionStorage.getItem("simulacao_atual")) || {};
+    dadosSimulacao.notasRelatorio = notas;
+    sessionStorage.setItem("simulacao_atual", JSON.stringify(dadosSimulacao));
+  } catch (e) {
+    console.error("Erro ao salvar notas do relatório:", e);
+  }
+}
+
+function adicionarObservacaoPagina(paginaNum) {
+  const pag = Number(paginaNum) || 1;
+  const notas = obterNotasRelatorio();
+
+  const novaNota = {
+    id: "nota_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
+    pagina: pag,
+    titulo: "Observação do Assessor (Página " + pag + ")",
+    conteudo: ""
+  };
+
+  notas.push(novaNota);
+  salvarNotasRelatorio(notas);
+
+  renderizarNotasRelatorio(document);
+  const clone = document.getElementById("area-relatorio-clone");
+  if (clone) {
+    renderizarNotasRelatorio(clone);
+  }
+
+  setTimeout(() => {
+    const elId = "card_nota_" + novaNota.id;
+    const targetEl = (clone ? clone.querySelector("#" + elId) : null) || document.getElementById(elId);
+    if (targetEl) {
+      targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      const txt = targetEl.querySelector("textarea");
+      if (txt) txt.focus();
+    }
+  }, 100);
+}
+
+function removerObservacaoPagina(notaId) {
+  let notas = obterNotasRelatorio();
+  notas = notas.filter(n => n.id !== notaId);
+  salvarNotasRelatorio(notas);
+
+  renderizarNotasRelatorio(document);
+  const clone = document.getElementById("area-relatorio-clone");
+  if (clone) {
+    renderizarNotasRelatorio(clone);
+  }
+}
+
+function atualizarNotaTexto(notaId, campo, valor) {
+  const notas = obterNotasRelatorio();
+  const nota = notas.find(n => n.id === notaId);
+  if (nota) {
+    nota[campo] = valor;
+    salvarNotasRelatorio(notas);
+
+    const clone = document.getElementById("area-relatorio-clone");
+    const alvos = [document];
+    if (clone) alvos.push(clone);
+
+    alvos.forEach(scope => {
+      const card = scope.querySelector(`[data-nota-id="${notaId}"]`);
+      if (card) {
+        if (campo === "titulo") {
+          const inp = card.querySelector(".nota-titulo-input");
+          if (inp && inp.value !== valor) inp.value = valor;
+        } else if (campo === "conteudo") {
+          const txt = card.querySelector(".nota-conteudo-textarea");
+          if (txt && txt.value !== valor) {
+            txt.value = valor;
+            autoAjustarTextarea(txt);
+          }
+        }
+      }
+    });
+  }
+}
+
+function autoAjustarTextarea(el) {
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = (el.scrollHeight) + "px";
+}
+
+function renderizarNotasRelatorio(scope = document) {
+  const notas = obterNotasRelatorio();
+  const containers = scope.querySelectorAll(".container-notas-pagina");
+
+  containers.forEach(container => {
+    const pagNum = Number(container.getAttribute("data-pagina"));
+    const notasPagina = notas.filter(n => Number(n.pagina) === pagNum);
+
+    container.innerHTML = "";
+
+    notasPagina.forEach(nota => {
+      const card = document.createElement("div");
+      card.className = "nota-assessor-card";
+      card.id = "card_nota_" + nota.id;
+      card.setAttribute("data-nota-id", nota.id);
+
+      const tituloEscaped = (nota.titulo || "").replace(/"/g, "&quot;");
+      const conteudoEscaped = (nota.conteudo || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+      card.innerHTML = `
+        <button type="button" class="btn-delete-nota no-print" onclick="removerObservacaoPagina('${nota.id}')" title="Excluir observação">✕ Apagar</button>
+        <input type="text" class="nota-titulo-input" value="${tituloEscaped}" placeholder="Título da Observação..." oninput="atualizarNotaTexto('${nota.id}', 'titulo', this.value)">
+        <textarea class="nota-conteudo-textarea" placeholder="Digite aqui observações ou recomendações exclusivas para o cliente nesta página..." oninput="atualizarNotaTexto('${nota.id}', 'conteudo', this.value); autoAjustarTextarea(this);">${conteudoEscaped}</textarea>
+      `;
+
+      container.appendChild(card);
+
+      const txt = card.querySelector("textarea");
+      if (txt) {
+        setTimeout(() => autoAjustarTextarea(txt), 0);
+      }
+    });
+  });
 }
 
 function recalculaGraficosEspeciaisPDF(total, regime, scope = document) {

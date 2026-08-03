@@ -393,6 +393,12 @@
 
 
 
+    <!-- CONTAINER NOTAS PÁGINA 1 -->
+    <div class="container-notas-pagina" data-pagina="1"></div>
+    <div class="no-print text-center" style="margin-top: 15px;">
+      <button type="button" class="btn-add-nota-pagina" onclick="adicionarObservacaoPagina(1)">+ Adicionar Observação nesta Página (Pág 1)</button>
+    </div>
+
     <div class="footer-relatorio">
       Página 1 | Relatório de Planejamento Valorum
     </div>
@@ -417,6 +423,12 @@
     <!-- ESTRUTURA FAMILIAR -->
     <div id="estrutura_familiar_container" class="estrutura-familiar-pdf" style="margin: 0 0 20px 0; padding: 10px;">
       <!-- Injetado via JS -->
+    </div>
+
+    <!-- CONTAINER NOTAS PÁGINA 2 -->
+    <div class="container-notas-pagina" data-pagina="2"></div>
+    <div class="no-print text-center" style="margin-top: 15px;">
+      <button type="button" class="btn-add-nota-pagina" onclick="adicionarObservacaoPagina(2)">+ Adicionar Observação nesta Página (Pág 2)</button>
     </div>
 
     <div class="footer-relatorio">
@@ -465,6 +477,12 @@
 
 
 
+    <!-- CONTAINER NOTAS PÁGINA 3 -->
+    <div class="container-notas-pagina" data-pagina="3"></div>
+    <div class="no-print text-center" style="margin-top: 15px;">
+      <button type="button" class="btn-add-nota-pagina" onclick="adicionarObservacaoPagina(3)">+ Adicionar Observação nesta Página (Pág 3)</button>
+    </div>
+
     <div class="footer-relatorio">
       Página 3 | Relatório de Planejamento Valorum
     </div>
@@ -509,6 +527,12 @@
           <div class="pdf-chart-legend-col"></div>
         </div>
       </div>
+    </div>
+
+    <!-- CONTAINER NOTAS PÁGINA 4 -->
+    <div class="container-notas-pagina" data-pagina="4"></div>
+    <div class="no-print text-center" style="margin-top: 15px;">
+      <button type="button" class="btn-add-nota-pagina" onclick="adicionarObservacaoPagina(4)">+ Adicionar Observação nesta Página (Pág 4)</button>
     </div>
 
     <div class="footer-relatorio">
@@ -598,6 +622,12 @@
         </div>
       </div>
 
+    <!-- CONTAINER NOTAS PÁGINA 5 -->
+    <div class="container-notas-pagina" data-pagina="5"></div>
+    <div class="no-print text-center" style="margin-top: 15px;">
+      <button type="button" class="btn-add-nota-pagina" onclick="adicionarObservacaoPagina(5)">+ Adicionar Observação nesta Página (Pág 5)</button>
+    </div>
+
     <!-- AVISO LEGAL / DISCLAIMER INSTITUCIONAL -->
     <div style="margin-top: 25px; padding: 12px 16px; border-radius: 8px; background: #fef2f2; border: 1px solid #fecaca; font-size: 11px; color: #dc2626; text-align: center; line-height: 1.5; font-weight: 500;">
       Este serviço é oferecido por RITMO, uma empresa do grupo Pace Capital, não havendo qualquer vínculo de exclusividade com o BTG Pactual.
@@ -614,7 +644,17 @@
 <div id="modal-preview" class="modal-preview">
   <div class="modal-content">
     <div class="modal-header">
-      <h2>Preview do Relatório</h2>
+      <div>
+        <h2 style="margin: 0; font-size: 18px; color: var(--primary-dark);">Preview do Relatório</h2>
+        <div class="add-note-toolbar no-print" style="margin-top: 6px; display: flex; align-items: center; gap: 6px; font-size: 12px; color: #64748b;">
+          <span style="font-weight: 600; color: #1e293b;">✍️ Adicionar Nota:</span>
+          <button type="button" class="btn-add-note-chip" onclick="adicionarObservacaoPagina(1)">Pág 1</button>
+          <button type="button" class="btn-add-note-chip" onclick="adicionarObservacaoPagina(2)">Pág 2</button>
+          <button type="button" class="btn-add-note-chip" onclick="adicionarObservacaoPagina(3)">Pág 3</button>
+          <button type="button" class="btn-add-note-chip" onclick="adicionarObservacaoPagina(4)">Pág 4</button>
+          <button type="button" class="btn-add-note-chip" onclick="adicionarObservacaoPagina(5)">Pág 5</button>
+        </div>
+      </div>
       <div class="modal-actions">
         <button class="btn-secundario" onclick="fecharPreview()">Fechar</button>
         <button onclick="gerarPDF()">Download PDF</button>

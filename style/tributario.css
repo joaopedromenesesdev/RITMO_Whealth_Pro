@@ -1091,8 +1091,109 @@ body.pdf-exporting .capa {
     background: white !important;
   }
 
-  /* Esconde o modal e outros overlays */
-  .navbar, .navbar *, .stepper-wrapper, .container_global, .modal-preview, .modal-preview *, .modal-colar, .modal-colar * {
+  /* Esconde o modal, botões no-print e outros overlays */
+  .navbar, .navbar *, .stepper-wrapper, .container_global, .modal-preview, .modal-preview *, .modal-colar, .modal-colar *, .no-print, .btn-delete-nota {
     display: none !important;
   }
+}
+
+/* ===== ESTILOS DE OBSERVAÇÕES E NOTAS DO ASSESSOR ===== */
+.btn-add-note-chip {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-add-note-chip:hover {
+  background: var(--primary, #0B53B8);
+  color: #ffffff;
+  border-color: var(--primary, #0B53B8);
+}
+
+.btn-add-nota-pagina {
+  background: rgba(11, 83, 184, 0.06);
+  border: 1px dashed var(--primary, #0B53B8);
+  color: var(--primary, #0B53B8);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-add-nota-pagina:hover {
+  background: var(--primary, #0B53B8);
+  color: #ffffff;
+  border-style: solid;
+}
+
+.nota-assessor-card {
+  margin-top: 15px;
+  margin-bottom: 15px;
+  padding: 14px 18px;
+  background: #f8fafc;
+  border-left: 4px solid var(--primary, #0B53B8);
+  border-radius: 8px;
+  border-top: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.nota-titulo-input {
+  font-weight: 700;
+  font-size: 13px;
+  color: #000080;
+  border: none;
+  background: transparent;
+  width: 100%;
+  margin-bottom: 6px;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.nota-conteudo-textarea {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  color: #334155;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 48px;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.btn-delete-nota {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: rgba(229, 57, 53, 0.1);
+  color: #e53935;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-delete-nota:hover {
+  background: #e53935;
+  color: #ffffff;
 }
