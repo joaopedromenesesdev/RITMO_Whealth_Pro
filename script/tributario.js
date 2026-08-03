@@ -1309,7 +1309,7 @@ function calcularPartilha(total, regime) {
     lista.innerHTML = html;
   }
 
-  // Preenchimento da Previdência Sucessória (desativado temporariamente)
+  // Preenchimento da Previdência Sucessória (removido do relatório)
   const divPrev = document.getElementById("container_previdencia_sucessao");
   if (divPrev) {
     divPrev.style.display = "none";
