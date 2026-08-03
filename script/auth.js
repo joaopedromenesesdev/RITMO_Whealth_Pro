@@ -81,16 +81,23 @@ function authGerarConvite(emailRestrito = null) {
   };
 }
 
-// Validar token de convite (Suporte a Supabase, LocalStorage e Validação Estrutural)
+// Validar token de convite (Suporte a Supabase RPC, Query Direta, LocalStorage e Validação Estrutural)
 async function authValidarConvite(token) {
   if (!token) return { valid: false, message: "Nenhum código de convite fornecido." };
 
   const cleanToken = token.trim();
 
-  // 1. Consulta remota no Supabase (garante validação em diferentes navegadores/dispositivos)
+  // 1. Consulta remota no Supabase via RPC seguro ou Query direta
   const client = getSupabase();
   if (client) {
     try {
+      // Tenta via RPC seguro primeiro (impede listagem pública da tabela)
+      const { data: rpcRes, error: rpcErr } = await client.rpc("validar_convite", { p_token: cleanToken });
+      if (!rpcErr && rpcRes && typeof rpcRes === "object" && typeof rpcRes.valid === "boolean") {
+        return rpcRes;
+      }
+
+      // Fallback para consulta direta por ID exato
       const { data, error } = await client
         .from("invites")
         .select("*")
@@ -147,13 +154,18 @@ function authConsumirConvite(token, emailUsado) {
   }
 
   if (window.supabaseClient) {
-    window.supabaseClient.from('invites').update({
-      used: true,
-      used_at: new Date().toISOString(),
-      used_by: emailUsado
-    }).eq('id', token).then(({ error }) => {
-      if (error) console.warn("[authConsumirConvite] Erro ao atualizar no Supabase:", error.message);
-    }).catch(err => console.warn(err));
+    // Tenta via RPC primeiro
+    window.supabaseClient.rpc('consumir_convite', { p_token: token, p_email: emailUsado })
+      .then(({ data, error }) => {
+        if (error || (data && data.success === false)) {
+          // Fallback para update direto se o usuário for master
+          window.supabaseClient.from('invites').update({
+            used: true,
+            used_at: new Date().toISOString(),
+            used_by: emailUsado
+          }).eq('id', token);
+        }
+      }).catch(err => console.warn(err));
   }
 }
 
