@@ -1524,9 +1524,14 @@ function gerarNarrativaIA(total, prejuizo, regime) {
 // PREVIEW E GERAR PDF
 // =========================
 async function abrirPreview() {
-  // (save unificado em gerarPDF)
-
   const modal = document.getElementById("modal-preview");
+  if (!modal) return;
+
+  // Garante que o modal esteja anexado direto no body para flutuar acima de todos os elementos
+  if (modal.parentNode !== document.body) {
+    document.body.appendChild(modal);
+  }
+
   const modalBody = document.getElementById("modal-body-pdf");
   const reportArea = document.getElementById("area-relatorio");
 
@@ -1710,7 +1715,7 @@ async function gerarPDF() {
     const a = document.createElement('a');
     a.style.display = 'none';
     a.href = url;
-    a.download = 'Relatorio_Pace_Capital.pdf';
+    a.download = 'Relatorio_Valorum.pdf';
     document.body.appendChild(a);
     a.click();
 
