@@ -35,47 +35,109 @@ window.addEventListener('scroll', () => {
 });
 
 // =========================
-// MODAL DE CONFIRMAÇÃO CUSTOMIZADO (REEMPLAZA CONFIRM NATIVO)
 // =========================
-window.confirmarAcaoCustom = function({ titulo = "Confirmação", mensagem = "Deseja prosseguir com esta ação?", textoConfirmar = "Confirmar", textoCancelar = "Cancelar", onConfirm }) {
+// MODAL DE CONFIRMAÇÃO / AVISO CUSTOMIZADO (REEMPLAZA CONFIRM NATIVO)
+// =========================
+window.confirmarAcaoCustom = function({
+    titulo = "Confirmação",
+    mensagem = "Deseja prosseguir com esta ação?",
+    textoConfirmar = "Confirmar",
+    textoCancelar = "Cancelar",
+    tipo = "danger",
+    somenteAviso = false,
+    onConfirm
+}) {
     let overlay = document.getElementById("custom-confirm-overlay");
     if (overlay) overlay.remove();
+
+    const isInfo = tipo === "info" || somenteAviso;
+    const strokeColor = isInfo ? "#0B53B8" : "#ef4444";
+    const iconSvg = isInfo
+      ? `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`
+      : `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+
+    const iconBg = isInfo ? "rgba(11, 83, 184, 0.12)" : "#fef2f2";
+    const btnClass = isInfo ? "btn-cancel-modal" : "btn-danger-modal";
+    const btnConfirmStyle = isInfo ? "background: #0B53B8; color: #fff; border-color: #0B53B8;" : "";
 
     overlay = document.createElement("div");
     overlay.id = "custom-confirm-overlay";
     overlay.className = "custom-confirm-overlay";
     overlay.innerHTML = `
       <div class="custom-confirm-card">
-        <div class="confirm-icon-wrap">
-          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div class="confirm-icon-wrap" style="background: ${iconBg};">
+          ${iconSvg}
         </div>
         <h3 class="confirm-title">${window.escapeHTML(titulo)}</h3>
         <p class="confirm-msg">${window.escapeHTML(mensagem)}</p>
-        <div class="confirm-actions">
-          <button type="button" class="btn-cancel-modal" id="btn-cancel-custom">${window.escapeHTML(textoCancelar)}</button>
-          <button type="button" class="btn-danger-modal" id="btn-ok-custom">${window.escapeHTML(textoConfirmar)}</button>
+        <div class="confirm-actions" style="${somenteAviso ? 'justify-content: center;' : ''}">
+          ${!somenteAviso && textoCancelar ? `<button type="button" class="btn-cancel-modal" id="btn-cancel-custom">${window.escapeHTML(textoCancelar)}</button>` : ''}
+          <button type="button" class="${btnClass}" id="btn-ok-custom" style="${btnConfirmStyle}">${window.escapeHTML(textoConfirmar)}</button>
         </div>
       </div>
     `;
 
     document.body.appendChild(overlay);
 
-    document.getElementById("btn-cancel-custom").onclick = () => overlay.remove();
+    const btnCancel = document.getElementById("btn-cancel-custom");
+    if (btnCancel) btnCancel.onclick = () => overlay.remove();
+
     document.getElementById("btn-ok-custom").onclick = () => {
         overlay.remove();
         if (typeof onConfirm === "function") onConfirm();
     };
 };
 
+// =========================
+// CHECAGEM DE SIMULAÇÃO EM ANDAMENTO
+// =========================
+window.temSimulacaoEmAndamento = function() {
+    const familia = sessionStorage.getItem("familia");
+    const patrimonioDados = sessionStorage.getItem("patrimonio_dados");
+    const totalPat = Number(sessionStorage.getItem("total_patrimonio")) || 0;
+    const currentReportId = sessionStorage.getItem("current_report_id");
+    const tributarioInputs = sessionStorage.getItem("tributario_inputs");
+    const evolucaoDados = sessionStorage.getItem("evolucao_dados");
+
+    if (currentReportId) return true;
+    if (totalPat > 0) return true;
+    if (familia) {
+        try {
+            const parsed = JSON.parse(familia);
+            if (parsed && (parsed.nome || (parsed.membros && parsed.membros.length > 0))) return true;
+        } catch(e) { return true; }
+    }
+    if (patrimonioDados) {
+        try {
+            const parsed = JSON.parse(patrimonioDados);
+            if (parsed && Object.keys(parsed).some(k => Number(parsed[k]) > 0 || (Array.isArray(parsed[k]) && parsed[k].length > 0))) return true;
+        } catch(e) { return true; }
+    }
+    if (tributarioInputs || evolucaoDados) return true;
+
+    return false;
+};
 
 // =========================
-// LIMPAR TUDO (RESET GLOBAL)
+// LIMPAR TUDO (RESET GLOBAL COM VERIFICAÇÃO DE SIMULAÇÃO)
 // =========================
 function limparTudo() {
+    if (!window.temSimulacaoEmAndamento()) {
+        window.confirmarAcaoCustom({
+            titulo: "Nenhuma Simulação em Andamento",
+            mensagem: "Não existe nenhuma simulação sendo realizada no momento para ser limpa.",
+            textoConfirmar: "Entendi",
+            tipo: "info",
+            somenteAviso: true
+        });
+        return;
+    }
+
     window.confirmarAcaoCustom({
         titulo: "Resetar Simulação",
         mensagem: "Tem certeza que deseja limpar todos os dados salvos da simulação atual?",
         textoConfirmar: "Sim, Resetar",
+        tipo: "danger",
         onConfirm: () => {
             sessionStorage.clear();
             window.location.href = "index.html";
@@ -155,7 +217,6 @@ window.abrirModalMasterEquipe = function() {
                 </div>
                 <div class="invite-actions-wrap">
                   <button type="button" class="btn-gen-invite" onclick="window.executarGerarConviteMaster()" title="Gerar link de convite">
-                    <i data-lucide="sparkles"></i>
                     <span>Gerar Link</span>
                   </button>
                   <button type="button" class="btn-send-email-direct" onclick="window.executarEnviarEmailMaster()" title="Gerar e abrir cliente de e-mail">
@@ -175,10 +236,6 @@ window.abrirModalMasterEquipe = function() {
                     <button type="button" class="btn-copy-link" onclick="window.copiarLinkConviteMaster()">
                       <i data-lucide="copy"></i>
                       <span>Copiar</span>
-                    </button>
-                    <button type="button" class="btn-copy-link btn-email-action" onclick="window.executarEnviarEmailMasterResult()">
-                      <i data-lucide="mail"></i>
-                      <span>E-mail</span>
                     </button>
                   </div>
                 </div>
@@ -350,6 +407,18 @@ window.excluirConviteMaster = function(tokenId) {
     if (!window.authObterConvites || !window.authSalvarConvites) return;
     const convites = window.authObterConvites().filter(c => c.id !== tokenId);
     window.authSalvarConvites(convites);
+
+    // Oculta a caixa de resultado com o botão Copiar se o link excluído estiver em exibição
+    const resultDiv = document.getElementById("master_invite_result");
+    const urlDiv = document.getElementById("master_invite_url");
+    if (resultDiv && urlDiv) {
+        if (!tokenId || (urlDiv.textContent && urlDiv.textContent.includes(tokenId))) {
+            resultDiv.style.display = "none";
+            resultDiv.classList.add("hidden");
+            urlDiv.textContent = "";
+        }
+    }
+
     window.renderizarTabelaConvitesMaster();
 };
 
