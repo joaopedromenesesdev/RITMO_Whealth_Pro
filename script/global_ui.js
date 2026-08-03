@@ -188,7 +188,7 @@ window.abrirModalMasterEquipe = function() {
             <div class="mh-icon-wrap"><i data-lucide="shield-check"></i></div>
             <div>
               <div class="mh-title">Gestão de Equipe</div>
-              <div class="mh-sub">Pace Capital · Painel Master</div>
+              <div class="mh-sub">Valorum · Painel Master</div>
             </div>
           </div>
           <button class="master-modal-close" id="btn-fechar-master" onclick="window.fecharModalMasterEquipe()" title="Fechar">
@@ -213,7 +213,7 @@ window.abrirModalMasterEquipe = function() {
                 <div class="invite-email-wrap">
                   <i data-lucide="mail" class="invite-mail-icon"></i>
                   <input type="email" id="master_invite_email" class="invite-email-input"
-                    placeholder="E-mail do destinatário (ex: assessor@pacecapital.com.br)">
+                    placeholder="E-mail do destinatário (ex: assessor@valorum.com.br)">
                 </div>
                 <div class="invite-actions-wrap">
                   <button type="button" class="btn-gen-invite" onclick="window.executarGerarConviteMaster()" title="Gerar link de convite">
@@ -292,11 +292,11 @@ window.executarGerarConviteMaster = function() {
 };
 
 function dispararEmailClienteMaster(emailDestino, inviteUrl) {
-    const assuntoText = "Convite Oficial de Acesso — Whealth Planner Pro";
+    const assuntoText = "Convite Oficial de Acesso — Valorum";
     const corpoText = `Olá!\n\n` +
-        `Você foi convidado para acessar a plataforma Whealth Planner Pro.\n\n` +
+        `Você foi convidado para acessar a plataforma Valorum.\n\n` +
         `Clique no link abaixo para criar sua conta de acesso:\n${inviteUrl}\n\n` +
-        `Atenciosamente,\nEquipe Whealth Planner Pro`;
+        `Atenciosamente,\nEquipe Valorum`;
 
     const assunto = encodeURIComponent(assuntoText);
     const corpo = encodeURIComponent(corpoText);
@@ -348,11 +348,11 @@ window.executarEnviarEmailMaster = function() {
     if (!inviteUrl) return;
 
     // Dispara a janela de e-mail reutilizando o mesmo link
-    const assuntoText = "Convite Oficial de Acesso — Whealth Planner Pro";
+    const assuntoText = "Convite Oficial de Acesso — Valorum";
     const corpoText = `Olá!\n\n` +
-        `Você foi convidado para acessar a plataforma Whealth Planner Pro.\n\n` +
+        `Você foi convidado para acessar a plataforma Valorum.\n\n` +
         `Clique no link abaixo para criar sua conta de acesso:\n${inviteUrl}\n\n` +
-        `Atenciosamente,\nEquipe Whealth Planner Pro`;
+        `Atenciosamente,\nEquipe Valorum`;
 
     const assunto = encodeURIComponent(assuntoText);
     const corpo = encodeURIComponent(corpoText);
@@ -369,11 +369,11 @@ window.executarEnviarEmailMasterResult = function() {
 
     if (!inviteUrl) return;
 
-    const assuntoText = "Convite Oficial de Acesso — Whealth Planner Pro";
+    const assuntoText = "Convite Oficial de Acesso — Valorum";
     const corpoText = `Olá!\n\n` +
-        `Você foi convidado para acessar a plataforma Whealth Planner Pro.\n\n` +
+        `Você foi convidado para acessar a plataforma Valorum.\n\n` +
         `Clique no link abaixo para criar sua conta de acesso:\n${inviteUrl}\n\n` +
-        `Atenciosamente,\nEquipe Whealth Planner Pro`;
+        `Atenciosamente,\nEquipe Valorum`;
 
     const assunto = encodeURIComponent(assuntoText);
     const corpo = encodeURIComponent(corpoText);

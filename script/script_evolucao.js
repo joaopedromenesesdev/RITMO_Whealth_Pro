@@ -329,7 +329,7 @@ function generateMagicInsight(taxa, aporte, tempo, totalFinal) {
   } else if (tempo > 20) {
     magicText.innerHTML = "⏳ <b>Juros Compostos:</b> O tempo é seu maior aliado. Note como a curva do gráfico se torna exponencial nos últimos 5 anos da projeção.";
   } else {
-    magicText.innerHTML = "💡 <b>Dica Pace:</b> Aumentar seu aporte mensal em 20% poderia antecipar sua meta financeira em quase 4 anos.";
+    magicText.innerHTML = "💡 <b>Dica Valorum:</b> Aumentar seu aporte mensal em 20% poderia antecipar sua meta financeira em quase 4 anos.";
   }
 }
 
