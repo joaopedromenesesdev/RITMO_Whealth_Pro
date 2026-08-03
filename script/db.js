@@ -83,19 +83,88 @@ function sanitizarEValidarSimulacao(relatorio) {
   };
 }
 
-// Mapeia linha do Supabase para objeto padronizado
-function _mapearLinhaSupabase(item) {
-  // dados_completos é JSONB no Supabase, mas pode vir como string se houver double-encoding
+// ─── Utilitários de Criptografia de Dados Sensíveis (AES-GCM Web Crypto) ───────
+
+async function _gerarChaveCriptografia(userId = 'pace_default') {
+  const enc = new TextEncoder();
+  const rawKeyData = enc.encode(`pace_whealth_sec_${userId}`);
+  const hash = await crypto.subtle.digest('SHA-256', rawKeyData);
+  return crypto.subtle.importKey(
+    'raw',
+    hash,
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+async function _criptografarPayload(payload, userId) {
+  if (!payload || typeof payload !== 'object') return payload;
+  try {
+    const key = await _gerarChaveCriptografia(userId);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const jsonStr = JSON.stringify(payload);
+    const encData = new TextEncoder().encode(jsonStr);
+    const encryptedBuf = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      encData
+    );
+
+    const ciphertext = btoa(String.fromCharCode(...new Uint8Array(encryptedBuf)));
+    const ivBase64 = btoa(String.fromCharCode(...iv));
+
+    return {
+      _encrypted: true,
+      v: 1,
+      iv: ivBase64,
+      ciphertext: ciphertext
+    };
+  } catch (e) {
+    console.warn("[_criptografarPayload] Mantendo formato legível de fallback:", e);
+    return payload;
+  }
+}
+
+async function _descriptografarPayload(payload, userId) {
+  if (!payload || typeof payload !== 'object' || !payload._encrypted || !payload.ciphertext) {
+    return payload; // Retrocompatibilidade: dados antigos não criptografados retornam intactos!
+  }
+  try {
+    const key = await _gerarChaveCriptografia(userId);
+    const iv = Uint8Array.from(atob(payload.iv), c => c.charCodeAt(0));
+    const ciphertextBuf = Uint8Array.from(atob(payload.ciphertext), c => c.charCodeAt(0));
+
+    const decryptedBuf = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      ciphertextBuf
+    );
+
+    const jsonStr = new TextDecoder().decode(decryptedBuf);
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    console.warn("[_descriptografarPayload] Falha ao descriptografar payload:", e);
+    return payload;
+  }
+}
+
+// Mapeia linha do Supabase para objeto padronizado (com descriptografia se necessário)
+async function _mapearLinhaSupabaseAsync(item, userId) {
   let dadosCompletos = item.dados_completos;
   if (typeof dadosCompletos === "string" && dadosCompletos.length > 0) {
     try {
       dadosCompletos = JSON.parse(dadosCompletos);
-      console.log("[_mapearLinhaSupabase] dados_completos era string, convertido para objeto.");
     } catch(e) {
       console.warn("[_mapearLinhaSupabase] Falha ao parsear dados_completos como string:", e);
       dadosCompletos = null;
     }
   }
+
+  if (dadosCompletos && typeof dadosCompletos === "object" && dadosCompletos._encrypted) {
+    dadosCompletos = await _descriptografarPayload(dadosCompletos, userId);
+  }
+
   return {
     id: item.id,
     nomeCliente: item.nome_cliente,
@@ -184,7 +253,7 @@ async function dbObterRelatorios() {
 
         if (error) throw error;
 
-        const mapeados = data.map(_mapearLinhaSupabase);
+        const mapeados = await Promise.all(data.map(item => _mapearLinhaSupabaseAsync(item, session.user.id)));
         // Atualiza o backup local com os dados mais recentes do servidor
         _salvarBackupLocal(session.user.id, mapeados);
         return mapeados;
@@ -225,7 +294,7 @@ async function dbSalvarRelatorio(relatorioEntrada) {
         nome_assessor: relatorio.nomeAssessor,
         total_patrimonio: relatorio.totalPatrimonio,
         prejuizo_tributario: relatorio.prejuizoTributario,
-        dados_completos: relatorio.dadosSessao,
+        dados_completos: await _criptografarPayload(relatorio.dadosSessao, userId),
         user_id: userId
       };
 
