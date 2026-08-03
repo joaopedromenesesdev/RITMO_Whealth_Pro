@@ -1589,7 +1589,13 @@ async function abrirPreview() {
 function obterNotasRelatorio() {
   try {
     const raw = sessionStorage.getItem("relatorio_notas_assessor");
-    return raw ? JSON.parse(raw) : [];
+    const notas = raw ? JSON.parse(raw) : [];
+    notas.forEach(n => {
+      if (n.titulo && n.titulo.startsWith("Observação do Assessor")) {
+        n.titulo = "";
+      }
+    });
+    return notas;
   } catch (e) {
     console.error("Erro ao carregar notas do relatório:", e);
     return [];
@@ -1614,7 +1620,7 @@ function adicionarObservacaoPagina(paginaNum) {
   const novaNota = {
     id: "nota_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
     pagina: pag,
-    titulo: "Observação do Assessor (Página " + pag + ")",
+    titulo: "",
     conteudo: ""
   };
 
@@ -1664,15 +1670,10 @@ function atualizarNotaTexto(notaId, campo, valor) {
     alvos.forEach(scope => {
       const card = scope.querySelector(`[data-nota-id="${notaId}"]`);
       if (card) {
-        if (campo === "titulo") {
-          const inp = card.querySelector(".nota-titulo-input");
-          if (inp && inp.value !== valor) inp.value = valor;
-        } else if (campo === "conteudo") {
-          const txt = card.querySelector(".nota-conteudo-textarea");
-          if (txt && txt.value !== valor) {
-            txt.value = valor;
-            autoAjustarTextarea(txt);
-          }
+        const txt = card.querySelector(".nota-conteudo-textarea");
+        if (txt && txt.value !== valor) {
+          txt.value = valor;
+          autoAjustarTextarea(txt);
         }
       }
     });
@@ -1701,13 +1702,11 @@ function renderizarNotasRelatorio(scope = document) {
       card.id = "card_nota_" + nota.id;
       card.setAttribute("data-nota-id", nota.id);
 
-      const tituloEscaped = (nota.titulo || "").replace(/"/g, "&quot;");
       const conteudoEscaped = (nota.conteudo || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
       card.innerHTML = `
         <button type="button" class="btn-delete-nota no-print" onclick="removerObservacaoPagina('${nota.id}')" title="Excluir observação">✕ Apagar</button>
-        <input type="text" class="nota-titulo-input" value="${tituloEscaped}" placeholder="Título da Observação..." oninput="atualizarNotaTexto('${nota.id}', 'titulo', this.value)">
-        <textarea class="nota-conteudo-textarea" placeholder="Digite aqui observações ou recomendações exclusivas para o cliente nesta página..." oninput="atualizarNotaTexto('${nota.id}', 'conteudo', this.value); autoAjustarTextarea(this);">${conteudoEscaped}</textarea>
+        <textarea class="nota-conteudo-textarea" placeholder="Digite sua observação aqui..." oninput="atualizarNotaTexto('${nota.id}', 'conteudo', this.value); autoAjustarTextarea(this);">${conteudoEscaped}</textarea>
       `;
 
       container.appendChild(card);
