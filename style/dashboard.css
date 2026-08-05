@@ -59,8 +59,9 @@
 
 .intro-logo {
   font-size: 48px;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
   font-weight: 800;
+  color: #c5a059;
   letter-spacing: 2px;
   margin-bottom: 5px;
   text-transform: uppercase;

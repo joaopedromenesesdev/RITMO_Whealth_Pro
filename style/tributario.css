@@ -467,7 +467,7 @@ body.pdf-exporting .capa {
   margin-bottom: 40px;
   letter-spacing: 4px;
   text-transform: uppercase;
-  color: #ffffff;
+  color: #c5a059;
   text-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
 }
 
@@ -625,9 +625,9 @@ body.pdf-exporting .capa {
 .logo-relatorio {
   font-weight: 800;
   font-size: 24px;
-  color: var(--primary-dark);
+  color: #c5a059;
   margin-bottom: 8px;
-  font-family: 'Playfair Display', serif;
+  font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
 }
 
 .tag-relatorio {
