@@ -364,8 +364,10 @@ body.pdf-exporting .pagina {
   box-shadow: none !important;
   border-radius: 0 !important;
   width: 794px !important;
-  min-height: 1123px !important; /* Permitir que a página cresça se houver muitos gráficos */
-  overflow: visible !important; /* Garantir que o html2canvas capture o conteúdo que transborda */
+  min-height: 1123px !important;
+  /* Permitir que a página cresça se houver muitos gráficos */
+  overflow: visible !important;
+  /* Garantir que o html2canvas capture o conteúdo que transborda */
   border: none !important;
   position: relative !important;
   display: block !important;
@@ -537,13 +539,15 @@ body.pdf-exporting .capa {
 .graficos-grid {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center; /* Centraliza se houver menos itens */
+  justify-content: center;
+  /* Centraliza se houver menos itens */
   gap: 20px;
   margin-top: 20px;
 }
 
 .grafico-item {
-  width: 45%; /* Um pouco menor para caber melhor lado a lado */
+  width: 45%;
+  /* Um pouco menor para caber melhor lado a lado */
   margin-bottom: 25px;
   background: #fcfdfe;
   padding: 15px;
@@ -554,13 +558,16 @@ body.pdf-exporting .capa {
 /* Quando houver 3 ou mais gráficos, ficam um embaixo do outro, grandes e centralizados */
 .grid-coluna-unica .grafico-item {
   width: 92% !important;
-  margin: 0 auto 20px auto !important; /* Reduzido de 40px para 20px para caber mais gráficos */
-  padding: 20px !important; /* Reduzido levemente */
+  margin: 0 auto 20px auto !important;
+  /* Reduzido de 40px para 20px para caber mais gráficos */
+  padding: 20px !important;
+  /* Reduzido levemente */
 }
 
 .grafico-pdf-sm {
   width: 100%;
-  height: 130px; /* Reduzido para garantir o encaixe na folha A4 */
+  height: 130px;
+  /* Reduzido para garantir o encaixe na folha A4 */
 }
 
 .estrutura-familiar-pdf {
@@ -602,15 +609,16 @@ body.pdf-exporting .capa {
 }
 
 .modal-content {
-  background: #f0f4f9;
+  background: #504444 !important;
   width: 100%;
   max-width: 1050px;
   height: 92vh;
-  border-radius: 24px;
+  border-radius: 20px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+  border: 1px solid #e2e8f0;
   position: relative;
   z-index: 1000000;
 }
@@ -641,18 +649,19 @@ body.pdf-exporting .capa {
 }
 
 .modal-header {
-  padding: 20px 40px;
-  background: white;
+  padding: 20px 32px;
+  background: #ffffff !important;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #e1e8f0;
+  border-bottom: 1px solid #e2e8f0 !important;
+  flex-shrink: 0;
 }
 
 .modal-header h2 {
   margin: 0;
-  font-size: 20px;
-  color: var(--primary-dark);
+  font-size: 18px;
+  color: var(--primary-dark) !important;
 }
 
 .modal-actions {
@@ -663,17 +672,18 @@ body.pdf-exporting .capa {
 .modal-body {
   flex: 1;
   overflow-y: auto;
-  padding: 40px;
+  padding: 24px;
   display: flex;
   justify-content: center;
-  background: #f0f4f9;
+  background: #ffffff !important;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
 #area-relatorio-clone {
   transform-origin: top center;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+  background: #ffffff !important;
+  box-shadow: none !important;
 }
 
 /* ===== GRID DE GRÁFICOS NO RELATÓRIO ===== */
@@ -968,8 +978,8 @@ body.pdf-exporting .capa {
 }
 
 /* Card de Doação à Vista */
-.reducao-card + .reducao-card {
-  margin-top: 16px;
+.reducao-card+.reducao-card {
+  margin-top: 32px;
 }
 
 .reducao-card-avista {
@@ -1033,29 +1043,146 @@ body.pdf-exporting .capa {
   margin-bottom: 16px;
 }
 
-/* Responsividade */
+/* Responsividade Completa (Tablet e Celular) */
+@media (max-width: 1024px) {
+  .tributario-dashboard {
+    grid-template-columns: 1fr;
+    padding: 0 20px;
+  }
+
+  .tributario-sidebar .card-glass {
+    position: relative;
+    top: 0;
+    margin-bottom: 20px;
+  }
+
+  .comparativo-cards {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .divisor-impacto {
+    transform: rotate(90deg);
+    margin: 8px 0;
+  }
+}
+
 @media (max-width: 768px) {
+  .tributario-dashboard {
+    padding: 0 12px;
+  }
+
+  .impacto-container {
+    padding: 24px 16px;
+    border-radius: 20px;
+  }
+
+  .header-main h2 {
+    font-size: 22px;
+  }
+
+  .header-main p {
+    font-size: 14px;
+    margin-bottom: 25px;
+  }
+
+  .card-impacto {
+    padding: 20px 16px;
+    border-radius: 16px;
+  }
+
+  .valor-principal {
+    font-size: 28px;
+  }
+
   .reducao-card {
     flex-direction: column;
     gap: 20px;
+    padding: 20px 16px;
+    border-radius: 16px;
   }
+
+  .reducao-card-seguro .seguro-inputs-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
   .results-col {
     border-left: none;
     border-top: 1px solid rgba(0, 0, 0, 0.06);
     padding-left: 0;
     padding-top: 20px;
   }
+
+  /* Modal Preview em Celular / Tablet */
+  .modal-preview {
+    padding: 8px !important;
+  }
+
+  .modal-content {
+    height: 96vh !important;
+    border-radius: 14px !important;
+  }
+
+  .modal-header {
+    padding: 14px 16px !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    align-items: stretch !important;
+  }
+
+  .modal-actions {
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+
+  .modal-actions button {
+    flex: 1;
+    text-align: center;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .modal-body {
+    padding: 12px 6px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .tributario-dashboard {
+    padding: 0 8px;
+  }
+
+  .header-main h2 {
+    font-size: 20px;
+  }
+
+  .valor-principal {
+    font-size: 24px;
+  }
+
+  .result-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .result-badge {
+    align-self: flex-start;
+  }
 }
 
 /* ===== REGRAS DE IMPRESSÃO (PDF NATIVO) ===== */
 @media print {
+
   /* Esconde tudo que não é o relatório */
   body * {
     visibility: hidden !important;
   }
-  
+
   /* Força a visibilidade apenas do container do relatório e seus filhos */
-  #area-relatorio, 
+  #area-relatorio,
   #area-relatorio *,
   .pdf-container,
   .pdf-container * {
@@ -1092,7 +1219,17 @@ body.pdf-exporting .capa {
   }
 
   /* Esconde o modal, botões no-print e outros overlays */
-  .navbar, .navbar *, .stepper-wrapper, .container_global, .modal-preview, .modal-preview *, .modal-colar, .modal-colar *, .no-print, .btn-delete-nota, .btn-add-nota-pagina {
+  .navbar,
+  .navbar *,
+  .stepper-wrapper,
+  .container_global,
+  .modal-preview,
+  .modal-preview *,
+  .modal-colar,
+  .modal-colar *,
+  .no-print,
+  .btn-delete-nota,
+  .btn-add-nota-pagina {
     display: none !important;
   }
 }
@@ -1148,7 +1285,7 @@ body.pdf-exporting .add-note-toolbar {
 .nota-assessor-card {
   margin-top: 15px;
   margin-bottom: 15px;
-  padding: 14px 18px;
+  padding: 14px 18px 44px 18px;
   background: #f8fafc;
   border-left: 4px solid var(--primary, #0B53B8);
   border-radius: 8px;
@@ -1184,12 +1321,72 @@ body.pdf-exporting .add-note-toolbar {
   outline: none;
   font-family: inherit;
   box-sizing: border-box;
+  display: block;
 }
 
-.btn-delete-nota {
+.nota-card-actions {
   position: absolute;
-  top: 10px;
+  bottom: 8px;
   right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 5;
+}
+
+.btn-valoris-ia {
+  position: static;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #f1f5f9;
+  border: 1px solid #d4af37;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.4px;
+  transition: all 0.25s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.btn-valoris-label {
+  color: #dfb256;
+  background: linear-gradient(135deg, #ffe082 0%, #dfb256 50%, #c59b27 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.btn-valoris-ia:hover {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-color: #ffe082;
+  box-shadow: 0 3px 12px rgba(223, 178, 86, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-valoris-ia:hover .btn-valoris-label {
+  background: linear-gradient(135deg, #ffffff 0%, #ffe082 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.btn-valoris-ia:active {
+  transform: translateY(0);
+}
+
+.btn-valoris-ia.loading {
+  opacity: 0.8;
+  cursor: wait;
+  pointer-events: none;
+}
+
+
+.btn-delete-nota {
+  position: static;
   background: rgba(229, 57, 53, 0.1);
   color: #e53935;
   border: none;
@@ -1204,4 +1401,259 @@ body.pdf-exporting .add-note-toolbar {
 .btn-delete-nota:hover {
   background: #e53935;
   color: #ffffff;
+}
+
+/* ===== ESTILOS PÁGINA 6: MATRIZ DE LIQUIDEZ E SEGURO RESGATÁVEL ===== */
+.card-apolice-destaque {
+  background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%);
+  border: 1px solid #cbd5e1;
+  border-left: 4px solid #d4af37;
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  margin-bottom: 20px;
+}
+
+.card-apolice-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.card-apolice-badge {
+  background: #d4af37;
+  color: #ffffff;
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.apolice-metric-main {
+  text-align: center;
+  background: #ffffff;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 12px;
+}
+
+.metric-label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.metric-val-gold {
+  display: block;
+  font-size: 26px;
+  font-weight: 800;
+  color: #0B53B8;
+  margin: 4px 0;
+  letter-spacing: -0.5px;
+}
+
+.metric-sub {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.apolice-metric-sub {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+.metric-box {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 11px;
+  text-align: center;
+}
+
+.metric-box span {
+  display: block;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.metric-box strong {
+  display: block;
+  color: #0f172a;
+  font-size: 12.5px;
+}
+
+/* MATRIZ COMPARATIVA */
+.comparativo-liquidez-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.card-cenario {
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.cenario-risco {
+  background: #fff5f5;
+  border: 1px solid #feb2b2;
+  border-top: 4px solid #e53935;
+}
+
+.cenario-protegido {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-top: 4px solid #16a34a;
+}
+
+.cenario-badge {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.badge-risco {
+  color: #c53030;
+}
+
+.badge-protegido {
+  color: #15803d;
+}
+
+.cenario-titulo {
+  margin: 0 0 10px 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cenario-lista {
+  margin: 0 0 14px 0;
+  padding-left: 18px;
+  font-size: 11.5px;
+  color: #334155;
+  line-height: 1.5;
+}
+
+.cenario-lista li {
+  margin-bottom: 6px;
+}
+
+.cenario-resultado {
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.resultado-risco {
+  background: rgba(229, 57, 53, 0.1);
+  color: #c53030;
+}
+
+.resultado-risco strong {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.resultado-protegido {
+  background: rgba(22, 163, 74, 0.1);
+  color: #15803d;
+}
+
+.resultado-protegido strong {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+/* ===== DROPDOWN MENU ADICIONAR NOTA ===== */
+.btn-add-note-dropdown-toggle {
+  background: #ffffff;
+  color: var(--primary-dark, #0b53b8);
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.btn-add-note-dropdown-toggle:hover {
+  background: #f8fafc;
+  border-color: #0b53b8;
+  color: #0b53b8;
+  box-shadow: 0 3px 10px rgba(11, 83, 184, 0.15);
+}
+
+.dropdown-menu-notas {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 1000;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+  width: 260px;
+  padding: 6px;
+}
+
+.dropdown-header {
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+  padding: 6px 10px 4px 10px;
+}
+
+.dropdown-item {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.dropdown-item:hover {
+  background: #f1f5f9;
+  color: #0b53b8;
+}
+
+.dropdown-item .page-badge {
+  background: rgba(11, 83, 184, 0.1);
+  color: #0b53b8;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
 }

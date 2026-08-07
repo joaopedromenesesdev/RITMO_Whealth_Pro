@@ -289,7 +289,7 @@
   box-shadow: 0 15px 45px rgba(11, 83, 184, 0.4);
 }
 
-/* --- RESPONSIVIDADE --- */
+/* --- RESPONSIVIDADE COMPLETA --- */
 @media (max-width: 1100px) {
   .container_evolucao {
     flex-direction: column;
@@ -300,8 +300,29 @@
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .insights-grid {
     grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .insight-card {
+    padding: 18px 14px;
+    gap: 14px;
+  }
+
+  .insight-content h2 {
+    font-size: 20px;
+  }
+
+  .container_evolucao {
+    padding: 0 12px;
+    gap: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .insight-content h2 {
+    font-size: 18px;
   }
 }
