@@ -114,9 +114,46 @@
 
 /* Ensure inputs stack on small screens */
 @media (max-width: 768px) {
-
   .container_inputs,
   .graficos {
     grid-template-columns: 1fr;
+    padding: 0 12px;
+    gap: 16px;
+  }
+
+  .graficos {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .graficos .card {
+    flex: 1 1 100%;
+    max-width: none;
+    min-width: 0;
+    padding: 20px 14px;
+  }
+
+  .total-container {
+    padding: 20px 16px;
+    max-width: 92%;
+    margin: 25px auto;
+  }
+
+  #total {
+    font-size: 28px;
+  }
+
+  .grafico {
+    height: 280px;
+  }
+}
+
+@media (max-width: 480px) {
+  #total {
+    font-size: 24px;
+  }
+
+  .bloco {
+    padding: 18px 14px;
   }
 }

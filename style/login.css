@@ -263,6 +263,8 @@ body {
 /* ── Responsivo ── */
 @media (max-width: 480px) {
   .login-card {
-    padding: 36px 24px;
+    padding: 30px 18px;
+    width: 92%;
+    margin: 0 auto;
   }
 }

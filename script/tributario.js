@@ -1074,6 +1074,27 @@ function atualizarPreservacaoPDF() {
   if (pdfSeguroParcela && elSeguroParcela) pdfSeguroParcela.innerText = elSeguroParcela.innerText;
   if (pdfSeguroQuitar && elSeguroQuitar) pdfSeguroQuitar.innerText = elSeguroQuitar.innerText;
   if (pdfSeguroEconomia && elSeguroEconomia) pdfSeguroEconomia.innerText = elSeguroEconomia.innerText;
+
+  // Atualiza elementos dinâmicos da PÁGINA 6 (Estratégia de Liquidez e Seguro Resgatável)
+  const p6CapitalRec = document.getElementById("p6_capital_recomendado");
+  const p6ParcelaEst = document.getElementById("p6_parcela_estimada");
+  const p6CustoInventario = document.getElementById("p6_custo_inventario_sem_seguro");
+  const p6PerdaTotalSemSeguro = document.getElementById("p6_perda_total_sem_seguro");
+  const p6PatrimonioPreservado = document.getElementById("p6_patrimonio_preservado");
+
+  const valCapital = (elSeguroCapital && elSeguroCapital.innerText !== "—" && elSeguroCapital.innerText !== "") 
+    ? elSeguroCapital.innerText 
+    : ((pdfAvistaITCMD && pdfAvistaITCMD.innerText !== "—") ? pdfAvistaITCMD.innerText : "R$ 0");
+
+  const valParcela = (elSeguroParcela && elSeguroParcela.innerText !== "—" && elSeguroParcela.innerText !== "") 
+    ? elSeguroParcela.innerText 
+    : "Sob consulta";
+
+  if (p6CapitalRec) p6CapitalRec.innerText = valCapital;
+  if (p6ParcelaEst) p6ParcelaEst.innerText = valParcela;
+  if (p6CustoInventario) p6CustoInventario.innerText = valCapital.replace("R$", "").trim();
+  if (p6PerdaTotalSemSeguro) p6PerdaTotalSemSeguro.innerText = valCapital;
+  if (p6PatrimonioPreservado) p6PatrimonioPreservado.innerText = "100% Protegido";
 }
 
 // =========================
@@ -1494,22 +1515,10 @@ function calcularSegundaMorte(totalOriginal, herancaPrimeira, meacaoPrimeira, va
     lista.innerHTML = html;
   }
 
-  // Alerta de Destino (Saída de Linhagem)
+  // Alerta de Destino removido conforme solicitação
   const alerta = document.getElementById("alerta_destino");
   if (alerta) {
-    if (!temFilhos && (conjugePossuiPais || conjugePossuiColaterais)) {
-      alerta.style.display = "block";
-      alerta.style.background = "rgba(229, 57, 53, 0.08)";
-      alerta.style.borderLeft = "4px solid #E53935";
-      alerta.style.color = "#c62828";
-      alerta.innerHTML = `<strong>⚠️ Alerta de Destino:</strong> Como não há descendentes diretos, o patrimônio originalmente construído pelo cliente acaba saindo da sua linhagem familiar e migrando integralmente para a família do cônjuge na segunda morte.`;
-    } else {
-      alerta.style.display = "block";
-      alerta.style.background = "rgba(11, 83, 184, 0.05)";
-      alerta.style.borderLeft = "4px solid #0B53B8";
-      alerta.style.color = "#0B53B8";
-      alerta.innerHTML = `<strong>ℹ️ Continuidade Familiar:</strong> O patrimônio segue para os descendentes comuns, mantendo a unidade familiar ao longo das gerações.`;
-    }
+    alerta.style.display = "none";
   }
 }
 
@@ -1551,8 +1560,8 @@ async function abrirPreview() {
   clone.style.position = "relative";
   clone.style.width = "100%";
   clone.style.margin = "0 auto";
-  clone.style.backgroundColor = "#fff";
-  clone.style.boxShadow = "0 10px 30px rgba(0,0,0,0.1)";
+  clone.style.backgroundColor = "#ffffff";
+  clone.style.boxShadow = "none";
 
   modalBody.appendChild(clone);
 
@@ -1644,6 +1653,31 @@ function adicionarObservacaoPagina(paginaNum) {
   }, 100);
 }
 
+function toggleMenuAdicionarNota(event) {
+  if (event) event.stopPropagation();
+  const menu = document.getElementById("dropdown-menu-notas");
+  if (!menu) return;
+  const isVisible = menu.style.display === "block";
+  menu.style.display = isVisible ? "none" : "block";
+}
+
+function selecionarNotaPagina(pagNum) {
+  const menu = document.getElementById("dropdown-menu-notas");
+  if (menu) menu.style.display = "none";
+  adicionarObservacaoPagina(pagNum);
+}
+
+// Fecha o menu dropdown ao clicar fora
+document.addEventListener("click", function (e) {
+  const menu = document.getElementById("dropdown-menu-notas");
+  if (menu && menu.style.display === "block") {
+    if (!e.target.closest("#dropdown-menu-notas") && !e.target.closest(".btn-add-note-dropdown-toggle")) {
+      menu.style.display = "none";
+    }
+  }
+});
+
+
 function removerObservacaoPagina(notaId) {
   let notas = obterNotasRelatorio();
   notas = notas.filter(n => n.id !== notaId);
@@ -1705,8 +1739,13 @@ function renderizarNotasRelatorio(scope = document) {
       const conteudoEscaped = (nota.conteudo || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
       card.innerHTML = `
-        <button type="button" class="btn-delete-nota no-print" onclick="removerObservacaoPagina('${nota.id}')" title="Excluir observação">✕ Apagar</button>
         <textarea class="nota-conteudo-textarea" placeholder="Digite sua observação aqui..." oninput="atualizarNotaTexto('${nota.id}', 'conteudo', this.value); autoAjustarTextarea(this);">${conteudoEscaped}</textarea>
+        <div class="nota-card-actions no-print">
+          <button type="button" class="btn-valoris-ia" onclick="aprimorarTextoValoris('${nota.id}')" title="Aprimorar observação com a Valoris AI">
+            <span class="btn-valoris-label">Valoris</span>
+          </button>
+          <button type="button" class="btn-delete-nota" onclick="removerObservacaoPagina('${nota.id}')" title="Excluir observação">✕ Apagar</button>
+        </div>
       `;
 
       container.appendChild(card);
@@ -1718,6 +1757,149 @@ function renderizarNotasRelatorio(scope = document) {
     });
   });
 }
+
+// Recupera o token de acesso de forma segura via variável global ou local sem expor segredos no repositório
+function _obterChaveValoris() {
+  return window.GROQ_API_KEY || localStorage.getItem("groq_api_key") || "";
+}
+
+async function aprimorarTextoValoris(notaId) {
+  const card = document.querySelector(`[data-nota-id="${notaId}"]`);
+  if (!card) return;
+
+  const textarea = card.querySelector(".nota-conteudo-textarea");
+  const btn = card.querySelector(".btn-valoris-ia");
+  const label = btn ? btn.querySelector(".btn-valoris-label") : null;
+
+  if (!textarea || !textarea.value.trim()) {
+    if (typeof mostrarToast === "function") {
+      mostrarToast("Digite um rascunho de texto primeiro para a Valoris aprimorar.", "aviso");
+    } else {
+      alert("Por favor, digite um rascunho de texto primeiro para a Valoris aprimorar.");
+    }
+    return;
+  }
+
+  const originalText = textarea.value;
+
+  if (btn) btn.classList.add("loading");
+  if (label) label.innerText = "Valoris aprimorando...";
+
+  try {
+    let resultText = "";
+
+    // 1. Prioridade Máxima: Tentar chamar a Supabase Edge Function (Servidor Seguro - Chave 100% invisível no F12)
+    if (window.supabaseClient && window.supabaseClient.functions) {
+      try {
+        const { data, error } = await window.supabaseClient.functions.invoke("valoris-ai", {
+          body: { texto: originalText }
+        });
+
+        if (!error && data && data.textoAprimorado) {
+          resultText = data.textoAprimorado.trim();
+        }
+      } catch (sErr) {
+        console.warn("Edge Function do Supabase offline ou não implantada, utilizando canal secundário:", sErr);
+      }
+    }
+
+    // 2. Fallback: Chamada Groq direta se a Edge Function do Supabase ainda não tiver sido iniciada
+    if (!resultText) {
+      const apiKey = _obterChaveValoris();
+      if (apiKey) {
+        const systemPrompt =
+          "Você é Valoris, a inteligência artificial corporativa da Pace Capital especializada em Wealth Planning e Gestão Patrimonial.\n" +
+          "Sua única função é reescrever o texto do rascunho fornecido pelo assessor patrimonial elevando a gramática, a fluidez, a clareza e o vocabulário para um tom executivo e elegante de Private Banking.\n\n" +
+          "REGRAS OBRIGATÓRIAS:\n" +
+          "1. Mantenha TODOS os dados numéricos, porcentagens, prazos, valores monetários, UFs, siglas e nomes exatamente como fornecidos pelo usuário.\n" +
+          "2. NÃO altere a intenção, a estratégia nem o contexto original do texto.\n" +
+          "3. Torne o texto mais articulado, profissional e coeso para figurar em um relatório oficial de alto nível.\n" +
+          "4. Responda APENAS com o texto aprimorado final, sem saudações, introduções ou explicações.";
+
+        try {
+          const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": "Bearer " + apiKey,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              model: "llama-3.3-70b-versatile",
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: "Texto a ser aprimorado:\n" + originalText }
+              ],
+              temperature: 0.3,
+              max_tokens: 1000
+            })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
+              resultText = data.choices[0].message.content.trim();
+            }
+          }
+        } catch (gErr) {
+          console.warn("Groq API offline:", gErr);
+        }
+      }
+    }
+
+    if (!resultText) {
+      resultText = polirTextoOfflineValoris(originalText);
+    }
+
+    textarea.value = resultText;
+    autoAjustarTextarea(textarea);
+    atualizarNotaTexto(notaId, "conteudo", resultText);
+
+    if (typeof mostrarToast === "function") {
+      mostrarToast("Texto aprimorado por Valoris!", "sucesso");
+    }
+  } catch (err) {
+    console.error("Erro ao aprimorar texto:", err);
+    const fallbackText = polirTextoOfflineValoris(originalText);
+    textarea.value = fallbackText;
+    autoAjustarTextarea(textarea);
+    atualizarNotaTexto(notaId, "conteudo", fallbackText);
+  } finally {
+    if (btn) btn.classList.remove("loading");
+    if (label) label.innerText = "Valoris";
+  }
+}
+
+function polirTextoOfflineValoris(texto) {
+  if (!texto) return "";
+  let t = texto.trim();
+
+  const substituicoes = [
+    [/\bpra\b/gi, "para"],
+    [/\bvc\b/gi, "você"],
+    [/\btb\b|\btmb\b/gi, "também"],
+    [/\bnao\b/gi, "não"],
+    [/\bja\b/gi, "já"],
+    [/\bate\b/gi, "até"],
+    [/\bso\b/gi, "só"],
+    [/\bfugir do itcmd\b/gi, "otimizar a incidência do ITCMD"],
+    [/\bevitar itcmd\b/gi, "mitigar o impacto do ITCMD"],
+    [/\bpassar pelo inventario\b/gi, "trâmites de inventário"],
+    [/\bdeixar dinheiro pro filho\b/gi, "assegurar a transmissão patrimonial aos herdeiros"],
+    [/\bdeixar dinheiro para o filho\b/gi, "assegurar a transmissão patrimonial aos herdeiros"]
+  ];
+
+  substituicoes.forEach(([regex, sub]) => {
+    t = t.replace(regex, sub);
+  });
+
+  t = t.charAt(0).toUpperCase() + t.slice(1);
+  if (!/[.!?]$/.test(t)) {
+    t += ".";
+  }
+  return t;
+}
+
+
 
 function recalculaGraficosEspeciaisPDF(total, regime, scope = document) {
   const dadosPartilha = JSON.parse(sessionStorage.getItem("partilha_dados"));
@@ -1781,8 +1963,8 @@ function fecharPreview() {
 }
 
 async function gerarPDF() {
-  const elemento = document.querySelector("#modal-body-pdf .pdf-container");
-  if (!elemento) {
+  const clone = document.getElementById("area-relatorio-clone");
+  if (!clone) {
     alert("Por favor, abra o Preview antes de baixar.");
     return;
   }
@@ -1798,65 +1980,86 @@ async function gerarPDF() {
   } else {
     await salvarRelatorioNoHistorico();
   }
+
   try {
     document.body.classList.add("pdf-exporting");
 
-    // Remove temporariamente o scroll do modal para a captura pegar todas as páginas
-    const modalBody = document.getElementById("modal-body-pdf");
-    const originalOverflow = modalBody.style.overflow;
-    const originalMaxHeight = modalBody.style.maxHeight;
-    modalBody.style.overflow = "visible";
-    modalBody.style.maxHeight = "none";
+    // CORREÇÃO: Converte textareas em divs para o html2canvas capturar o texto completo
+    const textareas = clone.querySelectorAll("textarea");
+    const textareaBackups = [];
 
-    // Configurações otimizadas para captura manual
+    textareas.forEach((ta) => {
+      const div = document.createElement("div");
+      div.className = ta.className;
+      div.style.cssText = window.getComputedStyle(ta).cssText;
+      div.style.whiteSpace = "pre-wrap";
+      div.style.wordWrap = "break-word";
+      div.style.overflowWrap = "break-word";
+      div.style.overflow = "visible";
+      div.style.height = "auto";
+      div.style.minHeight = ta.style.height || "48px";
+      div.style.resize = "none";
+      div.style.border = "none";
+      div.style.background = "transparent";
+      div.style.padding = window.getComputedStyle(ta).padding;
+      div.style.font = window.getComputedStyle(ta).font;
+      div.style.lineHeight = window.getComputedStyle(ta).lineHeight;
+      div.style.color = window.getComputedStyle(ta).color;
+      div.textContent = ta.value;
+      div.setAttribute("data-pdf-placeholder", "true");
+
+      textareaBackups.push({ textarea: ta, parent: ta.parentNode, nextSibling: ta.nextSibling });
+      ta.parentNode.replaceChild(div, ta);
+    });
+
     const h2c = window.html2canvas || html2canvas;
-    const canvas = await h2c(elemento, {
-      scale: 1.5,
-      useCORS: true,
-      logging: false,
-      backgroundColor: "#ffffff",
-      windowWidth: document.documentElement.offsetWidth,
-      windowHeight: elemento.scrollHeight,
-      ignoreElements: (el) => {
-        return el.classList.contains("no-print") ||
-               el.classList.contains("btn-add-nota-pagina") ||
-               el.classList.contains("btn-delete-nota") ||
-               el.classList.contains("add-note-toolbar");
+    const { jsPDF } = window.jspdf ? window.jspdf : window;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+
+    // Captura folha a folha para garantir separação de páginas perfeita sem cortes
+    const paginas = clone.querySelectorAll(".pagina");
+    let paginasAdicionadas = 0;
+
+    for (let i = 0; i < paginas.length; i++) {
+      const pag = paginas[i];
+      // Ignora páginas ocultas
+      if (pag.offsetWidth === 0 || pag.offsetHeight === 0 || window.getComputedStyle(pag).display === "none") {
+        continue;
+      }
+
+      const canvas = await h2c(pag, {
+        scale: 1.5,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+        windowWidth: 794,
+        ignoreElements: (el) => {
+          return el.classList.contains("no-print") ||
+            el.classList.contains("btn-add-nota-pagina") ||
+            el.classList.contains("btn-delete-nota") ||
+            el.classList.contains("add-note-toolbar");
+        }
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      if (paginasAdicionadas > 0) {
+        pdf.addPage();
+      }
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+      paginasAdicionadas++;
+    }
+
+    // Restaura as textareas originais após a captura
+    textareaBackups.forEach(({ textarea, parent, nextSibling }) => {
+      const placeholder = parent.querySelector("[data-pdf-placeholder]") || (nextSibling ? nextSibling.previousSibling : parent.lastChild);
+      if (placeholder && placeholder.getAttribute("data-pdf-placeholder")) {
+        parent.replaceChild(textarea, placeholder);
       }
     });
 
-    // Restaura o modal
-    modalBody.style.overflow = originalOverflow;
-    modalBody.style.maxHeight = originalMaxHeight;
-
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
-
-    // Criação manual do PDF via jsPDF
-    const { jsPDF } = window.jspdf ? window.jspdf : window;
-    const pdf = new jsPDF('p', 'mm', 'a4');
-
-    const imgProps = pdf.getImageProperties(imgData);
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-    // Adiciona a imagem ao PDF (tratando múltiplas páginas)
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    let heightLeft = pdfHeight;
-    let position = 0;
-
-    // Primeira página
-    pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
-    heightLeft -= pageHeight;
-
-    // Páginas seguintes
-    while (heightLeft > 5) { // Tolerância de 5mm para evitar páginas em branco
-      position = heightLeft - pdfHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
-      heightLeft -= pageHeight;
-    }
-
-    // DISPARO DO DOWNLOAD (Método de link direto para burlar bloqueios)
+    // DISPARO DO DOWNLOAD
     const blob = pdf.output('blob');
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1964,6 +2167,50 @@ async function salvarRelatorioNoHistorico() {
     await dbSalvarRelatorio(relatorio);
   } catch (e) {
     console.error("Falha ao salvar relatório no histórico", e);
+  }
+}
+
+// ==========================================
+// PITCH SALES COPILOT (WHATSAPP/E-MAIL)
+// ==========================================
+function copiarPitchWhatsApp() {
+  const capRec = document.getElementById("p6_capital_recomendado")?.innerText || "R$ 0";
+  const parcEst = document.getElementById("p6_parcela_estimada")?.innerText || "R$ 0 /mês";
+  const perdaEst = document.getElementById("p6_perda_total_sem_seguro")?.innerText || "R$ 0";
+
+  let nomeCliente = "Cliente";
+  try {
+    const familiaStr = sessionStorage.getItem("familia");
+    if (familiaStr) {
+      const familia = JSON.parse(familiaStr);
+      if (familia.nome) nomeCliente = familia.nome;
+    }
+  } catch (e) {}
+
+  const textoPitch = 
+    `*Planejamento de Liquidez Sucessória — ${nomeCliente}*\n\n` +
+    `Olá, ${nomeCliente}! Conforme nossa análise de planejamento patrimonial:\n\n` +
+    `🔴 *Sem Seguro (Inventário Tradicional)*:\n` +
+    `• Perda estimada em impostos (ITCMD), custas e deságio: *${perdaEst}*\n` +
+    `• Investimentos e contas familiares bloqueados judicialmente.\n\n` +
+    `🟢 *Com Seguro Resgatável (Proteção de Liquidez)*:\n` +
+    `• Apólice de Liquidez Recomendada: *${capRec}*\n` +
+    `• Aporte estimado: *${parcEst}*\n` +
+    `• Benefício 100% livre de inventário e isento de ITCMD (Art. 794 CC).\n\n` +
+    `Estou à disposição para estruturar sua apólice!`;
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(textoPitch).then(() => {
+      if (typeof mostrarToast === "function") {
+        mostrarToast("Pitch para WhatsApp copiado!", "sucesso");
+      } else {
+        alert("Pitch para WhatsApp copiado com sucesso!");
+      }
+    }).catch(err => {
+      console.error("Erro ao copiar texto:", err);
+    });
+  } else {
+    alert(textoPitch);
   }
 }
 

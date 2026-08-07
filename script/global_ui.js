@@ -20,10 +20,22 @@ document.addEventListener('DOMContentLoaded', () => {
         observer.observe(el);
     });
 
-    // Desativa sugestões de histórico (autocomplete) nos campos de entrada do simulador
-    document.querySelectorAll('input').forEach(input => {
-        input.setAttribute('autocomplete', 'off');
-    });
+    // Desativa sugestões de preenchimento automático do navegador (Edge/Chrome Wallet Popup)
+    const desativarAutofillNavegador = (scope = document) => {
+        const inputs = scope.querySelectorAll('input');
+        inputs.forEach(input => {
+            input.setAttribute('autocomplete', 'new-password');
+            input.setAttribute('data-lpignore', 'true');
+            input.setAttribute('data-form-type', 'other');
+            input.setAttribute('aria-autocomplete', 'none');
+        });
+    };
+
+    desativarAutofillNavegador();
+
+    // Monitora a inserção dinâmica de novos campos de input em toda a aplicação
+    const observerInputs = new MutationObserver(() => desativarAutofillNavegador());
+    observerInputs.observe(document.body, { childList: true, subtree: true });
 });
 
 // =========================
