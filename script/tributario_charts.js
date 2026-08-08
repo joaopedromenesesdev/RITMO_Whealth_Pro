@@ -27,13 +27,13 @@
         this.instancias[canvasId].destroy();
       }
 
-      const totalA = (Number(dadosPatrimonio.rf) || 0) + (Number(dadosPatrimonio.rv) || 0) + 
-                     (Number(dadosPatrimonio.inter) || 0) + (Number(dadosPatrimonio.prev) || 0) + 
-                     (Number(dadosPatrimonio.offshore) || 0);
+      const totalA = (Number(dadosPatrimonio.rf) || 0) + (Number(dadosPatrimonio.rv) || 0) +
+        (Number(dadosPatrimonio.inter) || 0) + (Number(dadosPatrimonio.prev) || 0) +
+        (Number(dadosPatrimonio.offshore) || 0);
 
-      const totalI = (Number(dadosPatrimonio.apt) || 0) + (Number(dadosPatrimonio.casa) || 0) + 
-                     (Number(dadosPatrimonio.terr) || 0) + (Number(dadosPatrimonio.galp) || 0) + 
-                     (Number(dadosPatrimonio.bens_particulares) || 0);
+      const totalI = (Number(dadosPatrimonio.apt) || 0) + (Number(dadosPatrimonio.casa) || 0) +
+        (Number(dadosPatrimonio.terr) || 0) + (Number(dadosPatrimonio.galp) || 0) +
+        (Number(dadosPatrimonio.bens_particulares) || 0);
 
       let totalEmpresas = 0;
       if (Array.isArray(dadosPatrimonio.empresas)) {

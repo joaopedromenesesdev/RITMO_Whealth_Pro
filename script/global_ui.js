@@ -36,6 +36,32 @@ document.addEventListener('DOMContentLoaded', () => {
     // Monitora a inserção dinâmica de novos campos de input em toda a aplicação
     const observerInputs = new MutationObserver(() => desativarAutofillNavegador());
     observerInputs.observe(document.body, { childList: true, subtree: true });
+
+    // Intercepta cliques nas 4 abas do planejamento (Patrimônio, Estrutura Familiar, Evolução, Prejuízo Tributário)
+    // Se o usuário NÃO clicou em "Novo Relatório" (sem simulação em andamento), reseta os inputs e abre a animação em nova_simulacao.html
+    const abasPlanejamento = ['patrimonio.html', 'familiar.html', 'evolucao.html', 'tributario.html'];
+    
+    document.querySelectorAll('a').forEach(link => {
+        const href = link.getAttribute('href') || '';
+        if (abasPlanejamento.some(aba => href.includes(aba))) {
+            link.addEventListener('click', (e) => {
+                if (typeof window.temSimulacaoEmAndamento === 'function' && !window.temSimulacaoEmAndamento()) {
+                    e.preventDefault();
+                    sessionStorage.clear();
+                    window.location.href = 'nova_simulacao.html';
+                }
+            });
+        }
+    });
+
+    // Se a página atual for uma das 4 telas de planejamento sem simulação em andamento, redireciona para a animação em nova_simulacao.html
+    const pathAtual = window.location.pathname;
+    if (abasPlanejamento.some(aba => pathAtual.endsWith(aba))) {
+        if (typeof window.temSimulacaoEmAndamento === 'function' && !window.temSimulacaoEmAndamento()) {
+            sessionStorage.clear();
+            window.location.href = 'nova_simulacao.html';
+        }
+    }
 });
 
 // =========================
@@ -170,12 +196,30 @@ window.escapeHTML = function(str) {
         .replace(/'/g, "&#039;");
 };
 
-// =========================
 // HELPER: Inicializar ícones Lucide (CDN expõe como 'lucide' global)
 function initLucide() {
     try {
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-        else if (window.lucide) window.lucide.createIcons();
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+            return;
+        }
+        if (window.lucide && window.lucide.createIcons) {
+            window.lucide.createIcons();
+            return;
+        }
+        if (!document.getElementById("lucide-cdn-script")) {
+            const script = document.createElement("script");
+            script.id = "lucide-cdn-script";
+            script.src = "https://unpkg.com/lucide@latest";
+            script.onload = () => {
+                try {
+                    if (window.lucide && window.lucide.createIcons) {
+                        window.lucide.createIcons();
+                    }
+                } catch(err) {}
+            };
+            document.head.appendChild(script);
+        }
     } catch(e) {}
 }
 
@@ -252,6 +296,7 @@ window.abrirModalMasterEquipe = function() {
                   </div>
                 </div>
               </div>
+              </div>
             </div>
           </div>
 
@@ -273,6 +318,7 @@ window.abrirModalMasterEquipe = function() {
 
     document.body.appendChild(overlay);
     initLucide();
+    setTimeout(initLucide, 60);
     window.renderizarTabelaConvitesMaster();
 };
 

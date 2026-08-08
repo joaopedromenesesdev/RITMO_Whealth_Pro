@@ -59,11 +59,23 @@
         </div>
 
         <!-- Senha -->
-        <div class="input-group">
-          <label for="password">Senha</label>
+        <div class="input-group" id="group-password">
+          <label for="password" id="label-password">Senha</label>
           <div class="input-container">
             <i data-lucide="lock"></i>
             <input type="password" id="password" required placeholder="••••••••" autocomplete="current-password">
+          </div>
+          <div class="forgot-password-link-wrap" id="forgot-password-wrap">
+            <a href="javascript:void(0)" id="link-forgot-password">Esqueceu sua senha?</a>
+          </div>
+        </div>
+
+        <!-- Confirmar Senha (só na redefinição de senha) -->
+        <div class="input-group hidden" id="group-confirm-password">
+          <label for="confirm-password">Confirmar Nova Senha</label>
+          <div class="input-container">
+            <i data-lucide="lock"></i>
+            <input type="password" id="confirm-password" placeholder="••••••••" autocomplete="new-password">
           </div>
         </div>
 
@@ -75,10 +87,18 @@
 
       </form>
 
-      <!-- Toggle (Oculto por padrão para impedir cadastros públicos) -->
-      <div class="auth-toggle hidden">
+      <!-- Toggle e Ações Secundárias -->
+      <div class="auth-toggle hidden" id="auth-toggle">
         <span id="toggle-text">Não tem uma conta?</span>
         <a href="javascript:void(0)" id="toggle-link">Criar conta</a>
+      </div>
+
+      <!-- Voltar ao Login -->
+      <div class="auth-back-login hidden" id="auth-back-login">
+        <button type="button" id="link-back-login" class="btn-secondary-auth">
+          <i data-lucide="arrow-left"></i>
+          <span>Voltar ao login</span>
+        </button>
       </div>
 
     </div>
