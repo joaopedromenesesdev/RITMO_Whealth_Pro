@@ -74,9 +74,8 @@ function animateValue(id, start, end, duration) {
 }
 
 // =========================
-// EMPRESAS DINÂMICAS
+// EMPRESAS DINÂMICAS (INLINE)
 // =========================
-
 
 document.getElementById("tem_empresas").addEventListener("change", function () {
   let area = document.getElementById("area_empresas");
@@ -86,6 +85,7 @@ document.getElementById("tem_empresas").addEventListener("change", function () {
   } else {
     area.style.display = "none";
     document.getElementById("inputs_empresas").innerHTML = "";
+    document.getElementById("qtd_empresas").value = "";
   }
 
   salvarPatrimonio();
@@ -158,33 +158,31 @@ function adicionarEventosEmpresas() {
       let displayEl = this.closest(".empresa_item").querySelector(".empresa_nome_display");
 
       if (cnpj.length === 14) {
-        displayEl.innerHTML = `<span class="loading-dots">Buscando dados da empresa</span>`;
+        if (displayEl) displayEl.innerHTML = `<span class="loading-dots">Buscando dados da empresa</span>`;
         try {
           let response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
           if (response.ok) {
             let data = await response.json();
-            displayEl.innerHTML = `<i class="icon-check" style="color: #1D6F42"></i> ${escapeHTML(data.nome_fantasia || data.razao_social)}`;
+            let nomeFinal = escapeHTML(data.nome_fantasia || data.razao_social);
+            if (displayEl) displayEl.innerHTML = `<i class="icon-check" style="color: #1D6F42"></i> ${nomeFinal}`;
 
-            // Preenchimento do Valor (Capital Social)
             if (data.capital_social > 0) {
-              let valorInput = input.closest(".empresa_item").querySelector(".empresa_valor");
-
-              // Passa o valor para o formato que a função formatar() entende (apenas números, centavos)
-              // Multiplicamos por 100 para compensar o /100 da função formatar()
-              valorInput.value = (data.capital_social * 100).toString();
-              formatar(valorInput);
-              valorInput.classList.add("filled");
+              let valorInput = this.closest(".empresa_item").querySelector(".empresa_valor");
+              if (valorInput) {
+                valorInput.value = (data.capital_social * 100).toString();
+                formatar(valorInput);
+                valorInput.classList.add("filled");
+              }
             }
-
           } else {
-            displayEl.innerText = "Empresa não encontrada";
+            if (displayEl) displayEl.innerText = "Empresa não encontrada";
           }
         } catch (e) {
-          displayEl.innerText = "Erro na conexão";
+          if (displayEl) displayEl.innerText = "Erro na conexão";
         }
         salvarPatrimonio();
       } else if (cnpj.length === 0) {
-        displayEl.innerText = "Empresa";
+        if (displayEl) displayEl.innerText = "Empresa";
         salvarPatrimonio();
       }
     });
@@ -721,33 +719,40 @@ window.onload = function () {
   }
 
   if (dados.temEmpresas === "sim") {
+    document.getElementById("tem_empresas").value = "sim";
     document.getElementById("area_empresas").style.display = "block";
+    if (dados.qtdEmpresas) {
+      document.getElementById("qtd_empresas").value = dados.qtdEmpresas;
+    } else if (dados.empresas && dados.empresas.length > 0) {
+      document.getElementById("qtd_empresas").value = dados.empresas.length;
+    }
   }
 
   let container = document.getElementById("inputs_empresas");
+  container.innerHTML = "";
 
-  if (dados.empresas) {
+  if (dados.empresas && dados.empresas.length > 0) {
     dados.empresas.forEach((emp, i) => {
       container.innerHTML += `
-        <div class="empresa_item" style="background: #f8faff; padding: 20px; border-radius: 12px; border: 1px dashed rgba(11, 83, 184, 0.2); margin-top: 15px;">
-          <h5 class="empresa_nome_display" style="margin-bottom: 10px; color: #0B53B8; font-size: 14px;">${escapeHTML(emp.nome) || `Empresa ${i + 1}`}</h5>
+        <div class="empresa_item empresa-card-box">
+          <h5 class="empresa_nome_display emp-card-title">${escapeHTML(emp.nome) || `Empresa ${i + 1}`}</h5>
           
           <div class="input-group">
-            <label>CNPJ (Autopreenchimento Inteligente)</label>
-            <input type="text" class="empresa_cnpj" placeholder="00.000.000/0000-00" value="${emp.cnpj || ''}">
+            <label>CNPJ (AUTOPREENCHIMENTO INTELIGENTE)</label>
+            <input type="text" class="empresa_cnpj input-premium" placeholder="00.000.000/0000-00" value="${escapeHTML(emp.cnpj || '')}">
           </div>
 
-          <div class="input-group" style="margin-top: 10px;">
-            <label>Valor da Empresa</label>
+          <div class="input-group">
+            <label>VALOR DA EMPRESA</label>
             <div class="input-box">
               <span>R$</span>
-              <input type="text" class="empresa_valor" value="${formatarValorRestaurado(emp.valor)}">
+              <input type="text" class="empresa_valor input-premium" value="${formatarValorRestaurado(emp.valor)}">
             </div>
           </div>
 
-          <div class="input-group" style="margin-top: 10px;">
-            <label>Sua participação (%)</label>
-            <input type="number" class="empresa_pct" value="${emp.pct}">
+          <div class="input-group">
+            <label>SUA PARTICIPAÇÃO (%)</label>
+            <input type="number" class="empresa_pct input-premium" placeholder="Ex: 50" value="${escapeHTML(emp.pct || '')}">
           </div>
         </div>
       `;
@@ -756,6 +761,7 @@ window.onload = function () {
     adicionarEventosEmpresas();
   }
 
+  window.atualizarResumoEmpresasBadge();
   calcular();
 
   // ATIVA AUTO-SAVE: Sempre que mudar um campo, salva automaticamente

@@ -229,6 +229,73 @@ body {
   }
 }
 
+/* ── Esqueceu a Senha & Voltar ao Login ── */
+.forgot-password-link-wrap {
+  text-align: right;
+  margin-top: 6px;
+}
+
+.forgot-password-link-wrap a {
+  font-size: 12.5px;
+  color: #0B53B8;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.forgot-password-link-wrap a:hover {
+  color: #000080;
+  text-decoration: underline;
+}
+
+.auth-back-login {
+  margin-top: 16px;
+}
+
+.btn-secondary-auth {
+  width: 100%;
+  padding: 12px 18px;
+  background: #ffffff;
+  color: #2b3d5b;
+  border: 1.5px solid #dce5f0;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Outfit', sans-serif;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.btn-secondary-auth:hover {
+  background: #f0f5ff;
+  border-color: #0B53B8;
+  color: #0B53B8;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(11, 83, 184, 0.14);
+}
+
+.btn-secondary-auth:active {
+  transform: translateY(0);
+}
+
+.btn-secondary-auth i,
+.btn-secondary-auth svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
+  color: currentColor;
+}
+
+.btn-secondary-auth:hover i,
+.btn-secondary-auth:hover svg {
+  transform: translateX(-4px);
+}
+
 /* ── Toggle ── */
 .auth-toggle {
   text-align: center;

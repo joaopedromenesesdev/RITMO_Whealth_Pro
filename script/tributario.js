@@ -177,37 +177,209 @@ function renderizarGraficoEvolucao(scope = document) {
 
   if (graficoEvolucao && scope === document) graficoEvolucao.destroy();
 
+  // Sanitização e formatação limpa das labels ("Ano 0", "Ano 1", etc.)
+  const labelsLimpos = anos.map(a => {
+    let raw = String(a).replace(/anos?/gi, '').replace(/ano/gi, '').trim();
+    return raw !== '' ? `Ano ${raw}` : String(a);
+  });
+
+  // Criar gradiente de fundo azul transparente elegante
+  const canvasCtx = ctx.getContext ? ctx.getContext('2d') : null;
+  let bgGradient = "rgba(11, 83, 184, 0.08)";
+  if (canvasCtx && canvasCtx.createLinearGradient) {
+    bgGradient = canvasCtx.createLinearGradient(0, 0, 0, 300);
+    bgGradient.addColorStop(0, "rgba(11, 83, 184, 0.25)");
+    bgGradient.addColorStop(0.7, "rgba(11, 83, 184, 0.03)");
+    bgGradient.addColorStop(1, "rgba(11, 83, 184, 0.0)");
+  }
+
+  // Recuperar premissas globais salvas como fallback 2
+  let mercadoPremissas = {};
+  try {
+    const rawPremissas = sessionStorage.getItem("mercado_premissas");
+    if (rawPremissas) mercadoPremissas = JSON.parse(rawPremissas) || {};
+  } catch (e) { }
+
+  // Função para extrair a taxa anual (% a.a.) com fallback em 3 níveis:
+  // 1. Propriedade direta no objeto dadosEvolucao
+  // 2. Objeto mercado_premissas no sessionStorage
+  // 3. Cálculo matemático reverso a partir da curva de pontos ((v1 - aporte) / v0 - 1)
+  const extrairTaxaAnualNum = (propVal, premissaKey, arr) => {
+    if (propVal !== undefined && propVal !== null && propVal !== "") {
+      let clean = String(propVal).replace("%", "").replace(",", ".").trim();
+      let num = Number(clean);
+      if (!isNaN(num) && num > 0) return num;
+    }
+    if (premissaKey && mercadoPremissas[premissaKey]) {
+      let clean = String(mercadoPremissas[premissaKey]).replace("%", "").replace(",", ".").trim();
+      let num = Number(clean);
+      if (!isNaN(num) && num > 0) return num;
+    }
+    if (Array.isArray(arr) && arr.length >= 2) {
+      let baseIdx = 0;
+      while (baseIdx < arr.length - 1 && Number(arr[baseIdx]) === 0) {
+        baseIdx++;
+      }
+      if (baseIdx < arr.length - 1) {
+        let v0 = Number(arr[baseIdx]);
+        let v1 = Number(arr[baseIdx + 1]);
+        let ap = Number(dadosEvolucao.aporteAnual || 0);
+        if (v0 > 0) {
+          let rate = ((v1 - ap) / v0) - 1;
+          if (rate > 0 && !isNaN(rate)) {
+            return Number((rate * 100).toFixed(2));
+          }
+        }
+      }
+    }
+    return 0;
+  };
+
+  const formatarTaxaAA = (num) => {
+    if (!num || isNaN(num) || num <= 0) return "";
+    return num.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + "% a.a.";
+  };
+
+  const numTaxaProj = extrairTaxaAnualNum(dadosEvolucao.taxa, null, resultados);
+  const numTaxaCDI = extrairTaxaAnualNum(dadosEvolucao.cdiTaxa, "cdi", dadosEvolucao.cdi);
+  const numTaxaIPCA = extrairTaxaAnualNum(dadosEvolucao.ipcaTaxa, "ipca", dadosEvolucao.ipca);
+
+  const strTaxaProj = formatarTaxaAA(numTaxaProj);
+  const strTaxaCDI = formatarTaxaAA(numTaxaCDI);
+  const strTaxaIPCA = formatarTaxaAA(numTaxaIPCA);
+
+  const valFinalPat = resultados && resultados.length > 0 ? resultados[resultados.length - 1] : 0;
+  const strFinalPat = "R$ " + Number(valFinalPat || 0).toLocaleString("pt-BR");
+  const labelPat = `Projeção Estimada ${strTaxaProj ? "(" + strTaxaProj + " - " + strFinalPat + ")" : "(" + strFinalPat + ")"}`;
+
+  const datasets = [{
+    label: labelPat,
+    data: resultados,
+    borderColor: "#0B53B8",
+    backgroundColor: bgGradient,
+    borderWidth: 3,
+    tension: 0.35,
+    clip: false,
+    pointBackgroundColor: "#ffffff",
+    pointBorderColor: "#0B53B8",
+    pointBorderWidth: 2,
+    pointRadius: 4,
+    pointHoverRadius: 6,
+    pointHoverBackgroundColor: "#0B53B8",
+    pointHoverBorderColor: "#ffffff",
+    pointHoverBorderWidth: 2,
+    fill: true
+  }];
+
+  // Adiciona dataset de CDI Projetado se disponível na simulação
+  if (Array.isArray(dadosEvolucao.cdi) && dadosEvolucao.cdi.length > 0 && dadosEvolucao.cdi.some(v => Number(v) > 0)) {
+    const valFinalCDI = dadosEvolucao.cdi[dadosEvolucao.cdi.length - 1];
+    const strFinalCDI = "R$ " + Number(valFinalCDI || 0).toLocaleString("pt-BR");
+    const labelCDI = `CDI ${strTaxaCDI ? "(" + strTaxaCDI + " - " + strFinalCDI + ")" : "(" + strFinalCDI + ")"}`;
+    datasets.push({
+      label: labelCDI,
+      data: dadosEvolucao.cdi,
+      borderColor: "#1D6F42",
+      borderDash: [5, 5],
+      borderWidth: 2,
+      tension: 0.35,
+      clip: false,
+      pointRadius: 0,
+      pointHoverRadius: 5,
+      fill: false
+    });
+  }
+
+  // Adiciona dataset de IPCA Projetado se disponível na simulação
+  if (Array.isArray(dadosEvolucao.ipca) && dadosEvolucao.ipca.length > 0 && dadosEvolucao.ipca.some(v => Number(v) > 0)) {
+    const valFinalIPCA = dadosEvolucao.ipca[dadosEvolucao.ipca.length - 1];
+    const strFinalIPCA = "R$ " + Number(valFinalIPCA || 0).toLocaleString("pt-BR");
+    const labelIPCA = `IPCA ${strTaxaIPCA ? "(" + strTaxaIPCA + " - " + strFinalIPCA + ")" : "(" + strFinalIPCA + ")"}`;
+    datasets.push({
+      label: labelIPCA,
+      data: dadosEvolucao.ipca,
+      borderColor: "#e53935",
+      borderDash: [5, 5],
+      borderWidth: 2,
+      tension: 0.35,
+      clip: false,
+      pointRadius: 0,
+      pointHoverRadius: 5,
+      fill: false
+    });
+  }
+
   const newChart = new Chart(ctx, {
     type: "line",
     data: {
-      labels: anos.map(a => a + " anos"),
-      datasets: [{
-        label: "Patrimônio (R$)",
-        data: resultados,
-        borderColor: "#0B53B8",
-        backgroundColor: "rgba(11,83,184,0.08)",
-        borderWidth: 2,
-        tension: 0.3,
-        pointRadius: context => {
-          const year = context.dataIndex;
-          return year % 5 === 0 ? 5 : 0;
-        },
-        pointHoverRadius: 7,
-        fill: true
-      }]
+      labels: labelsLimpos,
+      datasets: datasets
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       animation: { duration: 0 },
+      layout: {
+        padding: {
+          top: 25,
+          right: 30,
+          bottom: 12,
+          left: 15
+        }
+      },
       plugins: {
-        legend: { display: false },
-        datalabels: { display: false }
+        legend: {
+          display: true,
+          position: "top",
+          align: "end",
+          labels: {
+            usePointStyle: true,
+            boxWidth: 8,
+            font: { size: 10.5, family: "Outfit", weight: "600" },
+            color: "#334155"
+          }
+        },
+        datalabels: { display: false },
+        tooltip: {
+          backgroundColor: "rgba(10, 27, 55, 0.95)",
+          titleColor: "#ffffff",
+          bodyColor: "#ffffff",
+          padding: 10,
+          cornerRadius: 8,
+          displayColors: true,
+          callbacks: {
+            label: context => context.dataset.label + ": R$ " + Number(context.raw || 0).toLocaleString("pt-BR")
+          }
+        }
       },
       scales: {
-        y: {
+        x: {
+          grid: { display: false },
           ticks: {
-            callback: v => "R$ " + v.toLocaleString("pt-BR")
+            color: "#64748b",
+            font: { size: 11, weight: "500", family: "Outfit" },
+            maxRotation: 0,
+            minRotation: 0,
+            autoSkip: true,
+            maxTicksLimit: 7
+          }
+        },
+        y: {
+          grace: "15%",
+          grid: {
+            color: "rgba(226, 232, 240, 0.7)",
+            drawBorder: false
+          },
+          ticks: {
+            color: "#64748b",
+            font: { size: 11, weight: "500", family: "Outfit" },
+            callback: v => {
+              const num = Number(v);
+              if (num >= 1000000) {
+                return "R$ " + (num / 1000000).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " Mi";
+              }
+              return "R$ " + num.toLocaleString("pt-BR");
+            }
           }
         }
       }
@@ -1082,12 +1254,12 @@ function atualizarPreservacaoPDF() {
   const p6PerdaTotalSemSeguro = document.getElementById("p6_perda_total_sem_seguro");
   const p6PatrimonioPreservado = document.getElementById("p6_patrimonio_preservado");
 
-  const valCapital = (elSeguroCapital && elSeguroCapital.innerText !== "—" && elSeguroCapital.innerText !== "") 
-    ? elSeguroCapital.innerText 
+  const valCapital = (elSeguroCapital && elSeguroCapital.innerText !== "—" && elSeguroCapital.innerText !== "")
+    ? elSeguroCapital.innerText
     : ((pdfAvistaITCMD && pdfAvistaITCMD.innerText !== "—") ? pdfAvistaITCMD.innerText : "R$ 0");
 
-  const valParcela = (elSeguroParcela && elSeguroParcela.innerText !== "—" && elSeguroParcela.innerText !== "") 
-    ? elSeguroParcela.innerText 
+  const valParcela = (elSeguroParcela && elSeguroParcela.innerText !== "—" && elSeguroParcela.innerText !== "")
+    ? elSeguroParcela.innerText
     : "Sob consulta";
 
   if (p6CapitalRec) p6CapitalRec.innerText = valCapital;
@@ -2185,9 +2357,9 @@ function copiarPitchWhatsApp() {
       const familia = JSON.parse(familiaStr);
       if (familia.nome) nomeCliente = familia.nome;
     }
-  } catch (e) {}
+  } catch (e) { }
 
-  const textoPitch = 
+  const textoPitch =
     `*Planejamento de Liquidez Sucessória — ${nomeCliente}*\n\n` +
     `Olá, ${nomeCliente}! Conforme nossa análise de planejamento patrimonial:\n\n` +
     `🔴 *Sem Seguro (Inventário Tradicional)*:\n` +

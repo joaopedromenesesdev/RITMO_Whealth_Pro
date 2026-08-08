@@ -239,6 +239,76 @@ async function authSair() {
   window.location.href = "login.html";
 }
 
+// Tradutor universal de mensagens de erro do Supabase para Português
+function authTraduzirMensagemErro(rawMsg) {
+  if (!rawMsg || typeof rawMsg !== "string") {
+    return "Ocorreu um erro ao processar a solicitação. Por favor, tente novamente.";
+  }
+
+  const msgLower = rawMsg.toLowerCase().trim();
+
+  if (msgLower.includes("auth session missing")) {
+    return "Nenhuma sessão de recuperação de senha foi encontrada. Isso ocorre se você não clicou no link enviado por e-mail ou se o link expirou. Por favor, solicite um novo link de recuperação.";
+  }
+  if (msgLower.includes("invalid login credentials")) {
+    return "E-mail ou senha inválidos. Por favor, tente novamente.";
+  }
+  if (msgLower.includes("email not confirmed")) {
+    return "Seu e-mail foi cadastrado, mas ainda não foi verificado. Por favor, confirme o e-mail na sua caixa de entrada.";
+  }
+  if (msgLower.includes("user already registered")) {
+    return "Este endereço de e-mail já está cadastrado no sistema.";
+  }
+  if (msgLower.includes("token has expired") || msgLower.includes("link is invalid") || msgLower.includes("token is expired")) {
+    return "O link de recuperação de senha é inválido ou expirou. Por favor, solicite um novo link.";
+  }
+  if (msgLower.includes("new password should be different")) {
+    return "A nova senha deve ser diferente da senha antiga.";
+  }
+  if (msgLower.includes("password should be at least")) {
+    return "A senha deve conter no mínimo 6 caracteres.";
+  }
+  if (msgLower.includes("rate limit") || msgLower.includes("over email rate limit")) {
+    return "Muitas tentativas em pouco tempo. Por favor, aguarde alguns minutos antes de tentar novamente.";
+  }
+  if (msgLower.includes("user not found")) {
+    return "Usuário não encontrado em nossa base de dados.";
+  }
+  if (msgLower.includes("invalid format") || msgLower.includes("invalid email")) {
+    return "Endereço de e-mail em formato inválido.";
+  }
+
+  return rawMsg;
+}
+
+// Solicitar redefinição de senha (envio de e-mail)
+async function authSolicitarRecuperacaoSenha(email) {
+  const client = getSupabase();
+  if (!client) throw new Error("Cliente Supabase não configurado.");
+
+  const redirectUrl = window.location.origin + window.location.pathname;
+  const { data, error } = await client.auth.resetPasswordForEmail(email, {
+    redirectTo: redirectUrl
+  });
+  if (error) throw error;
+  return data;
+}
+
+// Redefinir senha do usuário autenticado via token de recuperação
+async function authRedefinirSenha(novaSenha) {
+  const client = getSupabase();
+  if (!client) throw new Error("Cliente Supabase não configurado.");
+
+  const { data, error } = await client.auth.updateUser({ password: novaSenha });
+  if (error) throw error;
+  return data;
+}
+
+// Expor globalmente
+window.authTraduzirMensagemErro = authTraduzirMensagemErro;
+window.authSolicitarRecuperacaoSenha = authSolicitarRecuperacaoSenha;
+window.authRedefinirSenha = authRedefinirSenha;
+
 // Guarda de Rotas para ser executada no início das páginas protegidas
 async function authProtegerRota() {
   const user = await authObterUsuario();
@@ -258,20 +328,136 @@ document.addEventListener("DOMContentLoaded", async () => {
   const groupFullname = document.getElementById("group-fullname");
   const fullnameInput = document.getElementById("fullname");
   const emailInput = document.getElementById("email");
+  const groupEmail = emailInput ? emailInput.closest(".input-group") : null;
+  const groupPassword = document.getElementById("group-password");
+  const labelPassword = document.getElementById("label-password");
   const passwordInput = document.getElementById("password");
+  const forgotPasswordWrap = document.getElementById("forgot-password-wrap");
+  const linkForgotPassword = document.getElementById("link-forgot-password");
+  const groupConfirmPassword = document.getElementById("group-confirm-password");
+  const confirmPasswordInput = document.getElementById("confirm-password");
   const btnSubmit = document.getElementById("btn-submit");
   const btnText = document.getElementById("btn-text");
   const btnSpinner = document.getElementById("btn-spinner");
-  const toggleArea = document.querySelector(".auth-toggle");
+  const toggleArea = document.getElementById("auth-toggle");
+  const authBackLogin = document.getElementById("auth-back-login");
+  const linkBackLogin = document.getElementById("link-back-login");
   const alertDiv = document.getElementById("auth-alert");
+
+  let isForgotPass = false;
+  let isResetMode = false;
+  let isSignUp = false;
+  let activeInvite = null;
+  let inviteToken = null;
+
+  // Funções de alteração de modo de UI
+  function setModeLogin() {
+    isForgotPass = false;
+    isResetMode = false;
+    if (title) title.textContent = "Bem-vindo de volta";
+    if (subtitle) subtitle.textContent = "Entre com suas credenciais para acessar seus planejamentos.";
+    if (groupEmail) groupEmail.classList.remove("hidden");
+    if (emailInput) {
+      emailInput.setAttribute("required", "required");
+      if (!activeInvite) emailInput.removeAttribute("readonly");
+    }
+    if (groupPassword) groupPassword.classList.remove("hidden");
+    if (labelPassword) labelPassword.textContent = "Senha";
+    if (passwordInput) {
+      passwordInput.setAttribute("required", "required");
+      passwordInput.placeholder = "••••••••";
+      passwordInput.value = "";
+    }
+    if (forgotPasswordWrap) forgotPasswordWrap.classList.remove("hidden");
+    if (groupConfirmPassword) groupConfirmPassword.classList.add("hidden");
+    if (confirmPasswordInput) {
+      confirmPasswordInput.removeAttribute("required");
+      confirmPasswordInput.value = "";
+    }
+    if (groupFullname) groupFullname.classList.add("hidden");
+    if (btnText) btnText.textContent = "Entrar na plataforma";
+    if (authBackLogin) authBackLogin.classList.add("hidden");
+    if (alertDiv) alertDiv.classList.add("hidden");
+  }
+
+  function setModeForgot() {
+    isForgotPass = true;
+    isResetMode = false;
+    if (title) title.textContent = "Recuperar Senha";
+    if (subtitle) subtitle.textContent = "Informe seu e-mail cadastrado para receber o link de redefinição.";
+    if (groupEmail) groupEmail.classList.remove("hidden");
+    if (emailInput) {
+      emailInput.setAttribute("required", "required");
+      emailInput.removeAttribute("readonly");
+    }
+    if (groupPassword) groupPassword.classList.add("hidden");
+    if (passwordInput) passwordInput.removeAttribute("required");
+    if (groupConfirmPassword) groupConfirmPassword.classList.add("hidden");
+    if (confirmPasswordInput) confirmPasswordInput.removeAttribute("required");
+    if (groupFullname) groupFullname.classList.add("hidden");
+    if (btnText) btnText.textContent = "Enviar E-mail de Recuperação";
+    if (authBackLogin) authBackLogin.classList.remove("hidden");
+    if (alertDiv) alertDiv.classList.add("hidden");
+    if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
+  }
+
+  function setModeReset() {
+    isForgotPass = false;
+    isResetMode = true;
+    if (title) title.textContent = "Redefinir sua Senha";
+    if (subtitle) subtitle.textContent = "Crie uma nova senha de acesso para sua conta.";
+    if (groupEmail) groupEmail.classList.add("hidden");
+    if (emailInput) emailInput.removeAttribute("required");
+    if (groupPassword) groupPassword.classList.remove("hidden");
+    if (labelPassword) labelPassword.textContent = "Nova Senha";
+    if (passwordInput) {
+      passwordInput.setAttribute("required", "required");
+      passwordInput.placeholder = "Digite a nova senha";
+      passwordInput.value = "";
+    }
+    if (forgotPasswordWrap) forgotPasswordWrap.classList.add("hidden");
+    if (groupConfirmPassword) groupConfirmPassword.classList.remove("hidden");
+    if (confirmPasswordInput) {
+      confirmPasswordInput.setAttribute("required", "required");
+      confirmPasswordInput.placeholder = "Confirme a nova senha";
+      confirmPasswordInput.value = "";
+    }
+    if (groupFullname) groupFullname.classList.add("hidden");
+    if (btnText) btnText.textContent = "Atualizar Senha";
+    if (authBackLogin) authBackLogin.classList.remove("hidden");
+    if (alertDiv) alertDiv.classList.add("hidden");
+    if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
+  }
+
+  // Eventos de clique para alternar modos
+  if (linkForgotPassword) {
+    linkForgotPassword.addEventListener("click", setModeForgot);
+  }
+  if (linkBackLogin) {
+    linkBackLogin.addEventListener("click", setModeLogin);
+  }
+
+  // Escuta de eventos do Supabase Auth para modo de recuperação
+  const client = getSupabase();
+  if (client) {
+    client.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setModeReset();
+      }
+    });
+  }
+
+  // Verifica se há hash de recuperação de senha na URL
+  const hashStr = window.location.hash || "";
+  if (hashStr.includes("type=recovery") || hashStr.includes("access_token")) {
+    setModeReset();
+  }
 
   // Verificar se há token de convite na URL
   const urlParams = new URLSearchParams(window.location.search);
-  const inviteToken = urlParams.get("invite");
-  let activeInvite = null;
-  let isSignUp = false;
+  inviteToken = urlParams.get("invite");
 
-  if (inviteToken) {
+  if (inviteToken && !isResetMode) {
     const validacao = await authValidarConvite(inviteToken);
     if (validacao.valid) {
       activeInvite = validacao.invite;
@@ -317,12 +503,54 @@ document.addEventListener("DOMContentLoaded", async () => {
     btnText.style.opacity = "0.7";
     alertDiv.classList.add("hidden");
 
-    const email = emailInput.value.trim();
-    const password = passwordInput.value;
-    const fullname = fullnameInput.value.trim();
+    const email = emailInput ? emailInput.value.trim() : "";
+    const password = passwordInput ? passwordInput.value : "";
+    const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value : "";
+    const fullname = fullnameInput ? fullnameInput.value.trim() : "";
 
     try {
-      if (isSignUp) {
+      if (isForgotPass) {
+        // Solicitação de E-mail de Recuperação
+        if (!email || !email.includes("@")) {
+          throw new Error("Por favor, informe um endereço de e-mail válido.");
+        }
+
+        await authSolicitarRecuperacaoSenha(email);
+
+        alertDiv.className = "auth-alert success";
+        alertDiv.textContent = "Se o e-mail estiver cadastrado, você receberá um link com as instruções de redefinição de senha em alguns instantes. Verifique também a caixa de spam.";
+        alertDiv.classList.remove("hidden");
+
+      } else if (isResetMode) {
+        // Atualização da Nova Senha
+        if (!password || password.length < 6) {
+          throw new Error("A nova senha deve possuir pelo menos 6 caracteres.");
+        }
+        if (password !== confirmPassword) {
+          throw new Error("As senhas digitadas não coincidem. Por favor, confirme a nova senha exatamente igual.");
+        }
+
+        const userSession = await authObterUsuario();
+        if (!userSession) {
+          throw new Error("Auth session missing!");
+        }
+
+        await authRedefinirSenha(password);
+
+        alertDiv.className = "auth-alert success";
+        alertDiv.textContent = "Senha atualizada com sucesso! Redirecionando para o login...";
+        alertDiv.classList.remove("hidden");
+
+        // Limpa hash da URL e retorna ao login após 2.5s
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState(null, null, window.location.pathname);
+        }
+
+        setTimeout(() => {
+          setModeLogin();
+        }, 2500);
+
+      } else if (isSignUp) {
         // Validação de e-mail válido
         if (!authValidarEmailPermitido(email, activeInvite)) {
           throw new Error("Por favor, informe um endereço de e-mail válido para concluir seu cadastro.");
@@ -357,17 +585,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (err) {
       console.error(err);
       alertDiv.className = "auth-alert error";
-
-      let msg = err.message || "Ocorreu um erro ao processar a autenticação.";
-      if (msg === "Email not confirmed") {
-        msg = "Seu e-mail foi cadastrado, mas ainda não foi verificado. Por favor, confirme o e-mail na sua caixa de entrada.";
-      } else if (msg === "Invalid login credentials") {
-        msg = "E-mail ou senha inválidos. Por favor, tente novamente.";
-      } else if (msg === "User already registered") {
-        msg = "Este endereço de e-mail já está cadastrado no sistema.";
-      }
-
-      alertDiv.textContent = msg;
+      alertDiv.textContent = authTraduzirMensagemErro(err ? err.message : null);
       alertDiv.classList.remove("hidden");
     } finally {
       btnSubmit.disabled = false;
@@ -376,12 +594,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // Redireciona se o usuário já estiver logado
-  authObterUsuario().then(user => {
-    if (user) {
-      window.location.href = "index.html";
-    }
-  });
+  // Redireciona se o usuário já estiver logado (e não estiver no modo de redefinição de senha)
+  if (!hashStr.includes("type=recovery") && !hashStr.includes("access_token")) {
+    authObterUsuario().then(user => {
+      if (user) {
+        window.location.href = "index.html";
+      }
+    });
+  }
 });
 
 // Toggle e Fechamento do Dropdown de Usuário

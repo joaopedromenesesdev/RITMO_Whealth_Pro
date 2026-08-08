@@ -275,11 +275,17 @@ function calcular() {
   generateMagicInsight(taxaAnual, aporteMensal, anosProjecao, valoresArr[valoresArr.length - 1]);
 
   // Salva persistência
+  const elCDIManual = document.getElementById("cdi_manual");
+  const elIPCAManual = document.getElementById("ipca_manual");
   sessionStorage.setItem("evolucao_dados", JSON.stringify({
     anos: anosArr,
     resultados: valoresArr,
     resultadosPrev: prevResultados,
+    cdi: cdiArr,
+    ipca: ipcaArr,
     taxa: document.getElementById("taxa").value,
+    cdiTaxa: elCDIManual ? elCDIManual.value : "0",
+    ipcaTaxa: elIPCAManual ? elIPCAManual.value : "0",
     tempo: anosProjecao,
     aporteAnual: aporteAnual
   }));
@@ -354,7 +360,7 @@ function renderChart(labels, data, cdi, ipca) {
       labels: labels,
       datasets: [
         {
-          label: "Sua Projeção",
+          label: "Projeção Estimada",
           data: data,
           borderColor: "#0B53B8",
           backgroundColor: gradient,
