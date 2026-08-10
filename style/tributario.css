@@ -1356,6 +1356,7 @@ body.pdf-exporting .add-note-toolbar {
   color: #dfb256;
   background: linear-gradient(135deg, #ffe082 0%, #dfb256 50%, #c59b27 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   font-weight: 700;
   letter-spacing: 0.5px;
@@ -1371,6 +1372,7 @@ body.pdf-exporting .add-note-toolbar {
 .btn-valoris-ia:hover .btn-valoris-label {
   background: linear-gradient(135deg, #ffffff 0%, #ffe082 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -1382,6 +1384,36 @@ body.pdf-exporting .add-note-toolbar {
   opacity: 0.8;
   cursor: wait;
   pointer-events: none;
+}
+
+.btn-valoris-icon {
+  font-size: 13px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.btn-valoris-text-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+}
+
+.btn-valoris-subtitle {
+  font-size: 8.5px;
+  font-weight: 500;
+  color: rgba(241, 245, 249, 0.65);
+  letter-spacing: 0.3px;
+  margin-top: 1px;
+  -webkit-text-fill-color: rgba(241, 245, 249, 0.65);
+  background: none;
+  -webkit-background-clip: unset;
+  background-clip: unset;
+}
+
+.btn-valoris-ia:hover .btn-valoris-subtitle {
+  color: rgba(255, 224, 130, 0.85);
+  -webkit-text-fill-color: rgba(255, 224, 130, 0.85);
 }
 
 
