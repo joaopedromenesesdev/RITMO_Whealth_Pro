@@ -1914,7 +1914,10 @@ function renderizarNotasRelatorio(scope = document) {
         <textarea class="nota-conteudo-textarea" placeholder="Digite sua observação aqui..." oninput="atualizarNotaTexto('${nota.id}', 'conteudo', this.value); autoAjustarTextarea(this);">${conteudoEscaped}</textarea>
         <div class="nota-card-actions no-print">
           <button type="button" class="btn-valoris-ia" onclick="aprimorarTextoValoris('${nota.id}')" title="Aprimorar observação com a Valoris AI">
-            <span class="btn-valoris-label">Valoris</span>
+            <span class="btn-valoris-text-group">
+              <span class="btn-valoris-label">Valoris</span>
+              <span class="btn-valoris-subtitle">Assistente de texto IA</span>
+            </span>
           </button>
           <button type="button" class="btn-delete-nota" onclick="removerObservacaoPagina('${nota.id}')" title="Excluir observação">✕ Apagar</button>
         </div>
