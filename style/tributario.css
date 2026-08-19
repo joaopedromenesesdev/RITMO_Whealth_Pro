@@ -468,31 +468,15 @@ body.pdf-exporting .capa {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  margin-bottom: 40px;
-}
-
-.logo-capa-badge {
-  background: #ffffff;
-  padding: 8px 24px;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.logo-capa-img {
-  height: 46px;
-  width: auto;
-  object-fit: contain;
+  margin-top: 30px;
+  margin-bottom: 50px;
 }
 
 .logo-capa-text {
   font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
-  letter-spacing: 3.5px;
+  letter-spacing: 4px;
   text-transform: uppercase;
   color: #ffffff;
   text-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
