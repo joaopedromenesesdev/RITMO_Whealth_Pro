@@ -25,18 +25,19 @@
   align-items: center;
   gap: 20px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-  border: 1px solid rgba(11, 83, 184, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
 }
 
 .insight-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 15px 40px rgba(11, 83, 184, 0.1);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
 }
 
 .insight-card.highlight {
-  background: linear-gradient(135deg, #0B53B8, #000080);
+  background: #09090b;
   color: white;
+  border: 1px solid #27272a;
 }
 
 .insight-card.highlight label {
@@ -46,16 +47,16 @@
 .insight-icon {
   width: 50px;
   height: 50px;
-  background: rgba(11, 83, 184, 0.1);
+  background: rgba(0, 0, 0, 0.06);
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #0B53B8;
+  color: #09090b;
 }
 
 .highlight .insight-icon {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.15);
   color: white;
 }
 
@@ -100,14 +101,14 @@
 .value-display {
   font-size: 14px;
   font-weight: 700;
-  color: #0B53B8;
-  background: rgba(11, 83, 184, 0.05);
+  color: #09090b;
+  background: #f4f4f5;
   padding: 4px 12px;
   border-radius: 100px;
 }
 
 .value-display.highlight {
-  background: #0B53B8;
+  background: #09090b;
   color: white;
 }
 
@@ -115,20 +116,20 @@
   width: 100%;
   padding: 14px 18px;
   border-radius: 12px;
-  border: 2px solid #eef2f6;
+  border: 2px solid #e4e4e7;
   background: #f8fafc;
   font-size: 16px;
   font-weight: 600;
-  color: #1a2b49;
+  color: #09090b;
   transition: all 0.3s ease;
   outline: none;
   font-family: 'Inter', sans-serif;
 }
 
 .input-premium:focus {
-  border-color: #0B53B8;
+  border-color: #09090b;
   background: white;
-  box-shadow: 0 0 0 4px rgba(11, 83, 184, 0.1);
+  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.08);
 }
 
 .input-minimal {
@@ -162,7 +163,7 @@
   margin: 0;
   font-family: 'Playfair Display', serif;
   font-size: 18px;
-  color: #000080;
+  color: #09090b;
 }
 
 .chart-legend-custom {
@@ -170,7 +171,7 @@
   gap: 15px;
   font-size: 12px;
   font-weight: 600;
-  color: #5f738c;
+  color: #71717a;
 }
 
 .dot {
@@ -181,9 +182,9 @@
   margin-right: 4px;
 }
 
-.sua-projecao { background: #0B53B8; }
-.cdi { background: #1D6F42; }
-.ipca { background: #e53935; }
+.sua-projecao { background: #2563EB; }
+.cdi { background: #10B981; }
+.ipca { background: #EF4444; }
 
 .grafico-container {
   flex: 1;
@@ -198,12 +199,12 @@
 }
 
 .magic-card {
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   padding: 30px;
   border-radius: 20px;
-  border-left: 6px solid #0B53B8;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+  border-left: 6px solid #09090b;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
 }
 
 .magic-title {
@@ -211,7 +212,7 @@
   align-items: center;
   gap: 10px;
   font-weight: 700;
-  color: #0B53B8;
+  color: #09090b;
   margin-bottom: 10px;
   text-transform: uppercase;
   font-size: 12px;
@@ -247,25 +248,27 @@
 }
 
 .botoes .btn-main {
-  background: linear-gradient(135deg, #0B53B8, #000080);
+  background: #09090b;
   color: white;
-  box-shadow: 0 6px 18px rgba(11, 83, 184, 0.25);
+  border: 1px solid #27272a;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
 }
 
 .botoes .btn-main:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(11, 83, 184, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  background: #18181b;
 }
 
 .botoes .btn-secundario {
-  background: #f1f5f9;
-  color: #475569;
-  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #09090b;
+  border: 1px solid #e4e4e7;
 }
 
 .botoes .btn-secundario:hover {
-  background: #e2e8f0;
-  color: #1e293b;
+  background: #f4f4f5;
+  color: #000000;
   transform: translateY(-2px);
 }
 
@@ -274,19 +277,21 @@
   display: inline-flex;
   align-items: center;
   gap: 15px;
-  background: linear-gradient(135deg, #0B53B8, #000080);
+  background: #09090b;
   color: white;
+  border: 1px solid #27272a;
   padding: 18px 45px;
   border-radius: 100px;
   text-decoration: none;
   font-weight: 700;
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 10px 30px rgba(11, 83, 184, 0.3);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 
 .btn-next:hover {
   transform: translateY(-5px) scale(1.02);
-  box-shadow: 0 15px 45px rgba(11, 83, 184, 0.4);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  background: #18181b;
 }
 
 /* --- RESPONSIVIDADE COMPLETA --- */

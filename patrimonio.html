@@ -3,10 +3,10 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Valorum — Patrimônio</title>
+  <title>Ritmo Wealth Pro — Patrimônio</title>
 
   <link rel="stylesheet" href="style/patrimonio.css">
-  <link rel="icon" type="image/png" href="img/favicon.png">
+  <link rel="icon" type="image/png" href="img/RITMO.png">
   <link rel="stylesheet" href="style/style.css">
 
   <!-- Icons -->
@@ -32,7 +32,9 @@
 <body>
   <!-- NAVBAR -->
   <div class="navbar">
-    <div class="logo">Valorum</div>
+    <div class="logo">
+      Ritmo <span>Wealth Pro</span>
+    </div>
 
     <div class="menu">
       <a href="index.html">Dashboard</a>
@@ -48,7 +50,7 @@
   <script>document.addEventListener('DOMContentLoaded', () => window.renderizarStepperGlobal(1));</script>
 
   <div class="container_global">
-    <div style="text-align: center; margin-bottom: 25px;">
+    <div style="text-align: center; margin-bottom: 40px;">
       <h1 class="reveal" style="margin: 0 auto; text-align: center;">Análise Patrimonial</h1>
     </div>
 
@@ -111,18 +113,18 @@
       </div>
 
       <!-- BENS E EMPRESAS -->
-      <div class="bloco card-premium reveal delay-3" style="display: flex; flex-direction: column; gap: 20px;">
+      <div class="bloco card-premium reveal delay-3" style="display: flex; flex-direction: column; gap: 28px;">
         <div>
           <h2>Aplicações Offshore</h2>
           <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
             <label style="margin:0;">Investimentos no Exterior</label>
             <div id="offshore_toggle"
-              style="display:flex; background:rgba(11,83,184,0.08); border-radius:20px; padding:2px; gap:2px; cursor:pointer; user-select:none;"
+              style="display:flex; background:rgba(0,0,0,0.06); border-radius:20px; padding:2px; gap:2px; cursor:pointer; user-select:none;"
               onclick="alternarMoedaOffshore()">
               <span id="toggle_brl"
-                style="padding:3px 12px; border-radius:16px; font-size:12px; font-weight:600; background:#0B53B8; color:#fff; transition:all .2s;">R$</span>
+                style="padding:3px 12px; border-radius:16px; font-size:12px; font-weight:600; background:#09090b; color:#fff; transition:all .2s;">R$</span>
               <span id="toggle_usd"
-                style="padding:3px 12px; border-radius:16px; font-size:12px; font-weight:600; color:#0B53B8; transition:all .2s;">USD</span>
+                style="padding:3px 12px; border-radius:16px; font-size:12px; font-weight:600; color:#09090b; transition:all .2s;">USD</span>
             </div>
           </div>
           <div class="input-box">
@@ -130,16 +132,16 @@
             <input type="text" id="offshore" oninput="formatar(this); atualizarBadgeOffshore(); salvarPatrimonio();">
           </div>
           <div id="offshore_badge"
-            style="display:none; margin-top:8px; padding:8px 12px; background:linear-gradient(135deg,rgba(11,83,184,0.08),rgba(29,111,66,0.06)); border-radius:10px; border:1px solid rgba(11,83,184,0.15);">
+            style="display:none; margin-top:8px; padding:8px 12px; background:#fafafa; border-radius:10px; border:1px solid #e4e4e7;">
             <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:4px;">
               <span id="offshore_ptax_label" style="font-size:12px; color:#555;">💱 Cotação PTAX: <strong
                   id="offshore_ptax_valor">carregando...</strong></span>
-              <span id="offshore_convertido" style="font-size:13px; font-weight:700; color:#0B53B8;"></span>
+              <span id="offshore_convertido" style="font-size:13px; font-weight:700; color:#09090b;"></span>
             </div>
           </div>
         </div>
 
-        <hr style="opacity: 0.1; margin: 5px 0;">
+        <hr style="border: 0; border-top: 1px solid rgba(0,0,0,0.06); margin: 0;">
 
         <div>
           <h2>Bens Móveis</h2>
@@ -149,7 +151,7 @@
           </div>
         </div>
 
-        <hr style="opacity: 0.1; margin: 10px 0;">
+        <hr style="border: 0; border-top: 1px solid rgba(0,0,0,0.06); margin: 0;">
 
         <div>
           <h2>Empresas / Holding</h2>

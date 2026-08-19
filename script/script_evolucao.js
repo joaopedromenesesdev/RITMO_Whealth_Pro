@@ -335,7 +335,7 @@ function generateMagicInsight(taxa, aporte, tempo, totalFinal) {
   } else if (tempo > 20) {
     magicText.innerHTML = "⏳ <b>Juros Compostos:</b> O tempo é seu maior aliado. Note como a curva do gráfico se torna exponencial nos últimos 5 anos da projeção.";
   } else {
-    magicText.innerHTML = "💡 <b>Dica Valorum:</b> Aumentar seu aporte mensal em 20% poderia antecipar sua meta financeira em quase 4 anos.";
+    magicText.innerHTML = "💡 <b>Dica Ritmo Wealth Pro:</b> Aumentar seu aporte mensal em 20% poderia antecipar sua meta financeira em quase 4 anos.";
   }
 }
 
@@ -347,8 +347,8 @@ function renderChart(labels, data, cdi, ipca) {
 
   // Gradient Background
   const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-  gradient.addColorStop(0, "rgba(11, 83, 184, 0.3)");
-  gradient.addColorStop(1, "rgba(11, 83, 184, 0.0)");
+  gradient.addColorStop(0, "rgba(37, 99, 235, 0.25)");
+  gradient.addColorStop(1, "rgba(37, 99, 235, 0.0)");
 
   if (grafico) {
     grafico.destroy();
@@ -362,21 +362,21 @@ function renderChart(labels, data, cdi, ipca) {
         {
           label: "Projeção Estimada",
           data: data,
-          borderColor: "#0B53B8",
+          borderColor: "#2563EB",
           backgroundColor: gradient,
           fill: true,
           tension: 0.4,
           borderWidth: 4,
           pointRadius: 0,
           pointHoverRadius: 6,
-          pointHoverBackgroundColor: "#0B53B8",
+          pointHoverBackgroundColor: "#2563EB",
           pointHoverBorderColor: "#fff",
           pointHoverBorderWidth: 3
         },
         {
           label: "CDI Projetado",
           data: cdi,
-          borderColor: "#1D6F42",
+          borderColor: "#10B981",
           borderDash: [5, 5],
           fill: false,
           tension: 0.4,
@@ -386,7 +386,7 @@ function renderChart(labels, data, cdi, ipca) {
         {
           label: "IPCA Projetado",
           data: ipca,
-          borderColor: "#e53935",
+          borderColor: "#EF4444",
           borderDash: [5, 5],
           fill: false,
           tension: 0.4,

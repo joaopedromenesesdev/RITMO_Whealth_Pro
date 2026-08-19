@@ -89,14 +89,14 @@ window.confirmarAcaoCustom = function({
     if (overlay) overlay.remove();
 
     const isInfo = tipo === "info" || somenteAviso;
-    const strokeColor = isInfo ? "#0B53B8" : "#ef4444";
+    const strokeColor = isInfo ? "#09090b" : "#ef4444";
     const iconSvg = isInfo
       ? `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`
       : `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
 
-    const iconBg = isInfo ? "rgba(11, 83, 184, 0.12)" : "#fef2f2";
+    const iconBg = isInfo ? "rgba(0, 0, 0, 0.06)" : "#fef2f2";
     const btnClass = isInfo ? "btn-cancel-modal" : "btn-danger-modal";
-    const btnConfirmStyle = isInfo ? "background: #0B53B8; color: #fff; border-color: #0B53B8;" : "";
+    const btnConfirmStyle = isInfo ? "background: #09090b; color: #fff; border-color: #09090b;" : "";
 
     overlay = document.createElement("div");
     overlay.id = "custom-confirm-overlay";
@@ -244,7 +244,7 @@ window.abrirModalMasterEquipe = function() {
             <div class="mh-icon-wrap"><i data-lucide="shield-check"></i></div>
             <div>
               <div class="mh-title">Gestão de Equipe</div>
-              <div class="mh-sub">Valorum · Painel Master</div>
+              <div class="mh-sub">Ritmo Wealth Pro · Painel Master</div>
             </div>
           </div>
           <button class="master-modal-close" id="btn-fechar-master" onclick="window.fecharModalMasterEquipe()" title="Fechar">
@@ -269,7 +269,7 @@ window.abrirModalMasterEquipe = function() {
                 <div class="invite-email-wrap">
                   <i data-lucide="mail" class="invite-mail-icon"></i>
                   <input type="email" id="master_invite_email" class="invite-email-input"
-                    placeholder="E-mail do destinatário (ex: assessor@valorum.com.br)">
+                    placeholder="E-mail do destinatário (ex: assessor@ritmowealthpro.com.br)">
                 </div>
                 <div class="invite-actions-wrap">
                   <button type="button" class="btn-gen-invite" onclick="window.executarGerarConviteMaster()" title="Gerar link de convite">
@@ -350,11 +350,11 @@ window.executarGerarConviteMaster = function() {
 };
 
 function dispararEmailClienteMaster(emailDestino, inviteUrl) {
-    const assuntoText = "Convite Oficial de Acesso — Valorum";
+    const assuntoText = "Convite Oficial de Acesso — Ritmo Wealth Pro";
     const corpoText = `Olá!\n\n` +
-        `Você foi convidado para acessar a plataforma Valorum.\n\n` +
+        `Você foi convidado para acessar a plataforma Ritmo Wealth Pro.\n\n` +
         `Clique no link abaixo para criar sua conta de acesso:\n${inviteUrl}\n\n` +
-        `Atenciosamente,\nEquipe Valorum`;
+        `Atenciosamente,\nEquipe Ritmo Wealth Pro`;
 
     const assunto = encodeURIComponent(assuntoText);
     const corpo = encodeURIComponent(corpoText);
@@ -406,11 +406,11 @@ window.executarEnviarEmailMaster = function() {
     if (!inviteUrl) return;
 
     // Dispara a janela de e-mail reutilizando o mesmo link
-    const assuntoText = "Convite Oficial de Acesso — Valorum";
+    const assuntoText = "Convite Oficial de Acesso — Ritmo Wealth Pro";
     const corpoText = `Olá!\n\n` +
-        `Você foi convidado para acessar a plataforma Valorum.\n\n` +
+        `Você foi convidado para acessar a plataforma Ritmo Wealth Pro.\n\n` +
         `Clique no link abaixo para criar sua conta de acesso:\n${inviteUrl}\n\n` +
-        `Atenciosamente,\nEquipe Valorum`;
+        `Atenciosamente,\nEquipe Ritmo Wealth Pro`;
 
     const assunto = encodeURIComponent(assuntoText);
     const corpo = encodeURIComponent(corpoText);
@@ -427,11 +427,11 @@ window.executarEnviarEmailMasterResult = function() {
 
     if (!inviteUrl) return;
 
-    const assuntoText = "Convite Oficial de Acesso — Valorum";
+    const assuntoText = "Convite Oficial de Acesso — Ritmo Wealth Pro";
     const corpoText = `Olá!\n\n` +
-        `Você foi convidado para acessar a plataforma Valorum.\n\n` +
+        `Você foi convidado para acessar a plataforma Ritmo Wealth Pro.\n\n` +
         `Clique no link abaixo para criar sua conta de acesso:\n${inviteUrl}\n\n` +
-        `Atenciosamente,\nEquipe Valorum`;
+        `Atenciosamente,\nEquipe Ritmo Wealth Pro`;
 
     const assunto = encodeURIComponent(assuntoText);
     const corpo = encodeURIComponent(corpoText);

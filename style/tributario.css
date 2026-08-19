@@ -1,16 +1,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap');
 
 :root {
-  --primary: #0B53B8;
-  --primary-dark: #000080;
-  --secondary: #367CDD;
-  --accent: #e53935;
-  --bg-dashboard: #f0f4f9;
+  --primary: #09090b;
+  --primary-dark: #000000;
+  --secondary: #27272a;
+  --accent: #18181b;
+  --bg-dashboard: #f4f4f5;
   --card-bg: rgba(255, 255, 255, 0.95);
-  --text-main: #1a2b49;
-  --text-muted: #5f738c;
+  --text-main: #09090b;
+  --text-muted: #71717a;
   --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 30px rgba(11, 83, 184, 0.1);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.1);
 }
 
 body {
@@ -33,13 +33,13 @@ body {
 
 /* ===== SIDEBAR / CONFIG ===== */
 .tributario-sidebar .card-glass {
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(25px) saturate(200%);
   -webkit-backdrop-filter: blur(25px) saturate(200%);
   padding: 30px;
   border-radius: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 15px 50px rgba(11, 83, 184, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.06);
   position: sticky;
   top: 20px;
   transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
@@ -47,8 +47,8 @@ body {
 
 .tributario-sidebar .card-glass:hover {
   transform: translateY(-5px);
-  background: rgba(255, 255, 255, 0.75);
-  box-shadow: 0 30px 60px rgba(11, 83, 184, 0.12);
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.1);
 }
 
 .tributario-sidebar h3 {
@@ -259,13 +259,14 @@ body {
 }
 
 .card-hoje {
-  background: linear-gradient(135deg, #f8faff 0%, #eef3ff 100%);
-  border: 1px solid #d0dfff;
+  background: #ffffff;
+  border: 1px solid #e4e4e7;
 }
 
 .card-futuro {
-  background: linear-gradient(135deg, #0B53B8 0%, #000080 100%);
+  background: #09090b;
   color: white;
+  border: 1px solid #27272a;
 }
 
 .label-periodo {
@@ -389,7 +390,7 @@ body.pdf-exporting .capa {
   margin: 0 !important;
   width: 794px !important;
   height: 1123px !important;
-  background: #000b21 !important;
+  background: #09090b !important;
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
@@ -401,7 +402,7 @@ body.pdf-exporting .capa {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  background: #000b21;
+  background: #09090b;
   position: relative;
   color: white;
   text-align: center;
@@ -414,7 +415,7 @@ body.pdf-exporting .capa {
   bottom: 0;
   width: 100%;
   height: 4px;
-  background: linear-gradient(90deg, transparent, #D4AF37, transparent);
+  background: linear-gradient(90deg, transparent, #71717a, transparent);
   opacity: 0.6;
 }
 
@@ -438,7 +439,7 @@ body.pdf-exporting .capa {
 .capa-divider {
   width: 60px;
   height: 2px;
-  background: #D4AF37;
+  background: #ffffff;
   margin: 20px auto;
   /* centered horizontally */
   opacity: 0.8;
@@ -450,7 +451,7 @@ body.pdf-exporting .capa {
   left: 50%;
   width: 600px;
   height: 600px;
-  background: radial-gradient(circle, rgba(11, 83, 184, 0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 70%);
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
@@ -463,13 +464,37 @@ body.pdf-exporting .capa {
 }
 
 .logo-capa {
-  font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
-  font-size: 42px;
-  font-weight: 800;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
   margin-bottom: 40px;
-  letter-spacing: 4px;
+}
+
+.logo-capa-badge {
+  background: #ffffff;
+  padding: 8px 24px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-capa-img {
+  height: 46px;
+  width: auto;
+  object-fit: contain;
+}
+
+.logo-capa-text {
+  font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 3.5px;
   text-transform: uppercase;
-  color: #c5a059;
+  color: #ffffff;
   text-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
 }
 
@@ -573,9 +598,11 @@ body.pdf-exporting .capa {
 .estrutura-familiar-pdf {
   margin: 30px 0;
   padding: 20px;
-  background: #f9fbff;
+  background: #fafafa;
   border-radius: 8px;
-  border-left: 4px solid #0B53B8;
+  border-left: 4px solid #09090b;
+  border: 1px solid #e4e4e7;
+  border-left-width: 4px;
 }
 
 @media (max-width: 1024px) {
@@ -631,11 +658,21 @@ body.pdf-exporting .capa {
 }
 
 .logo-relatorio {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 800;
-  font-size: 24px;
-  color: #c5a059;
+  font-size: 18px;
+  color: var(--primary);
   margin-bottom: 8px;
-  font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
+  font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+  letter-spacing: 1px;
+}
+
+.logo-relatorio img {
+  height: 20px;
+  width: auto;
+  object-fit: contain;
 }
 
 .tag-relatorio {
@@ -1256,15 +1293,15 @@ body.pdf-exporting .add-note-toolbar {
 }
 
 .btn-add-note-chip:hover {
-  background: var(--primary, #0B53B8);
+  background: #09090b;
   color: #ffffff;
-  border-color: var(--primary, #0B53B8);
+  border-color: #09090b;
 }
 
 .btn-add-nota-pagina {
-  background: rgba(11, 83, 184, 0.06);
-  border: 1px dashed var(--primary, #0B53B8);
-  color: var(--primary, #0B53B8);
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px dashed #09090b;
+  color: #09090b;
   padding: 8px 16px;
   border-radius: 8px;
   font-size: 12px;
@@ -1277,7 +1314,7 @@ body.pdf-exporting .add-note-toolbar {
 }
 
 .btn-add-nota-pagina:hover {
-  background: var(--primary, #0B53B8);
+  background: #09090b;
   color: #ffffff;
   border-style: solid;
 }
@@ -1286,12 +1323,12 @@ body.pdf-exporting .add-note-toolbar {
   margin-top: 15px;
   margin-bottom: 15px;
   padding: 14px 18px 44px 18px;
-  background: #f8fafc;
-  border-left: 4px solid var(--primary, #0B53B8);
+  background: #fafafa;
+  border-left: 4px solid #09090b;
   border-radius: 8px;
-  border-top: 1px solid #e2e8f0;
-  border-right: 1px solid #e2e8f0;
-  border-bottom: 1px solid #e2e8f0;
+  border-top: 1px solid #e4e4e7;
+  border-right: 1px solid #e4e4e7;
+  border-bottom: 1px solid #e4e4e7;
   position: relative;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
@@ -1486,7 +1523,7 @@ body.pdf-exporting .add-note-toolbar {
   display: block;
   font-size: 26px;
   font-weight: 800;
-  color: #0B53B8;
+  color: #09090b;
   margin: 4px 0;
   letter-spacing: -0.5px;
 }
@@ -1545,9 +1582,9 @@ body.pdf-exporting .add-note-toolbar {
 }
 
 .cenario-protegido {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-top: 4px solid #16a34a;
+  background: #fafafa;
+  border: 1px solid #e4e4e7;
+  border-top: 4px solid #09090b;
 }
 
 .cenario-badge {
@@ -1562,7 +1599,7 @@ body.pdf-exporting .add-note-toolbar {
 }
 
 .badge-protegido {
-  color: #15803d;
+  color: #09090b;
 }
 
 .cenario-titulo {
@@ -1604,8 +1641,8 @@ body.pdf-exporting .add-note-toolbar {
 }
 
 .resultado-protegido {
-  background: rgba(22, 163, 74, 0.1);
-  color: #15803d;
+  background: rgba(0, 0, 0, 0.05);
+  color: #09090b;
 }
 
 .resultado-protegido strong {
@@ -1616,7 +1653,7 @@ body.pdf-exporting .add-note-toolbar {
 /* ===== DROPDOWN MENU ADICIONAR NOTA ===== */
 .btn-add-note-dropdown-toggle {
   background: #ffffff;
-  color: var(--primary-dark, #0b53b8);
+  color: #09090b;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   padding: 6px 14px;
@@ -1632,9 +1669,9 @@ body.pdf-exporting .add-note-toolbar {
 
 .btn-add-note-dropdown-toggle:hover {
   background: #f8fafc;
-  border-color: #0b53b8;
-  color: #0b53b8;
-  box-shadow: 0 3px 10px rgba(11, 83, 184, 0.15);
+  border-color: #09090b;
+  color: #09090b;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
 }
 
 .dropdown-menu-notas {
@@ -1678,12 +1715,12 @@ body.pdf-exporting .add-note-toolbar {
 
 .dropdown-item:hover {
   background: #f1f5f9;
-  color: #0b53b8;
+  color: #09090b;
 }
 
 .dropdown-item .page-badge {
-  background: rgba(11, 83, 184, 0.1);
-  color: #0b53b8;
+  background: rgba(0, 0, 0, 0.06);
+  color: #09090b;
   font-size: 10px;
   font-weight: 800;
   padding: 2px 6px;
