@@ -99,8 +99,8 @@ document.getElementById("qtd_empresas").addEventListener("input", function () {
 
   for (let i = 1; i <= qtd; i++) {
     html += `
-      <div class="empresa_item" style="background: #f8faff; padding: 20px; border-radius: 12px; border: 1px dashed rgba(11, 83, 184, 0.2); margin-top: 15px;">
-        <h5 class="empresa_nome_display" style="margin-bottom: 10px; color: #0B53B8; font-size: 14px;">Empresa ${i}</h5>
+      <div class="empresa_item" style="background: #fafafa; padding: 20px; border-radius: 12px; border: 1px dashed rgba(0, 0, 0, 0.15); margin-top: 15px;">
+        <h5 class="empresa_nome_display" style="margin-bottom: 10px; color: #09090b; font-size: 14px;">Empresa ${i}</h5>
         
         <div class="input-group">
           <label>CNPJ (Autopreenchimento Inteligente)</label>
@@ -212,14 +212,14 @@ function checkFilled(el) {
 // CONFIG GRÁFICOS
 // =========================
 const coresPizza = [
-  "#0B53B8", // Pace Blue
-  "#10B981", // Emerald Green
-  "#F59E0B", // Amber Gold
-  "#8B5CF6", // Purple / Violet
-  "#EC4899", // Magenta / Pink
-  "#06B6D4", // Cyan
-  "#F97316", // Orange
-  "#6366F1"  // Indigo
+  "#2563EB", // Azul Royal Vibrante
+  "#10B981", // Verde Esmeralda
+  "#F59E0B", // Âmbar Dourado
+  "#8B5CF6", // Roxo Violeta
+  "#EC4899", // Rosa Framboesa
+  "#06B6D4", // Ciano Turquesa
+  "#F97316", // Laranja Coral
+  "#6366F1"  // Índigo
 ];
 
 function baseOptions(isPercent = true, showDatalabels = true) {
@@ -377,8 +377,8 @@ async function alternarMoedaOffshore() {
   if (offshoreEmUSD) {
     // Ativa modo USD
     toggleBRL.style.background = "";
-    toggleBRL.style.color = "#0B53B8";
-    toggleUSD.style.background = "#0B53B8";
+    toggleBRL.style.color = "#09090b";
+    toggleUSD.style.background = "#09090b";
     toggleUSD.style.color = "#fff";
     prefix.textContent = "$";
     badge.style.display = "block";
@@ -397,10 +397,10 @@ async function alternarMoedaOffshore() {
     }
   } else {
     // Volta para modo BRL
-    toggleBRL.style.background = "#0B53B8";
+    toggleBRL.style.background = "#09090b";
     toggleBRL.style.color = "#fff";
     toggleUSD.style.background = "";
-    toggleUSD.style.color = "#0B53B8";
+    toggleUSD.style.color = "#09090b";
     prefix.textContent = "R$";
     badge.style.display = "none";
     input.value = "";

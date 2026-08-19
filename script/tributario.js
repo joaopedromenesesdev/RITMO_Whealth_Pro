@@ -188,9 +188,9 @@ function renderizarGraficoEvolucao(scope = document) {
   let bgGradient = "rgba(11, 83, 184, 0.08)";
   if (canvasCtx && canvasCtx.createLinearGradient) {
     bgGradient = canvasCtx.createLinearGradient(0, 0, 0, 300);
-    bgGradient.addColorStop(0, "rgba(11, 83, 184, 0.25)");
-    bgGradient.addColorStop(0.7, "rgba(11, 83, 184, 0.03)");
-    bgGradient.addColorStop(1, "rgba(11, 83, 184, 0.0)");
+    bgGradient.addColorStop(0, "rgba(37, 99, 235, 0.25)");
+    bgGradient.addColorStop(0.7, "rgba(37, 99, 235, 0.03)");
+    bgGradient.addColorStop(1, "rgba(37, 99, 235, 0.0)");
   }
 
   // Recuperar premissas globais salvas como fallback 2
@@ -255,17 +255,17 @@ function renderizarGraficoEvolucao(scope = document) {
   const datasets = [{
     label: labelPat,
     data: resultados,
-    borderColor: "#0B53B8",
+    borderColor: "#2563EB",
     backgroundColor: bgGradient,
     borderWidth: 3,
     tension: 0.35,
     clip: false,
     pointBackgroundColor: "#ffffff",
-    pointBorderColor: "#0B53B8",
+    pointBorderColor: "#2563EB",
     pointBorderWidth: 2,
     pointRadius: 4,
     pointHoverRadius: 6,
-    pointHoverBackgroundColor: "#0B53B8",
+    pointHoverBackgroundColor: "#2563EB",
     pointHoverBorderColor: "#ffffff",
     pointHoverBorderWidth: 2,
     fill: true
@@ -279,7 +279,7 @@ function renderizarGraficoEvolucao(scope = document) {
     datasets.push({
       label: labelCDI,
       data: dadosEvolucao.cdi,
-      borderColor: "#1D6F42",
+      borderColor: "#10B981",
       borderDash: [5, 5],
       borderWidth: 2,
       tension: 0.35,
@@ -298,7 +298,7 @@ function renderizarGraficoEvolucao(scope = document) {
     datasets.push({
       label: labelIPCA,
       data: dadosEvolucao.ipca,
-      borderColor: "#e53935",
+      borderColor: "#EF4444",
       borderDash: [5, 5],
       borderWidth: 2,
       tension: 0.35,
@@ -517,7 +517,7 @@ function baseOptions(isPercent = true, animationDuration = 1000, isReport = fals
 // GRAFICOS
 // =========================
 function criarGraficos(dados, scope = document) {
-  const coresPaleta = ["#0B53B8", "#1D6F42", "#FFB800", "#E53935", "#6F42C1", "#00B8D9", "#7A7A7A"];
+  const coresPaleta = ["#2563EB", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4", "#F97316", "#6366F1", "#14B8A6", "#EF4444"];
 
   let rf = parseValor(dados.rf);
   let rv = parseValor(dados.rv);
@@ -1303,7 +1303,7 @@ function calcularPartilha(total, regime) {
 
   let fatias = [];
   let labels = [];
-  const coresBase = ["#0B53B8", "#1D6F42", "#FFB800", "#E53935", "#6F42C1"];
+  const coresBase = ["#2563EB", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4", "#F97316", "#6366F1"];
   let cores = [];
 
   let meacao = 0;
@@ -1581,7 +1581,7 @@ function calcularSegundaMorte(totalOriginal, herancaPrimeira, meacaoPrimeira, va
 
   let fatiasSegunda = [];
   let labelsSegunda = [];
-  const coresBase = ["#0B53B8", "#1D6F42", "#FFB800", "#E53935", "#6F42C1"];
+  const coresBase = ["#2563EB", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4", "#F97316", "#6366F1"];
   let coresSegunda = [];
 
   // Descrição Estágio 1
@@ -2087,7 +2087,7 @@ function recalculaGraficosEspeciaisPDF(total, regime, scope = document) {
         labels: dadosPartilha.labels,
         datasets: [{
           data: dadosPartilha.fatias,
-          backgroundColor: dadosPartilha.cores || ["#0B53B8", "#1D6F42", "#FFB800", "#E53935", "#6F42C1"]
+          backgroundColor: dadosPartilha.cores || ["#2563EB", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4"]
         }]
       },
       options: {
@@ -2116,7 +2116,7 @@ function recalculaGraficosEspeciaisPDF(total, regime, scope = document) {
         labels: dadosSM.labels,
         datasets: [{
           data: dadosSM.fatias,
-          backgroundColor: dadosSM.cores || ["#1D6F42", "#0B53B8", "#FFB800", "#E53935", "#6F42C1"]
+          backgroundColor: dadosSM.cores || ["#10B981", "#2563EB", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4"]
         }]
       },
       options: {
@@ -2240,7 +2240,7 @@ async function gerarPDF() {
     const a = document.createElement('a');
     a.style.display = 'none';
     a.href = url;
-    a.download = 'Relatorio_Valorum.pdf';
+    a.download = 'Relatorio_Ritmo_Wealth_Pro.pdf';
     document.body.appendChild(a);
     a.click();
 
