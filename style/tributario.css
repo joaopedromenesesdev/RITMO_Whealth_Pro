@@ -635,38 +635,37 @@ body.pdf-exporting .capa {
 }
 
 .header-relatorio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   border-bottom: 2px solid #f0f0f0;
   padding-bottom: 15px;
   margin-bottom: 30px;
+  gap: 4px;
 }
 
 .logo-relatorio {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  display: block;
   font-weight: 800;
-  font-size: 18px;
+  font-size: 19px;
   color: var(--primary);
-  margin-bottom: 8px;
   font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
-  letter-spacing: 1px;
-}
-
-.logo-relatorio img {
-  height: 20px;
-  width: auto;
-  object-fit: contain;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin: 0;
 }
 
 .tag-relatorio {
+  display: block;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 3px;
   background: transparent;
   color: var(--text-muted);
   font-weight: 600;
-  display: inline-block;
+  margin: 0;
 }
 
 .modal-header {
