@@ -7,7 +7,9 @@
   <title>Ritmo Wealth Pro — Dashboard de Relatórios</title>
 
   <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&family=Outfit:wght@300;400;600;700&display=swap"
+    rel="stylesheet">
 
   <!-- Estilos Globais e Específicos -->
   <link rel="stylesheet" href="style/style.css">
@@ -25,10 +27,11 @@
   <script src="script/auth.js"></script>
   <script src="script/db.js"></script>
 </head>
-<body>  <!-- NAVBAR -->
+
+<body> <!-- NAVBAR -->
   <div class="navbar">
     <div class="logo">
-      Ritmo <span>Wealth Pro</span>
+      <span class="logo-brand">Ritmo</span> <span>Wealth Pro</span>
     </div>
 
     <div class="menu">
@@ -42,7 +45,7 @@
 
   <!-- MAIN CONTAINER -->
   <div class="dashboard-container">
-    
+
     <!-- HEADER -->
     <div class="dashboard-header reveal delay-1">
       <div class="dashboard-title-area">
@@ -67,7 +70,7 @@
           <h2 id="metric_qtd_relatorios">0</h2>
         </div>
       </div>
-      
+
       <!-- Patrimônio Acumulado -->
       <div class="metric-card">
         <div class="metric-icon green">
@@ -96,7 +99,8 @@
       <!-- Campo Busca -->
       <div class="filter-group search-group">
         <label>Buscar Planejamento</label>
-        <input type="text" id="filtro_busca" class="filter-control" placeholder="Ex: Nome do Cliente ou Assessor..." autocomplete="off">
+        <input type="text" id="filtro_busca" class="filter-control" placeholder="Ex: Nome do Cliente ou Assessor..."
+          autocomplete="off">
       </div>
 
       <!-- Faixa Patrimônio -->
@@ -133,4 +137,5 @@
   <script src="script/dashboard.js"></script>
 
 </body>
+
 </html>

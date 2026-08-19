@@ -204,43 +204,74 @@
    position: sticky;
    top: 0;
    z-index: 1000;
+   gap: 15px;
+   flex-wrap: wrap;
  }
 
-.logo {
-  font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  line-height: 1;
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  user-select: none;
-}
+ .logo {
+   font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+   font-size: 20px;
+   font-weight: 800;
+   letter-spacing: 2px;
+   text-transform: uppercase;
+   line-height: 1;
+   color: #ffffff;
+   display: flex;
+   align-items: center;
+   gap: 8px;
+   user-select: none;
+   cursor: pointer;
+ }
 
-.logo span {
-  font-weight: 300;
-  opacity: 0.85;
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 15px;
-  letter-spacing: 2.5px;
-}
+ .logo-brand {
+   position: relative;
+   color: #ffffff;
+   background: linear-gradient(90deg, #ffffff 0%, #ffffff 100%);
+   background-clip: text;
+   -webkit-background-clip: text;
+   -webkit-text-fill-color: transparent;
+   transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+ }
+
+ .logo:hover .logo-brand {
+   background: linear-gradient(135deg, #c9a84c, #f0d78c, #e8c860, #a8862a);
+   background-clip: text;
+   -webkit-background-clip: text;
+   -webkit-text-fill-color: transparent;
+   filter: drop-shadow(0 0 8px rgba(201, 168, 76, 0.4));
+   transform: scale(1.05);
+   letter-spacing: 3px;
+ }
+
+ .logo span {
+   font-weight: 300;
+   opacity: 0.85;
+   color: rgba(255, 255, 255, 0.85);
+   font-size: 15px;
+   letter-spacing: 2.5px;
+   transition: opacity 0.4s ease;
+ }
+
+ .logo:hover span {
+   opacity: 1;
+ }
 
  .menu {
    display: flex;
-   gap: 10px;
+   gap: 8px;
+   align-items: center;
+   flex-wrap: wrap;
  }
 
  .menu a {
    text-decoration: none;
    color: rgba(255, 255, 255, 0.85);
-   padding: 10px 20px;
+   padding: 9px 18px;
    border-radius: 100px;
-   font-size: 14px;
+   font-size: 13.5px;
    font-weight: 500;
    transition: all 0.3s ease;
+   white-space: nowrap;
  }
 
  .menu a:hover {
@@ -253,6 +284,68 @@
    color: var(--primary);
    font-weight: 700;
    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+ }
+
+ /* --- BOTÃO DE TRANSIÇÃO GLOBAL (PRÓXIMO PASSO) --- */
+ .btn-next {
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+   gap: 12px;
+   background: #09090b;
+   color: #ffffff !important;
+   border: 1px solid #27272a;
+   padding: 16px 40px;
+   border-radius: 100px;
+   text-decoration: none;
+   font-family: 'Outfit', 'Inter', sans-serif;
+   font-size: 15px;
+   font-weight: 700;
+   cursor: pointer;
+   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+ }
+
+ .btn-next:hover {
+   transform: translateY(-4px) scale(1.02);
+   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+   background: #18181b;
+   border-color: #3f3f46;
+ }
+
+ .btn-next i,
+ .btn-next svg {
+   width: 18px;
+   height: 18px;
+   transition: transform 0.3s ease;
+ }
+
+ .btn-next:hover i,
+ .btn-next:hover svg {
+   transform: translateX(4px);
+ }
+
+ /* --- RESPONSIVIDADE NAVBAR --- */
+ @media (max-width: 860px) {
+   .navbar {
+     padding: 12px 18px;
+     justify-content: center;
+     gap: 12px;
+   }
+   .logo {
+     width: 100%;
+     justify-content: center;
+   }
+   .menu {
+     justify-content: center;
+     overflow-x: auto;
+     max-width: 100%;
+     padding-bottom: 4px;
+   }
+   .menu a {
+     padding: 7px 13px;
+     font-size: 12.5px;
+   }
  }
 
  .btn-limpar {
@@ -373,11 +466,11 @@
  /* =========================
    CONTAINER GERAL
 ========================= */
-  .container_global {
-    max-width: min(1820px, 96vw);
-    margin: 35px auto;
-    padding: 0 30px;
-  }
+ .container_global {
+   max-width: min(1820px, 96vw);
+   margin: 35px auto;
+   padding: 0 30px;
+ }
 
  /* =========================
    TÍTULOS GLOBAIS
@@ -1723,23 +1816,24 @@
    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
  }
 
-  /* ══════════════════════════════════════
+ /* ══════════════════════════════════════
       RESPONSIVIDADE GLOBAL (MOBILE & TABLET)
    ══════════════════════════════════════ */
-  @media (max-width: 768px) {
-    .modal-colar-content,
-    .custom-confirm-card {
-      width: 92% !important;
-      max-width: 440px !important;
-      padding: 20px 16px !important;
-    }
+ @media (max-width: 768px) {
 
-    .autosave-toast {
-      bottom: 16px;
-      right: 16px;
-      left: 16px;
-      justify-content: center;
-      font-size: 12px;
-      padding: 8px 14px;
-    }
-  }
+   .modal-colar-content,
+   .custom-confirm-card {
+     width: 92% !important;
+     max-width: 440px !important;
+     padding: 20px 16px !important;
+   }
+
+   .autosave-toast {
+     bottom: 16px;
+     right: 16px;
+     left: 16px;
+     justify-content: center;
+     font-size: 12px;
+     padding: 8px 14px;
+   }
+ }

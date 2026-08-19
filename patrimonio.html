@@ -3,6 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ritmo Wealth Pro — Patrimônio</title>
 
   <link rel="stylesheet" href="style/patrimonio.css">
@@ -33,7 +34,7 @@
   <!-- NAVBAR -->
   <div class="navbar">
     <div class="logo">
-      Ritmo <span>Wealth Pro</span>
+      <span class="logo-brand">Ritmo</span> <span>Wealth Pro</span>
     </div>
 
     <div class="menu">
@@ -182,10 +183,9 @@
 
     <!-- 🔥 BOTÃO -->
     <div style="text-align:center; margin: 40px 0;">
-      <a href="familiar.html">
-        <button>
-          Próximo Passo: Estrutura Familiar
-        </button>
+      <a href="familiar.html" class="btn-next">
+        <span>Próximo Passo: Estrutura Familiar</span>
+        <i data-lucide="arrow-right"></i>
       </a>
     </div>
 
@@ -217,6 +217,9 @@
   </div>
 
   <script src="script/patrimonio.js"></script>
+  <script>
+    if (window.lucide) { lucide.createIcons(); }
+  </script>
 </body>
 
 </html>
