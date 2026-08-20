@@ -222,6 +222,105 @@
       });
     },
 
+    // ── GESTÃO DE CARTEIRA DE INVESTIMENTOS ──────────────────────────────────
+    getCarteiraAtivos() {
+      try {
+        const raw = sessionStorage.getItem("carteira_ativos");
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        console.error("[AppState] Erro ao ler carteira_ativos:", e);
+        return [];
+      }
+    },
+
+    setCarteiraAtivos(ativos) {
+      if (!Array.isArray(ativos)) return;
+      sessionStorage.setItem("carteira_ativos", JSON.stringify(ativos));
+    },
+
+    getCarteiraMovimentacoes() {
+      try {
+        const raw = sessionStorage.getItem("carteira_movimentacoes");
+        if (!raw) return { saldoInicial: 0, aportes: 0, resgates: 0, rendimentos: 0 };
+        return JSON.parse(raw);
+      } catch (e) {
+        return { saldoInicial: 0, aportes: 0, resgates: 0, rendimentos: 0 };
+      }
+    },
+
+    setCarteiraMovimentacoes(mov) {
+      sessionStorage.setItem("carteira_movimentacoes", JSON.stringify(mov));
+    },
+
+    // ── GESTÃO DE RENDA PASSIVA ───────────────────────────────────────────────
+    getRendaPassivaInputs() {
+      try {
+        const raw = sessionStorage.getItem("renda_passiva_inputs");
+        if (!raw) return this.getDefaultRendaPassivaInputs();
+        return { ...this.getDefaultRendaPassivaInputs(), ...JSON.parse(raw) };
+      } catch (e) {
+        return this.getDefaultRendaPassivaInputs();
+      }
+    },
+
+    setRendaPassivaInputs(inputs) {
+      sessionStorage.setItem("renda_passiva_inputs", JSON.stringify(inputs));
+    },
+
+    getDefaultRendaPassivaInputs() {
+      return {
+        idadeAtual: 50,
+        idadeAposentadoria: 60,
+        idadeFinal: 95,
+        rendaDesejada: 50000,
+        aporteMensal: 0,
+        rentabilidadeAnual: 10,
+        inflacaoAnual: 5
+      };
+    },
+
+    getRendaPassivaResultados() {
+      try {
+        const raw = sessionStorage.getItem("renda_passiva_resultados");
+        if (!raw) return null;
+        return JSON.parse(raw);
+      } catch (e) {
+        return null;
+      }
+    },
+
+    setRendaPassivaResultados(dados) {
+      sessionStorage.setItem("renda_passiva_resultados", JSON.stringify(dados));
+    },
+
+    // ── PREMISSAS MACROECONÔMICAS GLOBAIS ──────────────────────────────────────
+    getPremissasMacro() {
+      try {
+        const raw = sessionStorage.getItem("premissas_macro");
+        if (!raw) return this.getDefaultPremissasMacro();
+        return { ...this.getDefaultPremissasMacro(), ...JSON.parse(raw) };
+      } catch (e) {
+        return this.getDefaultPremissasMacro();
+      }
+    },
+
+    setPremissasMacro(premissas) {
+      sessionStorage.setItem("premissas_macro", JSON.stringify(premissas));
+    },
+
+    getDefaultPremissasMacro() {
+      return {
+        selic: 10,
+        cdi: 10,
+        ipca: 5,
+        rentabilidadeCarteira: 10,
+        rentabilidadeInternacional: 8,
+        valorizacaoCambial: 3
+      };
+    },
+
     // ── SNAPSHOT UNIFICADO (SIMULATION STORE) ────────────────────────────────
     exportSnapshot() {
       const patrimonioDados = this.getPatrimonioDados();
@@ -231,6 +330,11 @@
       const evolucaoDados = this.getEvolucaoDados();
       const tributarioInputs = this.getTributarioInputs();
       const prejuizoFinal = this.getPrejuizoFinal();
+      const carteiraAtivos = this.getCarteiraAtivos();
+      const carteiraMovimentacoes = this.getCarteiraMovimentacoes();
+      const rendaPassivaInputs = this.getRendaPassivaInputs();
+      const rendaPassivaResultados = this.getRendaPassivaResultados();
+      const premissasMacro = this.getPremissasMacro();
 
       return {
         meta: {
@@ -252,7 +356,16 @@
         tributario: {
           inputs: tributarioInputs,
           prejuizoFinal
-        }
+        },
+        carteira: {
+          ativos: carteiraAtivos,
+          movimentacoes: carteiraMovimentacoes
+        },
+        rendaPassiva: {
+          inputs: rendaPassivaInputs,
+          resultados: rendaPassivaResultados
+        },
+        premissasMacro
       };
     },
 
@@ -283,6 +396,20 @@
         if (snapshot.tributario) {
           if (snapshot.tributario.inputs) this.setTributarioInputs(snapshot.tributario.inputs);
           if (snapshot.tributario.prejuizoFinal) this.setPrejuizoFinal(snapshot.tributario.prejuizoFinal);
+        }
+
+        if (snapshot.carteira) {
+          if (snapshot.carteira.ativos) this.setCarteiraAtivos(snapshot.carteira.ativos);
+          if (snapshot.carteira.movimentacoes) this.setCarteiraMovimentacoes(snapshot.carteira.movimentacoes);
+        }
+
+        if (snapshot.rendaPassiva) {
+          if (snapshot.rendaPassiva.inputs) this.setRendaPassivaInputs(snapshot.rendaPassiva.inputs);
+          if (snapshot.rendaPassiva.resultados) this.setRendaPassivaResultados(snapshot.rendaPassiva.resultados);
+        }
+
+        if (snapshot.premissasMacro) {
+          this.setPremissasMacro(snapshot.premissasMacro);
         }
 
         this.notify('import', snapshot);
