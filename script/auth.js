@@ -43,6 +43,23 @@ function authSalvarConvites(convites) {
   localStorage.setItem("pace_invite_tokens", JSON.stringify(convites));
 }
 
+// Helper universal para obter a URL absoluta de login.html em qualquer ambiente (GitHub Pages, localhost, subpastas)
+function authObterBaseUrlLogin() {
+  try {
+    const url = new URL(window.location.href);
+    let pathname = url.pathname;
+    const lastSlashIndex = pathname.lastIndexOf("/");
+    if (lastSlashIndex !== -1) {
+      pathname = pathname.substring(0, lastSlashIndex + 1) + "login.html";
+    } else {
+      pathname = "/login.html";
+    }
+    return `${url.origin}${pathname}`;
+  } catch (e) {
+    return "login.html";
+  }
+}
+
 // Gerar novo token de convite (uso exclusivo Master)
 function authGerarConvite(emailRestrito = null) {
   const token = "pace_inv_" + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
@@ -72,11 +89,11 @@ function authGerarConvite(emailRestrito = null) {
     }).catch(err => console.warn(err));
   }
 
-  // Monta a URL de cadastro
-  const baseUrl = window.location.href.split("?")[0].replace("index.html", "login.html");
+  // Monta a URL de cadastro garantindo apontamento direto para login.html
+  const loginUrl = authObterBaseUrlLogin();
   return {
     token,
-    url: `${baseUrl}?invite=${token}`,
+    url: `${loginUrl}?invite=${token}`,
     invite: novoConvite
   };
 }
@@ -313,7 +330,10 @@ window.authRedefinirSenha = authRedefinirSenha;
 async function authProtegerRota() {
   const user = await authObterUsuario();
   if (!user) {
-    window.location.href = "login.html";
+    const search = window.location.search || "";
+    const loginUrl = authObterBaseUrlLogin();
+    window.location.href = `${loginUrl}${search}`;
+    return null;
   }
   return user;
 }
@@ -464,8 +484,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       isSignUp = true;
 
       // Configura formulário em Modo Cadastro por Convite
-      if (title) title.textContent = "Criar Conta de Funcionário";
-      if (subtitle) subtitle.textContent = "Convite oficial ativado. Cadastre-se para acessar a plataforma.";
+      if (title) title.textContent = "Criar Conta de Acesso";
+      if (subtitle) subtitle.textContent = "Convite oficial ativado. Cadastre suas credenciais para acessar a plataforma.";
       if (groupFullname) groupFullname.classList.remove("hidden");
       if (fullnameInput) fullnameInput.setAttribute("required", "required");
       if (btnText) btnText.textContent = "Criar Minha Conta";
@@ -478,7 +498,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (toggleArea) toggleArea.classList.add("hidden");
 
       alertDiv.className = "auth-alert success";
-      alertDiv.textContent = "Convite verificado com sucesso! Preencha os campos abaixo para concluir seu cadastro.";
+      alertDiv.textContent = "Convite verificado com sucesso! Preencha seu nome e senha para concluir seu cadastro.";
       alertDiv.classList.remove("hidden");
     } else {
       // Convite inválido ou expirado
@@ -560,8 +580,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           throw new Error(`Este convite foi gerado exclusivamente para o e-mail: ${activeInvite.email_restrito}`);
         }
 
-        // Determina se a conta criada é master
-        const role = MASTER_EMAILS.map(m => m.toLowerCase()).includes(email.toLowerCase()) ? "master" : "funcionario";
+        // Determina se a conta criada é master ou assessor (conforme check constraint de profiles)
+        const role = MASTER_EMAILS.map(m => m.toLowerCase()).includes(email.toLowerCase()) ? "master" : "assessor";
 
         await authCadastrar(email, password, { full_name: fullname, role: role });
 
@@ -594,8 +614,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // Redireciona se o usuário já estiver logado (e não estiver no modo de redefinição de senha)
-  if (!hashStr.includes("type=recovery") && !hashStr.includes("access_token")) {
+  // Redireciona se o usuário já estiver logado (e não estiver no modo de redefinição de senha e nem com token de convite)
+  if (!hashStr.includes("type=recovery") && !hashStr.includes("access_token") && !inviteToken) {
     authObterUsuario().then(user => {
       if (user) {
         window.location.href = "index.html";

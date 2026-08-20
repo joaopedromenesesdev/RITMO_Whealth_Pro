@@ -456,7 +456,10 @@ async function dbAutoSalvarExecutar() {
       "patrimonio_dados", "total_patrimonio", "nome_assessor", "data_reuniao",
       "familia", "evolucao_dados", "evolucao_inputs", "mercado_premissas",
       "tributario_inputs", "prejuizo_final", "partilha_dados", "segunda_morte_dados",
-      "current_report_id"
+      "current_report_id",
+      "carteira_ativos", "carteira_movimentacoes",
+      "renda_passiva_inputs", "renda_passiva_resultados",
+      "premissas_macro"
     ];
     keysToSave.forEach(key => {
       const val = sessionStorage.getItem(key);

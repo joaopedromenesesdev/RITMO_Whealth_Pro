@@ -30,7 +30,8 @@ document.addEventListener("DOMContentLoaded", () => {
         // Tenta obter sessão uma última vez
         const { data: { session } } = await client.auth.getSession().catch(() => ({ data: { session: null } }));
         if (!session) {
-          window.location.href = "login.html";
+          const search = window.location.search || "";
+          window.location.href = `login.html${search}`;
         } else {
           carregarDashboard();
         }
@@ -46,7 +47,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (session) {
           carregarDashboard();
         } else {
-          window.location.href = "login.html";
+          const search = window.location.search || "";
+          window.location.href = `login.html${search}`;
         }
       }
     });

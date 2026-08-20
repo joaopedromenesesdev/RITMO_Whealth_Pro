@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ritmo Wealth Pro — Carteira de Investimentos</title>
+  <meta name="description" content="Consolidação de investimentos multi-instituição, composição por indexador, cronograma de vencimentos, simulação de cenários e análise de rentabilidade da carteira.">
+
+  <link rel="stylesheet" href="style/style.css">
+  <link rel="stylesheet" href="style/carteira.css">
+  <link rel="stylesheet" href="style/renda_passiva.css">
+  <link rel="icon" type="image/png" href="img/RITMO.png">
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Chart & Icons -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="script/global_ui.js"></script>
+  <script src="script/state.js"></script>
+
+  <!-- Engines -->
+  <script src="script/carteira_engine.js"></script>
+
+  <!-- Supabase & Autenticação -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script/supabase_config.js"></script>
+  <script src="script/auth.js"></script>
+  <script src="script/db.js"></script>
+</head>
+
+<body>
+  <!-- NAVBAR -->
+  <div class="navbar">
+    <div class="logo">
+      <span class="logo-brand">Ritmo</span> <span>Wealth Pro</span>
+    </div>
+    <div class="menu">
+      <a href="index.html">Dashboard</a>
+      <a href="patrimonio.html">Patrimônio</a>
+      <a href="familiar.html">Estrutura Familiar</a>
+      <a href="evolucao.html">Evolução Patrimonial</a>
+      <a href="renda_passiva.html">Renda Passiva</a>
+      <a href="carteira.html" class="active">Carteira</a>
+      <a href="tributario.html">Prejuízo Tributário</a>
+    </div>
+  </div>
+
+  <div class="container_global">
+
+    <!-- HEADER -->
+    <div class="carteira-header reveal">
+      <h1>Carteira de Investimentos</h1>
+      <button class="btn-add-ativo" onclick="abrirModalAtivo()">
+        <i data-lucide="plus-circle"></i> Adicionar Ativo
+      </button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- PREMISSAS DE SIMULAÇÃO -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div class="simulacao-premissas reveal delay-1">
+      <div class="premissa-titulo">
+        <i data-lucide="settings-2"></i> Premissas de Mercado
+      </div>
+      <div class="premissa-group">
+        <label>Selic (%)</label>
+        <input type="text" id="sim_selic" value="10,00">
+      </div>
+      <div class="premissa-group">
+        <label>IPCA (%)</label>
+        <input type="text" id="sim_ipca" value="4,50">
+      </div>
+      <button class="btn-recalcular" onclick="recalcularCarteira()">
+        <i data-lucide="refresh-cw" style="width:12px;height:12px;vertical-align:middle;margin-right:4px;"></i> Recalcular
+      </button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- MOVIMENTAÇÕES DO PERÍODO -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div class="movimentacoes-card reveal delay-1" id="movimentacoes_container" style="display:none;">
+      <div style="font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700; margin-bottom: 4px;">Movimentações do Período</div>
+      <div class="mov-grid" id="mov_grid">
+        <!-- Preenchido via JS -->
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- CONSOLIDAÇÃO POR INSTITUIÇÃO -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div class="instituicoes-table reveal delay-2" id="instituicoes_container" style="display:none;">
+      <div class="table-titulo">Investimentos por Instituição</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Instituição</th>
+            <th>Saldo Atual</th>
+            <th>Rent. Mês</th>
+            <th>Rent. Ano</th>
+            <th>12 Meses</th>
+            <th>24 Meses</th>
+          </tr>
+        </thead>
+        <tbody id="instituicoes_tbody">
+          <!-- Preenchido via JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- COMPOSIÇÃO + VENCIMENTOS (LADO A LADO) -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div class="carteira-grid-duo reveal delay-2" id="grid_duo_container" style="display:none;">
+
+      <!-- Composição por Classe -->
+      <div class="carteira-card">
+        <div class="card-titulo">Composição da Carteira</div>
+        <div class="chart-container">
+          <canvas id="graficoComposicao"></canvas>
+        </div>
+        <div class="composicao-lista" id="composicao_lista">
+          <!-- Preenchido via JS -->
+        </div>
+      </div>
+
+      <!-- Cronograma de Vencimentos -->
+      <div class="carteira-card">
+        <div class="card-titulo">Cronograma de Vencimentos</div>
+        <div class="vencimentos-bars" id="vencimentos_bars">
+          <!-- Preenchido via JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- SIMULAÇÃO DOS PAPÉIS -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div class="instituicoes-table reveal delay-3" id="simulacao_container" style="display:none;">
+      <div class="table-titulo">Simulação dos Papéis da Carteira</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Ativo</th>
+            <th>Valor Atual</th>
+            <th>Vencimento</th>
+            <th>Indexador / Taxa</th>
+            <th>Valor Projetado</th>
+            <th>Valor Real (Hoje)</th>
+          </tr>
+        </thead>
+        <tbody id="simulacao_tbody">
+          <!-- Preenchido via JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- LISTA DE ATIVOS -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div class="ativos-lista reveal delay-3">
+      <div class="lista-titulo">Detalhamento dos Investimentos</div>
+      <div id="ativos_lista_container">
+        <!-- Preenchido via JS (ativos ou empty state) -->
+      </div>
+    </div>
+
+    <!-- NAVEGAÇÃO -->
+    <div style="text-align:center; margin: 60px 0;" class="reveal delay-4">
+      <a href="tributario.html" class="btn-next">
+        <span>Próximo: Prejuízo Tributário</span>
+        <i data-lucide="arrow-right"></i>
+      </a>
+    </div>
+  </div>
+
+  <!-- MODAL DE ATIVO (oculto por padrão) -->
+  <div id="modal_ativo_overlay" class="modal-ativo-overlay" style="display:none;">
+    <div class="modal-ativo-content">
+      <h3 id="modal_ativo_titulo">Adicionar Investimento</h3>
+
+      <div class="modal-grid">
+        <div class="modal-field">
+          <label>Instituição</label>
+          <select id="ma_instituicao">
+            <option value="">Selecione</option>
+            <option value="BTG Pactual">BTG Pactual</option>
+            <option value="XP Investimentos">XP Investimentos</option>
+            <option value="Itaú">Itaú</option>
+            <option value="Santander">Santander</option>
+            <option value="Safra">Safra</option>
+            <option value="Banco do Brasil">Banco do Brasil</option>
+            <option value="Bradesco">Bradesco</option>
+            <option value="Nu Invest">Nu Invest</option>
+            <option value="Cooperativa">Cooperativa</option>
+            <option value="Internacional">Internacional</option>
+            <option value="Outra">Outra</option>
+          </select>
+        </div>
+        <div class="modal-field">
+          <label>Nome do Ativo</label>
+          <input type="text" id="ma_nome" placeholder="Ex: CDB Banco X">
+        </div>
+      </div>
+
+      <div class="modal-grid">
+        <div class="modal-field">
+          <label>Tipo de Produto</label>
+          <select id="ma_tipo">
+            <option value="">Selecione</option>
+            <option value="CDB">CDB</option>
+            <option value="LCI">LCI</option>
+            <option value="LCA">LCA</option>
+            <option value="Debênture">Debênture</option>
+            <option value="CRI/CRA">CRI / CRA</option>
+            <option value="Tesouro Direto">Tesouro Direto</option>
+            <option value="Fundo RF">Fundo de Renda Fixa</option>
+            <option value="Fundo Multi">Fundo Multimercado</option>
+            <option value="FII">Fundo Imobiliário</option>
+            <option value="Ação">Ação</option>
+            <option value="ETF">ETF</option>
+            <option value="COE">COE</option>
+            <option value="Previdência">Previdência</option>
+            <option value="Offshore">Offshore</option>
+            <option value="Outro">Outro</option>
+          </select>
+        </div>
+        <div class="modal-field">
+          <label>Classe do Ativo</label>
+          <select id="ma_classe">
+            <option value="cdi">Pós-fixado / CDI</option>
+            <option value="ipca">Inflação / IPCA</option>
+            <option value="prefixado">Prefixado</option>
+            <option value="multimercado">Multimercado</option>
+            <option value="renda_variavel">Renda Variável</option>
+            <option value="fii">Fundos Imobiliários</option>
+            <option value="coe">Estruturadas / COE</option>
+            <option value="previdencia">Previdência</option>
+            <option value="internacional">Internacional</option>
+            <option value="caixa">Caixa</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-grid">
+        <div class="modal-field">
+          <label>Emissor</label>
+          <input type="text" id="ma_emissor" placeholder="Ex: Banco X">
+        </div>
+        <div class="modal-field">
+          <label>Indexador</label>
+          <input type="text" id="ma_indexador" placeholder="Ex: 110% CDI, IPCA + 6%">
+        </div>
+      </div>
+
+      <div class="modal-grid">
+        <div class="modal-field">
+          <label>Valor Aplicado (R$)</label>
+          <input type="text" id="ma_valor_aplicado" placeholder="0,00">
+        </div>
+        <div class="modal-field">
+          <label>Valor Atual (R$)</label>
+          <input type="text" id="ma_valor_atual" placeholder="0,00">
+        </div>
+      </div>
+
+      <div class="modal-grid">
+        <div class="modal-field">
+          <label>Taxa (% a.a.)</label>
+          <input type="text" id="ma_taxa" placeholder="Ex: 6,00">
+        </div>
+        <div class="modal-field">
+          <label>Liquidez</label>
+          <select id="ma_liquidez">
+            <option value="Diária">Diária (D+0/D+1)</option>
+            <option value="D+30">D+30</option>
+            <option value="D+90">D+90</option>
+            <option value="No vencimento" selected>No Vencimento</option>
+            <option value="Bolsa">Bolsa (D+2)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-grid">
+        <div class="modal-field">
+          <label>Data da Aplicação</label>
+          <input type="date" id="ma_data_aplicacao">
+        </div>
+        <div class="modal-field">
+          <label>Data de Vencimento</label>
+          <input type="date" id="ma_data_vencimento">
+        </div>
+      </div>
+
+      <div class="modal-grid">
+        <div class="modal-field">
+          <label>Tributação</label>
+          <select id="ma_tributacao">
+            <option value="">Selecione</option>
+            <option value="Tabela Regressiva">Tabela Regressiva (IR)</option>
+            <option value="Isento">Isento (LCI/LCA)</option>
+            <option value="Come-Cotas">Come-Cotas (Fundos)</option>
+            <option value="15% (RV)">15% Ganho de Capital</option>
+            <option value="Progressiva">Tabela Progressiva</option>
+          </select>
+        </div>
+        <div class="modal-field" style="display: flex; flex-direction: row; align-items: center; gap: 8px; padding-top: 20px;">
+          <input type="checkbox" id="ma_fgc" style="width: 18px; height: 18px;">
+          <label style="font-size: 13px; font-weight: 600; margin: 0;">Coberto pelo FGC</label>
+        </div>
+      </div>
+
+      <!-- Campos de rentabilidade (opcionais) -->
+      <div style="background: rgba(0,0,0,0.02); padding: 16px; border-radius: 12px; margin-top: 8px;">
+        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); font-weight: 700; margin-bottom: 12px;">
+          Rentabilidade Informada (Opcional)
+        </div>
+        <div class="modal-grid">
+          <div class="modal-field">
+            <label>Rent. Mês (%)</label>
+            <input type="text" id="ma_rent_mes" placeholder="0,00">
+          </div>
+          <div class="modal-field">
+            <label>Rent. Ano (%)</label>
+            <input type="text" id="ma_rent_ano" placeholder="0,00">
+          </div>
+        </div>
+        <div class="modal-grid">
+          <div class="modal-field">
+            <label>Rent. 12 Meses (%)</label>
+            <input type="text" id="ma_rent_12m" placeholder="0,00">
+          </div>
+          <div class="modal-field">
+            <label>Rent. 24 Meses (%)</label>
+            <input type="text" id="ma_rent_24m" placeholder="0,00">
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-botoes">
+        <button class="btn-salvar" id="btn_salvar_ativo" onclick="salvarAtivo()">Salvar Investimento</button>
+        <button class="btn-cancelar" onclick="fecharModalAtivo()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script/carteira.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+
+</html>

@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Intercepta cliques nas 4 abas do planejamento (Patrimônio, Estrutura Familiar, Evolução, Prejuízo Tributário)
     // Se o usuário NÃO clicou em "Novo Relatório" (sem simulação em andamento), reseta os inputs e abre a animação em nova_simulacao.html
-    const abasPlanejamento = ['patrimonio.html', 'familiar.html', 'evolucao.html', 'tributario.html'];
+    const abasPlanejamento = ['patrimonio.html', 'familiar.html', 'evolucao.html', 'renda_passiva.html', 'carteira.html', 'tributario.html'];
     
     document.querySelectorAll('a').forEach(link => {
         const href = link.getAttribute('href') || '';
