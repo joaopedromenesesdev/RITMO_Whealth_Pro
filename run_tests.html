@@ -13,17 +13,13 @@
   </style>
   <script src="script/tributario_engine.js"></script>
   <script src="script/tributario_engine.test.js"></script>
-  <script src="script/renda_passiva_engine.js"></script>
-  <script src="script/renda_passiva_engine.test.js"></script>
-  <script src="script/carteira_engine.js"></script>
-  <script src="script/carteira_engine.test.js"></script>
 </head>
 <body>
   <div class="card">
     <h1>🧪 Suíte de Testes Automatizados</h1>
-    <p>Validação da precisão matemática das regras tributárias (ITCMD), cálculo de renda passiva (acumulação/desacumulação) e consolidação da carteira de investimentos.</p>
+    <p>Validação da precisão matemática das regras tributárias (ITCMD e custos sucessórios).</p>
     
-    <button class="btn-run" onclick="executarTestesVisual()">Executar Todas as Suítes de Testes</button>
+    <button class="btn-run" onclick="executarTestesVisual()">Executar Testes Tributários</button>
 
     <div id="output" class="console-box">Clique no botão acima para iniciar os testes...</div>
   </div>
@@ -49,12 +45,6 @@
 
       if (window.rodarTestesTributario) {
         window.rodarTestesTributario();
-      }
-      if (window.rodarTestesRendaPassiva) {
-        window.rodarTestesRendaPassiva();
-      }
-      if (window.rodarTestesCarteira) {
-        window.rodarTestesCarteira();
       }
 
       console.log = originalLog;
