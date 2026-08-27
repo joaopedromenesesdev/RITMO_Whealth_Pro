@@ -205,7 +205,8 @@ create policy "Usuários podem criar relatórios para si mesmos"
 drop policy if exists "Usuários podem atualizar seus próprios relatórios" on public.relatorios;
 create policy "Usuários podem atualizar seus próprios relatórios"
   on public.relatorios for update
-  using (auth.uid() = user_id);
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 
 drop policy if exists "Usuários podem deletar seus próprios relatórios" on public.relatorios;
 create policy "Usuários podem deletar seus próprios relatórios"
@@ -239,3 +240,35 @@ drop policy if exists "Usuários podem registrar eventos de auditoria" on public
 create policy "Usuários podem registrar eventos de auditoria"
   on public.audit_logs for insert
   with check (auth.uid() = user_id or (user_id is null and auth.role() = 'authenticated'));
+
+
+-- 5. FUNÇÃO PARA EXPURGO E EXCLUSÃO DE DADOS (LGPD Art. 18, VI)
+create or replace function public.solicitar_exclusao_meus_dados()
+returns json as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_relatorios_removidos integer := 0;
+begin
+  if v_user_id is null then
+    return json_build_object('success', false, 'message', 'Usuário não autenticado.');
+  end if;
+
+  -- Remove todos os relatórios e simulações do titular
+  delete from public.relatorios where user_id = v_user_id;
+  get diagnostics v_relatorios_removidos = row_count;
+
+  -- Registra evento de auditoria de conformidade
+  insert into public.audit_logs (user_id, acao, detalhes)
+  values (
+    v_user_id,
+    'EXCLUSAO_CONTA_LGPD',
+    json_build_object('relatorios_expurgados', v_relatorios_removidos, 'data', now())
+  );
+
+  return json_build_object(
+    'success', true,
+    'message', 'Dados expurgados com sucesso em conformidade com a LGPD.',
+    'relatorios_removidos', v_relatorios_removidos
+  );
+end;
+$$ language plpgsql security definer;

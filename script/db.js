@@ -253,22 +253,43 @@ function _removerItemBackup(userId, id) {
   _salvarBackupLocal(userId, filtrados);
 }
 
+// ─── Resiliência de Rede: Retry Automático com Backoff Exponencial ──────────
+async function executarComRetry(operacaoAsync, maxTentativas = 3, atrasoBaseMs = 300) {
+  let tentativa = 0;
+  while (tentativa < maxTentativas) {
+    try {
+      return await operacaoAsync();
+    } catch (erro) {
+      tentativa++;
+      if (tentativa >= maxTentativas) {
+        throw erro;
+      }
+      const delay = atrasoBaseMs * Math.pow(2, tentativa - 1);
+      console.warn(`[Rede/Supabase] Tentativa ${tentativa} falhou. Repetindo em ${delay}ms...`, erro);
+      await new Promise(r => setTimeout(r, delay));
+    }
+  }
+}
+
 // ─── CRUD Principal ──────────────────────────────────────────────────────────
 
-// Carregar todos os relatórios do Supabase (com fallback para LocalStorage)
+// Carregar todos os relatórios do Supabase (com retry automático e fallback para LocalStorage)
 async function dbObterRelatorios() {
   if (window.supabaseClient) {
     try {
       const session = await aguardarSessao();
       if (session) {
-        const { data, error } = await window.supabaseClient
-          .from('relatorios')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .order('data_criacao', { ascending: false });
+        const fetchRemote = async () => {
+          const { data, error } = await window.supabaseClient
+            .from('relatorios')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .order('data_criacao', { ascending: false });
+          if (error) throw error;
+          return data;
+        };
 
-        if (error) throw error;
-
+        const data = await executarComRetry(fetchRemote, 3, 300);
         const mapeados = await Promise.all(data.map(item => _mapearLinhaSupabaseAsync(item, session.user.id)));
         // Atualiza o backup local com os dados mais recentes do servidor
         _salvarBackupLocal(session.user.id, mapeados);
@@ -511,3 +532,68 @@ async function dbAutoSalvarExecutar() {
     if (typeof window.notificarAutoSave === "function") window.notificarAutoSave("offline");
   }
 }
+
+// ─── Ferramentas LGPD: Portabilidade e Exclusão de Dados (Art. 18 LGPD) ───────
+
+// Exporta todos os dados do titular em JSON estruturado legível por máquina (Portabilidade)
+async function dbExportarDadosCompletos() {
+  const relatorios = await dbObterRelatorios();
+  const session = await aguardarSessao();
+  const userId = session?.user?.id || "anonimo";
+  const userEmail = session?.user?.email || "desconhecido";
+
+  return {
+    conformidade: "Lei Geral de Proteção de Dados (Lei 13.709/2018 - LGPD)",
+    data_geracao: new Date().toISOString(),
+    titular: {
+      user_id: userId,
+      email: userEmail,
+      role: session?.user?.role || "assessor"
+    },
+    total_relatorios_mapeados: relatorios.length,
+    relatorios: relatorios
+  };
+}
+
+// Exclui todos os dados do usuário autenticado no sistema (Direito ao Esquecimento)
+async function dbSolicitarExclusaoConta() {
+  if (!window.supabaseClient) return false;
+  try {
+    const session = await aguardarSessao();
+    const userId = session?.user?.id;
+    if (!userId) throw new Error("Usuário não autenticado.");
+
+    // Tenta via RPC seguro do Supabase
+    const { error: rpcErr } = await window.supabaseClient.rpc("solicitar_exclusao_meus_dados");
+    if (rpcErr) {
+      // Fallback: remove relatórios diretamente via RLS
+      await window.supabaseClient.from("relatorios").delete().eq("user_id", userId);
+    }
+
+    // Limpa backups locais e sessões do navegador
+    localStorage.removeItem(`relatorios_backup_${userId}`);
+    sessionStorage.clear();
+    return true;
+  } catch (e) {
+    console.error("[dbSolicitarExclusaoConta] Erro ao expurgar dados:", e);
+    throw e;
+  }
+}
+
+// Captura global de exceções assíncronas para não travar a aplicação
+if (typeof window !== "undefined") {
+  window.addEventListener("unhandledrejection", (event) => {
+    console.warn("[Segurança/Resiliência] Exceção assíncrona interceptada:", event.reason);
+  });
+
+  // Expõe helpers de teste de segurança para a suíte automatizada
+  window.__PACE_SECURITY_TEST__ = {
+    _gerarChaveCriptografia,
+    _criptografarPayload,
+    _descriptografarPayload,
+    sanitizarNumero,
+    sanitizarEValidarSimulacao,
+    executarComRetry
+  };
+}
+

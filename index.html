@@ -54,10 +54,18 @@
         <h1>Planejamentos Patrimoniais</h1>
         <p>Acompanhe, gerencie e filtre as simulações e relatórios gerados para seus clientes.</p>
       </div>
-      <a href="nova_simulacao.html" class="btn-new-report">
-        <i data-lucide="plus-circle"></i>
-        Novo Relatório
-      </a>
+      <div class="dashboard-header-actions" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <button type="button" class="btn-action secondary" onclick="exportarDadosUsuarioLGPD()" title="Exportar dados e relatórios em JSON (Portabilidade LGPD Art. 18)">
+          <i data-lucide="download"></i> Exportar Dados (LGPD)
+        </button>
+        <button type="button" class="btn-action secondary" onclick="abrirModalPrivacidadeLGPD()" title="Diretrizes de Privacidade e LGPD">
+          <i data-lucide="shield"></i> Privacidade
+        </button>
+        <a href="nova_simulacao.html" class="btn-new-report">
+          <i data-lucide="plus-circle"></i>
+          Novo Relatório
+        </a>
+      </div>
     </div>
 
     <!-- METRICS GRID -->

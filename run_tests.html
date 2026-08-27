@@ -11,6 +11,8 @@
     .btn-run { background: #2563eb; color: #fff; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; }
     .btn-run:hover { background: #1d4ed8; }
   </style>
+  <script src="script/state.js"></script>
+  <script src="script/db.js"></script>
   <script src="script/tributario_engine.js"></script>
   <script src="script/tributario_engine.test.js"></script>
 </head>
@@ -25,7 +27,7 @@
   </div>
 
   <script>
-    function executarTestesVisual() {
+    async function executarTestesVisual() {
       const out = document.getElementById("output");
       out.textContent = "";
 
@@ -43,12 +45,14 @@
         originalError.apply(console, args);
       };
 
-      if (window.rodarTestesTributario) {
-        window.rodarTestesTributario();
+      try {
+        if (window.rodarTestesTributario) {
+          await window.rodarTestesTributario();
+        }
+      } finally {
+        console.log = originalLog;
+        console.error = originalError;
       }
-
-      console.log = originalLog;
-      console.error = originalError;
     }
 
     // Executa automaticamente ao carregar
