@@ -36,9 +36,9 @@
     }
   }
 
-  function rodarSuiteDeTestes() {
+  async function rodarSuiteDeTestes() {
     console.log("=================================================");
-    console.log("🧪 INICIANDO SUÍTE DE TESTES — TributarioEngine");
+    console.log("🧪 INICIANDO SUÍTE DE TESTES EXPANDIDA — TributarioEngine & Segurança");
     console.log("=================================================");
 
     if (!engine) {
@@ -66,8 +66,6 @@
     console.log("\n📋 Teste 3: Partilha por Regime de Casamento");
     
     // Comunhão Universal (50% meação, 50% herança)
-    const resUniversal = engine.calcularPartilhaRegime({}, { estadoCivil: "casado", regime: "comunhao_universal" });
-    // Define total temporário no sessionStorage se em navegador
     if (typeof sessionStorage !== 'undefined') sessionStorage.setItem("total_patrimonio", "10000000");
     
     const partilhaUniversal = engine.calcularPartilhaRegime({}, { estadoCivil: "casado", regime: "comunhao_universal" });
@@ -141,6 +139,7 @@
     assert(tExatoLimite.valorValido === 96050 && !tExatoLimite.excedeuLimite, "Valor exato de R$ 96.050 deve ser aceito sem exceder o limite");
     const tAcimaLimite = engine.validarLimiteDoacaoIsenta(100000);
     assert(tAcimaLimite.valorValido === 96050 && tAcimaLimite.excedeuLimite, "Valor R$ 100.000 deve ser travado no teto de R$ 96.050 e sinalizar excedeuLimite = true");
+    
     // TESTE 8: Validação de Segurança e Integridade das Regras
     console.log("\n📋 Teste 8: Validações de Segurança e Não Regressão");
     assert(typeof engine.obterAliquotaITCMD === "function", "obterAliquotaITCMD disponível");
@@ -151,6 +150,94 @@
     assert(custosZero.totalPrejuizo === 0, "Patrimônio zero deve gerar prejuízo zero");
     const custosNegativos = engine.calcularCustosInventario(-50000, 4, 5, 1.5);
     assert(custosNegativos.totalPrejuizo === 0, "Patrimônio negativo deve ser sanitizado para zero");
+
+    // TESTE 9: Criptografia AES-GCM (Web Crypto) e Retrocompatibilidade (v1 e v2 com pepper)
+    console.log("\n📋 Teste 9: Criptografia AES-GCM e Integridade de Dados");
+    if (typeof window !== 'undefined' && window.__PACE_SECURITY_TEST__) {
+      const sec = window.__PACE_SECURITY_TEST__;
+      const payloadOriginal = { cliente: "João Silva", saldo: 500000, sensivel: true };
+      const encResult = await sec._criptografarPayload(payloadOriginal, "user-teste-uuid");
+      assert(encResult._encrypted === true, "Payload criptografado marcado com flag _encrypted = true");
+      assert(encResult.v === 2, "Criptografia gerada na versão v2 (com pepper institucional)");
+      assert(typeof encResult.ciphertext === "string" && encResult.ciphertext.length > 0, "Ciphertext gerado em base64 válido");
+      assert(typeof encResult.iv === "string" && encResult.iv.length > 0, "Vetor de inicialização (IV) gerado em base64 válido");
+      
+      const decResult = await sec._descriptografarPayload(encResult, "user-teste-uuid");
+      assert(decResult.cliente === "João Silva" && decResult.saldo === 500000, "Descriptografia v2 retornou dados 100% íntegros");
+      
+      const keyV1 = await sec._gerarChaveCriptografia("user-teste-uuid", 1);
+      assert(typeof keyV1 === 'object', "Chave legado v1 gerada com sucesso para retrocompatibilidade");
+    } else {
+      console.log("  ℹ️ [SKIP] __PACE_SECURITY_TEST__ não disponível no escopo.");
+    }
+
+    // TESTE 10: Sanitização Contra Injeções e Proteção de Entradas
+    console.log("\n📋 Teste 10: Sanitização Contra Injeções e Extremos");
+    if (typeof window !== 'undefined' && window.__PACE_SECURITY_TEST__) {
+      const sec = window.__PACE_SECURITY_TEST__;
+      const numLimpo = sec.sanitizarNumero("R$ 1.250.500,75");
+      assert(numLimpo === 1250500.75, "Sanitização de moeda brasileira converteu para float 1250500.75");
+      const numInvalido = sec.sanitizarNumero("<script>alert(1)</script>", 0);
+      assert(numInvalido === 0, "Sanitização contra injeção de script retorna zero seguro");
+      const numNaN = sec.sanitizarNumero(NaN, 0);
+      assert(numNaN === 0, "Sanitização contra NaN retorna zero seguro");
+      const numInf = sec.sanitizarNumero(Infinity, 0);
+      assert(numInf === 0, "Sanitização contra Infinity retorna zero seguro");
+
+      const nomeExcessivo = "A".repeat(300);
+      const validacaoSim = sec.sanitizarEValidarSimulacao({ nomeCliente: nomeExcessivo, totalPatrimonio: -500 });
+      assert(validacaoSim.relatorioSanitizado.nomeCliente.length === 150, "Nome de cliente truncado para limite máximo de 150 caracteres");
+      assert(validacaoSim.relatorioSanitizado.totalPatrimonio === 0, "Total de patrimônio negativo corrigido para zero");
+    } else {
+      console.log("  ℹ️ [SKIP] __PACE_SECURITY_TEST__ não disponível no escopo.");
+    }
+
+    // TESTE 11: Resiliência de Rede e Retry Automático com Backoff
+    console.log("\n📋 Teste 11: Resiliência de Rede e Retry Automático");
+    if (typeof window !== 'undefined' && window.__PACE_SECURITY_TEST__) {
+      const sec = window.__PACE_SECURITY_TEST__;
+      let tentativas = 0;
+      const operacaoInstavel = async () => {
+        tentativas++;
+        if (tentativas < 3) throw new Error("Falha temporária de rede");
+        return "sucesso_conectado";
+      };
+      const resRetry = await sec.executarComRetry(operacaoInstavel, 3, 30);
+      assert(resRetry === "sucesso_conectado", "Retry automático superou falhas temporárias e retornou sucesso");
+      assert(tentativas === 3, "Executou exatamente 3 tentativas com backoff até obter sucesso");
+    } else {
+      console.log("  ℹ️ [SKIP] __PACE_SECURITY_TEST__ não disponível no escopo.");
+    }
+
+    // TESTE 12: Regimes de Bens e Direito Sucessório (Partilha Legal)
+    console.log("\n📋 Teste 12: Partilhas Legais por Regime de Casamento");
+    const familiaUniversal = { estadoCivil: "casado", regime: "comunhao_universal" };
+    const pUniversal = engine.calcularPartilhaRegime({}, familiaUniversal);
+    assert(pUniversal.regime === "comunhao_universal", "Regime comunhão universal identificado");
+
+    const familiaSeparacao = { estadoCivil: "casado", regime: "separacao_total" };
+    const pSeparacao = engine.calcularPartilhaRegime({}, familiaSeparacao);
+    assert(pSeparacao.regime === "separacao_total", "Regime separação total identificado");
+
+    const familiaSolteiro = { estadoCivil: "solteiro" };
+    const pSolteiro = engine.calcularPartilhaRegime({}, familiaSolteiro);
+    assert(pSolteiro.meacaoConjuge === 0, "Solteiro/Divorciado gera 0 de meação para cônjuge");
+
+    // TESTE 13: Estratégias Sucessórias (Previdência e Seguro de Vida Resgatável)
+    console.log("\n📋 Teste 13: Estratégias de Preservação e Previdência");
+    const est = engine.calcularEstrategias(10000000, 1000000, {
+      doacao: 0,
+      doacao_avista: 0,
+      previdencia: 1000000,
+      honorarios: 5,
+      custas: 1.5,
+      seguro_capital: 1000000,
+      seguro_idade: 40
+    });
+    assert(est.previdencia.valor === 1000000, "Valor de previdência configurado em R$ 1.000.000");
+    assert(est.previdencia.economiaInventario === 65000, "Economia de inventário em previdência calculada corretamente (6.5% = R$ 65.000)");
+    assert(est.seguro.capitalSeguro === 1000000, "Capital segurado definido em R$ 1.000.000");
+    assert(est.seguro.premioAnual > 0 && est.seguro.premioMensal > 0, "Prêmio anual e mensal do seguro de vida calculados com sucesso");
 
     console.log("\n=================================================");
     console.log(`📊 RESUMO DA SUÍTE DE TESTES:`);

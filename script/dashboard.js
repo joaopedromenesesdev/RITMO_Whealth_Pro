@@ -431,3 +431,47 @@ async function excluirRelatorio(id) {
     await carregarDashboard();
   }
 }
+
+// ─── FERRAMENTAS LGPD (Portabilidade & Direitos do Titular — Art. 18) ────────
+
+async function exportarDadosUsuarioLGPD() {
+  try {
+    if (typeof window.PaceUI?.mostrarToast === "function") {
+      window.PaceUI.mostrarToast("Gerando exportação de dados em JSON...", "info");
+    }
+
+    const payload = await dbExportarDadosCompletos();
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload, null, 2));
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `meus_dados_pace_wealth_${new Date().toISOString().slice(0, 10)}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+
+    if (typeof window.PaceUI?.mostrarToast === "function") {
+      window.PaceUI.mostrarToast("Dados exportados com sucesso!", "sucesso");
+    }
+  } catch (err) {
+    console.error("[exportarDadosUsuarioLGPD] Erro:", err);
+    alert("Não foi possível gerar a exportação no momento.");
+  }
+}
+
+function abrirModalPrivacidadeLGPD() {
+  if (typeof window.confirmarAcaoCustom === "function") {
+    window.confirmarAcaoCustom({
+      titulo: "Privacidade e Proteção de Dados (LGPD)",
+      mensagem: "O Ritmo Wealth Pro adota governança em conformidade com a Lei 13.709/2018 (LGPD). Todos os relatórios contam com Row Level Security (RLS) e isolamento por usuário. Para dúvidas ou solicitações ao Encarregado (DPO), contate: compliance@pacecapital.com.br.",
+      textoConfirmar: "Ver Termos de Uso",
+      textoCancelar: "Fechar",
+      tipo: "info",
+      onConfirm: () => {
+        window.open("termos_privacidade.html", "_blank");
+      }
+    });
+  } else {
+    window.open("termos_privacidade.html", "_blank");
+  }
+}
+
