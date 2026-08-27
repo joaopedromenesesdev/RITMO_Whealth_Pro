@@ -1974,11 +1974,6 @@ function renderizarNotasRelatorio(scope = document) {
   });
 }
 
-// Recupera o token de acesso de forma segura via variável global ou local sem expor segredos no repositório
-function _obterChaveValoris() {
-  return window.GROQ_API_KEY || localStorage.getItem("groq_api_key") || "";
-}
-
 async function aprimorarTextoValoris(notaId) {
   const card = document.querySelector(`[data-nota-id="${notaId}"]`);
   if (!card) return;
@@ -2004,7 +1999,7 @@ async function aprimorarTextoValoris(notaId) {
   try {
     let resultText = "";
 
-    // 1. Prioridade Máxima: Tentar chamar a Supabase Edge Function (Servidor Seguro - Chave 100% invisível no F12)
+    // 1. Canal Seguro Institucional: Supabase Edge Function (Chave protegida no servidor com validação JWT)
     if (window.supabaseClient && window.supabaseClient.functions) {
       try {
         const { data, error } = await window.supabaseClient.functions.invoke("valoris-ai", {
@@ -2013,55 +2008,15 @@ async function aprimorarTextoValoris(notaId) {
 
         if (!error && data && data.textoAprimorado) {
           resultText = data.textoAprimorado.trim();
+        } else if (error) {
+          console.warn("[Valoris AI] Edge Function reportou aviso:", error);
         }
       } catch (sErr) {
-        console.warn("Edge Function do Supabase offline ou não implantada, utilizando canal secundário:", sErr);
+        console.warn("[Valoris AI] Edge Function offline ou inacessível:", sErr);
       }
     }
 
-    // 2. Fallback: Chamada Groq direta se a Edge Function do Supabase ainda não tiver sido iniciada
-    if (!resultText) {
-      const apiKey = _obterChaveValoris();
-      if (apiKey) {
-        const systemPrompt =
-          "Você é Valoris, a inteligência artificial corporativa da Pace Capital especializada em Wealth Planning e Gestão Patrimonial.\n" +
-          "Sua única função é reescrever o texto do rascunho fornecido pelo assessor patrimonial elevando a gramática, a fluidez, a clareza e o vocabulário para um tom executivo e elegante de Private Banking.\n\n" +
-          "REGRAS OBRIGATÓRIAS:\n" +
-          "1. Mantenha TODOS os dados numéricos, porcentagens, prazos, valores monetários, UFs, siglas e nomes exatamente como fornecidos pelo usuário.\n" +
-          "2. NÃO altere a intenção, a estratégia nem o contexto original do texto.\n" +
-          "3. Torne o texto mais articulado, profissional e coeso para figurar em um relatório oficial de alto nível.\n" +
-          "4. Responda APENAS com o texto aprimorado final, sem saudações, introduções ou explicações.";
-
-        try {
-          const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              "Authorization": "Bearer " + apiKey,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              model: "llama-3.3-70b-versatile",
-              messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: "Texto a ser aprimorado:\n" + originalText }
-              ],
-              temperature: 0.3,
-              max_tokens: 1000
-            })
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            if (data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
-              resultText = data.choices[0].message.content.trim();
-            }
-          }
-        } catch (gErr) {
-          console.warn("Groq API offline:", gErr);
-        }
-      }
-    }
-
+    // 2. Fallback Léxico Local Inteligente (sem expor chaves ou dependências de terceiros no browser)
     if (!resultText) {
       resultText = polirTextoOfflineValoris(originalText);
     }

@@ -7,13 +7,16 @@ const MASTER_EMAILS = [
   "willians.novais@pacecapital.com"
 ];
 
-// Verifica se o usuário atual é Master
+// Verifica se o usuário atual é Master (validando profile do banco e metadados)
 function authIsMaster(user) {
-  if (!user || !user.email) return false;
-  const emailLower = user.email.toLowerCase().trim();
-  const isMasterEmail = MASTER_EMAILS.map(e => e.toLowerCase()).includes(emailLower);
-  const isMasterRole = user.user_metadata?.role === "master";
-  return isMasterEmail || isMasterRole;
+  if (!user) return false;
+  if (user.role === "master" || user.profile_role === "master") return true;
+  if (user.user_metadata?.role === "master") return true;
+  if (user.email) {
+    const emailLower = user.email.toLowerCase().trim();
+    return MASTER_EMAILS.map(e => e.toLowerCase()).includes(emailLower);
+  }
+  return false;
 }
 
 // Verifica se o e-mail é válido para cadastro (qualquer e-mail com link de convite ativo)
@@ -132,7 +135,7 @@ async function authValidarConvite(token) {
     }
   }
 
-  // 2. Fallback: LocalStorage do navegador local
+  // 2. Fallback: LocalStorage do navegador local (apenas se gerado neste navegador pelo Master)
   const convites = authObterConvites();
   const convite = convites.find(c => c.id === cleanToken);
 
@@ -143,20 +146,8 @@ async function authValidarConvite(token) {
     return { valid: true, invite: convite };
   }
 
-  // 3. Fallback Estrutural: Valida se o token segue o padrão do sistema (começa com "pace_inv_")
-  if (/^pace_inv_[a-z0-9]+$/i.test(cleanToken)) {
-    return {
-      valid: true,
-      invite: {
-        id: cleanToken,
-        created_at: new Date().toISOString(),
-        used: false,
-        email_restrito: null
-      }
-    };
-  }
-
-  return { valid: false, message: "Link de convite inválido ou não encontrado." };
+  // SEM FALLBACK ESTRUTURAL FRAUDULENTO. Se não foi emitido no Supabase ou localmente, rejeita o token.
+  return { valid: false, message: "Link de convite inválido, expirado ou não encontrado." };
 }
 
 // Consumir token após cadastro bem sucedido
@@ -205,7 +196,7 @@ function getSupabase() {
   return null;
 }
 
-// Verifica se o usuário atual está logado (retorna promessa com dados do user ou null)
+// Verifica se o usuário atual está logado (retorna promessa com dados do user e sua role oficial)
 async function authObterUsuario() {
   const client = getSupabase();
   if (!client) return null;
@@ -213,7 +204,29 @@ async function authObterUsuario() {
   try {
     const { data: { session }, error } = await client.auth.getSession();
     if (error) throw error;
-    return session ? session.user : null;
+    if (!session || !session.user) return null;
+
+    // Obtém a role oficial da tabela profiles (garantia server-side)
+    try {
+      const { data: profile } = await client
+        .from("profiles")
+        .select("role, full_name")
+        .eq("id", session.user.id)
+        .maybeSingle();
+
+      if (profile) {
+        session.user.role = profile.role;
+        session.user.profile_role = profile.role;
+        if (profile.full_name && !session.user.user_metadata?.full_name) {
+          session.user.user_metadata = session.user.user_metadata || {};
+          session.user.user_metadata.full_name = profile.full_name;
+        }
+      }
+    } catch (pErr) {
+      console.warn("[authObterUsuario] Aviso ao obter profile do Supabase:", pErr);
+    }
+
+    return session.user;
   } catch (e) {
     console.error("Erro ao obter sessão:", e);
     return null;
@@ -230,16 +243,20 @@ async function authEntrar(email, password) {
   return data;
 }
 
-// Criar Conta
+// Criar Conta (bloqueando injeção client-side de role)
 async function authCadastrar(email, password, metadata = {}) {
   const client = getSupabase();
   if (!client) throw new Error("Cliente Supabase não configurado.");
+
+  // Remove qualquer tentativa de ditar role pelo cliente (determinado exclusivamente no servidor)
+  const safeMetadata = { ...metadata };
+  delete safeMetadata.role;
 
   const { data, error } = await client.auth.signUp({
     email,
     password,
     options: {
-      data: metadata // Ex: { full_name: fullname, role: 'funcionario' }
+      data: safeMetadata
     }
   });
   if (error) throw error;
@@ -395,6 +412,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       confirmPasswordInput.value = "";
     }
     if (groupFullname) groupFullname.classList.add("hidden");
+    const groupTermos = document.getElementById("group-termos");
+    if (groupTermos) groupTermos.classList.add("hidden");
     if (btnText) btnText.textContent = "Entrar na plataforma";
     if (authBackLogin) authBackLogin.classList.add("hidden");
     if (alertDiv) alertDiv.classList.add("hidden");
@@ -415,6 +434,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (groupConfirmPassword) groupConfirmPassword.classList.add("hidden");
     if (confirmPasswordInput) confirmPasswordInput.removeAttribute("required");
     if (groupFullname) groupFullname.classList.add("hidden");
+    const groupTermos = document.getElementById("group-termos");
+    if (groupTermos) groupTermos.classList.add("hidden");
     if (btnText) btnText.textContent = "Enviar E-mail de Recuperação";
     if (authBackLogin) authBackLogin.classList.remove("hidden");
     if (alertDiv) alertDiv.classList.add("hidden");
@@ -443,6 +464,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       confirmPasswordInput.value = "";
     }
     if (groupFullname) groupFullname.classList.add("hidden");
+    const groupTermos = document.getElementById("group-termos");
+    if (groupTermos) groupTermos.classList.add("hidden");
     if (btnText) btnText.textContent = "Atualizar Senha";
     if (authBackLogin) authBackLogin.classList.remove("hidden");
     if (alertDiv) alertDiv.classList.add("hidden");
@@ -488,6 +511,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (subtitle) subtitle.textContent = "Convite oficial ativado. Cadastre suas credenciais para acessar a plataforma.";
       if (groupFullname) groupFullname.classList.remove("hidden");
       if (fullnameInput) fullnameInput.setAttribute("required", "required");
+      const groupTermos = document.getElementById("group-termos");
+      if (groupTermos) groupTermos.classList.remove("hidden");
+      const checkTermos = document.getElementById("check-termos");
+      if (checkTermos) checkTermos.setAttribute("required", "required");
       if (btnText) btnText.textContent = "Criar Minha Conta";
 
       if (activeInvite && activeInvite.email_restrito) {
@@ -580,10 +607,17 @@ document.addEventListener("DOMContentLoaded", async () => {
           throw new Error(`Este convite foi gerado exclusivamente para o e-mail: ${activeInvite.email_restrito}`);
         }
 
-        // Determina se a conta criada é master ou assessor (conforme check constraint de profiles)
-        const role = MASTER_EMAILS.map(m => m.toLowerCase()).includes(email.toLowerCase()) ? "master" : "assessor";
+        // Validação obrigatória de consentimento LGPD
+        const checkTermos = document.getElementById("check-termos");
+        if (checkTermos && !checkTermos.checked) {
+          throw new Error("Você precisa concordar com os Termos de Uso e a Política de Privacidade (LGPD) para concluir seu cadastro.");
+        }
 
-        await authCadastrar(email, password, { full_name: fullname, role: role });
+        // O role é atribuído de forma segura exclusivamente no servidor pelo PostgreSQL
+        await authCadastrar(email, password, { 
+          full_name: fullname,
+          termos_aceitos_em: new Date().toISOString()
+        });
 
         // Marcar convite como consumido
         if (inviteToken) {

@@ -331,6 +331,41 @@ body {
   color: #27272a;
 }
 
+/* ── Checkbox LGPD ── */
+.input-group-checkbox {
+  margin: 14px 0 6px 0;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 12.5px;
+  color: #4b5563;
+  line-height: 1.45;
+  user-select: none;
+}
+
+.checkbox-container input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  margin-top: 2px;
+  accent-color: #09090b;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.checkbox-label a {
+  color: #09090b;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.checkbox-label a:hover {
+  color: #27272a;
+}
+
 /* ── Animações ── */
 @keyframes fadeIn {
   from {

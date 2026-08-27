@@ -2,13 +2,17 @@
 // Servidor Backend Supabase Edge Function — Valoris AI
 // A chave da Groq fica mantida DENTRO do servidor da Edge Function (100% Invisível no F12 / DevTools)
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") || "";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -16,6 +20,29 @@ serve(async (req) => {
   }
 
   try {
+    // 1. Validação obrigatória de Autenticação JWT do Usuário
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Acesso não autorizado. Token de sessão obrigatório." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+      );
+    }
+
+    if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: authHeader } }
+      });
+      const { data: { user }, error: authErr } = await supabase.auth.getUser();
+      if (authErr || !user) {
+        return new Response(
+          JSON.stringify({ error: "Sessão inválida ou expirada." }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+        );
+      }
+    }
+
+    // 2. Validação do parâmetro de entrada
     const { texto } = await req.json();
 
     if (!texto || typeof texto !== "string" || !texto.trim()) {
@@ -34,6 +61,7 @@ serve(async (req) => {
       "3. Torne o texto mais articulado, profissional e coeso para figurar em um relatório oficial de alto nível.\n" +
       "4. Responda APENAS com o texto aprimorado final, sem saudações, introduções ou explicações.";
 
+    // Modelo ativo na Groq (Llama 3.1 8B Instant — alta performance e precisão sem descontinuação)
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -41,7 +69,7 @@ serve(async (req) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: "llama-3.1-8b-instant",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Texto a ser aprimorado:\n${texto}` }
@@ -54,8 +82,8 @@ serve(async (req) => {
     if (!response.ok) {
       const errText = await response.text();
       return new Response(
-        JSON.stringify({ error: "Erro na API Groq", details: errText }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+        JSON.stringify({ error: "Erro no serviço de inteligência artificial", details: errText }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 502 }
       );
     }
 

@@ -40,19 +40,43 @@ create policy "Usuários podem ler seus próprios dados de perfil"
 drop policy if exists "Usuários podem atualizar seus próprios dados de perfil" on public.profiles;
 create policy "Usuários podem atualizar seus próprios dados de perfil"
   on public.profiles for update
-  using (auth.uid() = id);
+  using (auth.uid() = id)
+  with check (
+    auth.uid() = id and (
+      role = (select p.role from public.profiles p where p.id = auth.uid()) or public.is_master()
+    )
+  );
 
--- Trigger para criar perfil automaticamente no cadastro
+-- Trigger para criar perfil automaticamente no cadastro (Role determinada estritamente no servidor)
 create or replace function public.handle_new_user()
 returns trigger as $$
+declare
+  v_role text := 'assessor';
+  v_master_emails text[] := array[
+    'joaopedromeneses129@gmail.com',
+    'willians.novais@pacecapital.com.br',
+    'willians.novais@pacecapital.com'
+  ];
 begin
+  -- Atribuição de privilégio Master controlada no servidor (ignora manipulação no client)
+  if lower(trim(new.email)) = any(v_master_emails) then
+    v_role := 'master';
+  else
+    v_role := 'assessor';
+  end if;
+
   insert into public.profiles (id, email, full_name, role)
   values (
     new.id,
     new.email,
     coalesce(new.raw_user_meta_data->>'full_name', 'Assessor'),
-    coalesce(new.raw_user_meta_data->>'role', 'assessor')
-  );
+    v_role
+  )
+  on conflict (id) do update set
+    email = excluded.email,
+    full_name = coalesce(excluded.full_name, public.profiles.full_name),
+    updated_at = now();
+
   return new;
 end;
 $$ language plpgsql security definer;

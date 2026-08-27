@@ -141,8 +141,16 @@
     assert(tExatoLimite.valorValido === 96050 && !tExatoLimite.excedeuLimite, "Valor exato de R$ 96.050 deve ser aceito sem exceder o limite");
     const tAcimaLimite = engine.validarLimiteDoacaoIsenta(100000);
     assert(tAcimaLimite.valorValido === 96050 && tAcimaLimite.excedeuLimite, "Valor R$ 100.000 deve ser travado no teto de R$ 96.050 e sinalizar excedeuLimite = true");
-    const tMuitoAcima = engine.validarLimiteDoacaoIsenta(1000000);
-    assert(tMuitoAcima.valorValido === 96050 && tMuitoAcima.excedeuLimite, "Valor R$ 1.000.000 deve ser travado no teto de R$ 96.050 e sinalizar excedeuLimite = true");
+    // TESTE 8: Validação de Segurança e Integridade das Regras
+    console.log("\n📋 Teste 8: Validações de Segurança e Não Regressão");
+    assert(typeof engine.obterAliquotaITCMD === "function", "obterAliquotaITCMD disponível");
+    assert(engine.obterAliquotaITCMD("SP") === 4.0, "Alíquota SP deve ser 4.0%");
+    assert(engine.obterAliquotaITCMD("RJ") === 8.0, "Alíquota RJ deve ser 8.0%");
+    assert(engine.obterAliquotaITCMD("INVALIDO") === 4.0, "Alíquota inválida deve fazer fallback seguro para 4.0%");
+    const custosZero = engine.calcularCustosInventario(0, 4, 5, 1.5);
+    assert(custosZero.totalPrejuizo === 0, "Patrimônio zero deve gerar prejuízo zero");
+    const custosNegativos = engine.calcularCustosInventario(-50000, 4, 5, 1.5);
+    assert(custosNegativos.totalPrejuizo === 0, "Patrimônio negativo deve ser sanitizado para zero");
 
     console.log("\n=================================================");
     console.log(`📊 RESUMO DA SUÍTE DE TESTES:`);
