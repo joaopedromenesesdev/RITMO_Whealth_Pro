@@ -693,6 +693,40 @@ function checkFilled(el) {
   }
 }
 
+// =========================================================================
+// TRAVA E VALIDAÇÃO: LIMITE ISENTO ANUAL DE ITCMD (R$ 96.050,00 - 2.500 UFESPs)
+// =========================================================================
+function validarTravaLimiteDoacao(input, silencioso = false) {
+  if (!input) return 0;
+  const LIMITE_MAXIMO = window.TributarioEngine?.LIMITE_ISENCAO_ANUAL || 96050;
+  let valor = obterValorInput(input);
+  const aviso = document.getElementById("aviso_limite_doacao");
+  const wrapper = document.getElementById("wrapper_doacao_vida") || input.parentElement;
+
+  if (valor > LIMITE_MAXIMO) {
+    // Bloqueia e trava imediatamente no teto legal
+    input.value = Math.round(LIMITE_MAXIMO * 100).toString();
+    formatarMoeda(input);
+
+    if (aviso) aviso.style.display = "flex";
+    if (wrapper) wrapper.classList.add("input-limite-atingido");
+
+    if (!silencioso) {
+      const msg = "O valor máximo para doação anual com isenção de ITCMD é R$ 96.050,00 (2.500 UFESPs). O valor foi ajustado ao teto isento.";
+      if (window.PaceUI && typeof window.PaceUI.mostrarToast === "function") {
+        window.PaceUI.mostrarToast(msg, "aviso", 4500);
+      } else if (typeof mostrarToast === "function") {
+        mostrarToast(msg, "aviso");
+      }
+    }
+    return LIMITE_MAXIMO;
+  } else {
+    if (aviso) aviso.style.display = "none";
+    if (wrapper) wrapper.classList.remove("input-limite-atingido");
+    return valor;
+  }
+}
+
 // =========================
 // SIMULADOR DE PREJUIZO PREMIUM
 // =========================
@@ -708,6 +742,7 @@ function initPrejuizo() {
   if (inputDoacao) {
     inputDoacao.addEventListener("input", function () {
       formatarMoeda(this);
+      validarTravaLimiteDoacao(this);
       checkFilled(this);
       salvarInputsTributario();
     });
@@ -760,9 +795,11 @@ function initPrejuizo() {
     if (salvos.custas) document.getElementById("taxa_custas").value = salvos.custas;
     if (salvos.doacao) {
       if (inputDoacao) {
-        const numericVal = Number(salvos.doacao) || 0;
+        let numericVal = Number(salvos.doacao) || 0;
+        if (numericVal > 96050) numericVal = 96050;
         inputDoacao.value = Math.round(numericVal * 100).toString();
         formatarMoeda(inputDoacao);
+        validarTravaLimiteDoacao(inputDoacao, true);
         checkFilled(inputDoacao);
       }
     }
@@ -816,7 +853,8 @@ function salvarInputsTributario() {
   const itcmd = document.getElementById("taxa_itcmd")?.value;
   const honorarios = document.getElementById("taxa_honorarios")?.value;
   const custas = document.getElementById("taxa_custas")?.value;
-  const doacao = obterValorInput(document.getElementById("input_doacao_vida"));
+  let doacao = obterValorInput(document.getElementById("input_doacao_vida"));
+  if (doacao > 96050) doacao = 96050;
   const doacao_avista = obterValorInput(document.getElementById("input_doacao_avista"));
   const previdencia = obterValorInput(document.getElementById("input_previdencia"));
   const seguro_idade = document.getElementById("input_seguro_idade")?.value || "";
@@ -980,6 +1018,9 @@ function calcularPrejuizo() {
   let doacaoVal = 0;
   if (inputDoacao) {
     doacaoVal = obterValorInput(inputDoacao);
+    if (doacaoVal > 96050) {
+      doacaoVal = 96050;
+    }
   }
 
   const elTempoAtual = document.getElementById("tempo_atual_doacao");
@@ -1005,7 +1046,7 @@ function calcularPrejuizo() {
   }
 
   // Preenche tabela da Estratégia 2: Doação dentro da isenção
-  const LIMITE_ISENCAO_ANUAL = doacaoVal > 0 ? doacaoVal : 96050;
+  const LIMITE_ISENCAO_ANUAL = (doacaoVal > 0 && doacaoVal <= 96050) ? doacaoVal : 96050;
   const elE2Valor = document.getElementById("estrategia2_valor_necessario");
   const elE2Limite = document.getElementById("estrategia2_limite_isencao");
   const elE2Tempo = document.getElementById("estrategia2_tempo_estimado");

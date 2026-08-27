@@ -938,6 +938,41 @@ body.pdf-exporting .capa {
   color: var(--text-muted);
 }
 
+.exemption-info-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.alerta-limite-isencao {
+  margin-top: 4px;
+  padding: 8px 12px;
+  background: rgba(229, 57, 53, 0.08);
+  border-left: 3px solid #E53935;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #b91c1c;
+  line-height: 1.4;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  animation: fadeInAviso 0.25s ease-out;
+}
+
+.alerta-limite-isencao strong {
+  color: #991b1b;
+}
+
+.input-limite-atingido input {
+  border-color: #E53935 !important;
+  box-shadow: 0 0 0 3px rgba(229, 57, 53, 0.15) !important;
+}
+
+@keyframes fadeInAviso {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .results-col {
   border-left: 1px solid rgba(0, 0, 0, 0.06);
   padding-left: 30px;
