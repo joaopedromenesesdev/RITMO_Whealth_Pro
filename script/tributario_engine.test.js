@@ -132,6 +132,18 @@
       console.log("  ℹ️ [SKIP] AppState não carregado no escopo global do runner.");
     }
 
+    // TESTE 7: Trava e Validação do Limite Anual Isento de ITCMD (R$ 96.050,00)
+    console.log("\n📋 Teste 7: Trava e Validação do Limite Anual Isento de ITCMD");
+    assert(engine.LIMITE_ISENCAO_ANUAL === 96050, "Limite isento anual padrão deve ser R$ 96.050,00 (2.500 UFESPs)");
+    const tDentroLimite = engine.validarLimiteDoacaoIsenta(50000);
+    assert(tDentroLimite.valorValido === 50000 && !tDentroLimite.excedeuLimite, "Valor R$ 50.000 deve ser aceito sem exceder o limite");
+    const tExatoLimite = engine.validarLimiteDoacaoIsenta(96050);
+    assert(tExatoLimite.valorValido === 96050 && !tExatoLimite.excedeuLimite, "Valor exato de R$ 96.050 deve ser aceito sem exceder o limite");
+    const tAcimaLimite = engine.validarLimiteDoacaoIsenta(100000);
+    assert(tAcimaLimite.valorValido === 96050 && tAcimaLimite.excedeuLimite, "Valor R$ 100.000 deve ser travado no teto de R$ 96.050 e sinalizar excedeuLimite = true");
+    const tMuitoAcima = engine.validarLimiteDoacaoIsenta(1000000);
+    assert(tMuitoAcima.valorValido === 96050 && tMuitoAcima.excedeuLimite, "Valor R$ 1.000.000 deve ser travado no teto de R$ 96.050 e sinalizar excedeuLimite = true");
+
     console.log("\n=================================================");
     console.log(`📊 RESUMO DA SUÍTE DE TESTES:`);
     console.log(`   Total: ${totalTestes} | Passados: ${testesPassados} | Falhas: ${testesFalhados}`);

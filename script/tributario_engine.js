@@ -21,6 +21,20 @@
   };
 
   const TributarioEngine = {
+    // Limite de isenção anual legal do ITCMD (2.500 UFESPs / SP como padrão de referência nacional)
+    LIMITE_ISENCAO_ANUAL: 96050,
+
+    // Valida e aplica trava ao valor anual de doação isenta
+    validarLimiteDoacaoIsenta(valor) {
+      const num = Math.max(0, Number(valor) || 0);
+      const excedeu = num > this.LIMITE_ISENCAO_ANUAL;
+      return {
+        valorValido: excedeu ? this.LIMITE_ISENCAO_ANUAL : num,
+        excedeuLimite: excedeu,
+        limiteMaximo: this.LIMITE_ISENCAO_ANUAL
+      };
+    },
+
     // Obter alíquota estimada do ITCMD por Estado
     obterAliquotaITCMD(uf) {
       if (!uf) return 4.0;

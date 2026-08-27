@@ -185,11 +185,17 @@
         <div class="reducao-card">
           <div class="reducao-col">
             <label for="input_doacao_vida" class="input-title">1 - Doação de ativos financeiros em vida</label>
-            <div class="input-wrapper">
+            <div class="input-wrapper" id="wrapper_doacao_vida">
               <span class="currency-symbol">R$</span>
-              <input type="text" id="input_doacao_vida" placeholder="Digite o valor anual" autocomplete="off">
+              <input type="text" id="input_doacao_vida" placeholder="Digite o valor anual (máx. R$ 96.050)" autocomplete="off">
             </div>
-            <span class="exemption-limit">Limite isento ao ITCMD: R$ 96.050,00 / ano</span>
+            <div class="exemption-info-box">
+              <span class="exemption-limit">Limite isento ao ITCMD: R$ 96.050,00 / ano</span>
+              <div id="aviso_limite_doacao" class="alerta-limite-isencao" style="display: none;">
+                <span class="alerta-icone">⚠️</span>
+                <span class="alerta-texto">O limite máximo para isenção anual de ITCMD é <strong>R$ 96.050,00</strong> (2.500 UFESPs). O valor foi ajustado ao teto isento. Para valores superiores sujeitos ao imposto, veja a <strong>Opção 2</strong> abaixo.</span>
+              </div>
+            </div>
           </div>
 
           <div class="reducao-col results-col">
