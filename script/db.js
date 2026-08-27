@@ -84,10 +84,15 @@ function sanitizarEValidarSimulacao(relatorio) {
 }
 
 // ─── Utilitários de Criptografia de Dados Sensíveis (AES-GCM Web Crypto) ───────
+const APP_PEPPER = "pace_whealth_kdf_v2_9a8f4c2e";
 
-async function _gerarChaveCriptografia(userId = 'pace_default') {
+async function _gerarChaveCriptografia(userId = 'pace_default', versao = 1) {
   const enc = new TextEncoder();
-  const rawKeyData = enc.encode(`pace_whealth_sec_${userId}`);
+  // v1: legado retrocompatível | v2+: derivação enriquecida com pepper
+  const rawKeyData = (versao === 1)
+    ? enc.encode(`pace_whealth_sec_${userId}`)
+    : enc.encode(`${APP_PEPPER}_${userId}_sec`);
+
   const hash = await crypto.subtle.digest('SHA-256', rawKeyData);
   return crypto.subtle.importKey(
     'raw',
@@ -101,7 +106,7 @@ async function _gerarChaveCriptografia(userId = 'pace_default') {
 async function _criptografarPayload(payload, userId) {
   if (!payload || typeof payload !== 'object') return payload;
   try {
-    const key = await _gerarChaveCriptografia(userId);
+    const key = await _gerarChaveCriptografia(userId, 2);
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const jsonStr = JSON.stringify(payload);
     const encData = new TextEncoder().encode(jsonStr);
@@ -116,7 +121,7 @@ async function _criptografarPayload(payload, userId) {
 
     return {
       _encrypted: true,
-      v: 1,
+      v: 2,
       iv: ivBase64,
       ciphertext: ciphertext
     };
@@ -130,8 +135,9 @@ async function _descriptografarPayload(payload, userId) {
   if (!payload || typeof payload !== 'object' || !payload._encrypted || !payload.ciphertext) {
     return payload; // Retrocompatibilidade: dados antigos não criptografados retornam intactos!
   }
-  try {
-    const key = await _gerarChaveCriptografia(userId);
+
+  const tentarDescriptografar = async (versaoKey) => {
+    const key = await _gerarChaveCriptografia(userId, versaoKey);
     const iv = Uint8Array.from(atob(payload.iv), c => c.charCodeAt(0));
     const ciphertextBuf = Uint8Array.from(atob(payload.ciphertext), c => c.charCodeAt(0));
 
@@ -143,9 +149,19 @@ async function _descriptografarPayload(payload, userId) {
 
     const jsonStr = new TextDecoder().decode(decryptedBuf);
     return JSON.parse(jsonStr);
+  };
+
+  try {
+    const v = Number(payload.v) || 1;
+    return await tentarDescriptografar(v);
   } catch (e) {
-    console.warn("[_descriptografarPayload] Falha ao descriptografar payload:", e);
-    return payload;
+    // Tentativa de fallback com versão 1 legado caso v seja diferente
+    try {
+      return await tentarDescriptografar(1);
+    } catch (e2) {
+      console.warn("[_descriptografarPayload] Falha ao descriptografar payload (retornando payload bruto):", e2);
+      return payload;
+    }
   }
 }
 
