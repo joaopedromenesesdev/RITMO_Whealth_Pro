@@ -580,20 +580,88 @@ async function dbSolicitarExclusaoConta() {
   }
 }
 
+// Registra um novo chamado de suporte na tabela suporte_chamados (Supabase) e despacha por e-mail
+async function dbRegistrarChamadoSuporte(dados) {
+  if (!dados || typeof dados !== "object") throw new Error("Dados do chamado inválidos.");
+
+  const payload = {
+    assessor_nome: String(dados.assessor_nome || "").trim().slice(0, 150),
+    assessor_email: String(dados.assessor_email || "").trim().slice(0, 150),
+    tipo: String(dados.tipo || "duvida").trim().slice(0, 80),
+    assunto: String(dados.assunto || "").trim().slice(0, 200),
+    mensagem: String(dados.mensagem || "").trim().slice(0, 3000),
+    pagina_origem: String(dados.pagina_origem || (typeof window !== "undefined" ? window.location.pathname : "")).trim().slice(0, 200),
+    print_imagem: dados.print_imagem ? String(dados.print_imagem) : null,
+    status: "aberto"
+  };
+
+  if (!payload.assunto || !payload.mensagem) {
+    throw new Error("Por favor, preencha o assunto e a descrição do chamado.");
+  }
+
+  const client = window.supabaseClient;
+  if (client) {
+    try {
+      const session = await aguardarSessao(1500);
+      if (session?.user?.id) {
+        payload.user_id = session.user.id;
+      }
+      const { data, error } = await client.from("suporte_chamados").insert([payload]).select().maybeSingle();
+      if (error) {
+        console.warn("[dbRegistrarChamadoSuporte] Aviso ao gravar no Supabase:", error.message);
+      }
+
+      // Dispara envio do e-mail em background via Edge Function
+      if (client.functions) {
+        client.functions.invoke("suporte-email", {
+          body: {
+            ...payload,
+            destinatario: "joaopedromeneses129@gmail.com",
+            chamado_id: data?.id || null,
+            enviado_em: new Date().toISOString()
+          }
+        }).then(({ data: funcData, error: funcErr }) => {
+          if (funcErr) {
+            console.warn("[dbRegistrarChamadoSuporte] Aviso da Edge Function de e-mail:", funcErr.message || funcErr);
+          } else {
+            console.log("[dbRegistrarChamadoSuporte] E-mail despachado com sucesso.");
+          }
+        }).catch(e => {
+          console.warn("[dbRegistrarChamadoSuporte] Falha na rede da Edge Function:", e.message || e);
+        });
+      }
+
+      return { success: true, id: data?.id || "chamado-" + Date.now() };
+    } catch (err) {
+      console.warn("[dbRegistrarChamadoSuporte] Falha na rede do Supabase:", err.message || err);
+      return { success: true, id: "offline-" + Date.now() };
+    }
+  }
+
+  return { success: true, id: "local-" + Date.now() };
+}
+
+window.dbRegistrarChamadoSuporte = dbRegistrarChamadoSuporte;
+
 // Captura global de exceções assíncronas para não travar a aplicação
 if (typeof window !== "undefined") {
   window.addEventListener("unhandledrejection", (event) => {
     console.warn("[Segurança/Resiliência] Exceção assíncrona interceptada:", event.reason);
   });
 
-  // Expõe helpers de teste de segurança para a suíte automatizada
-  window.__PACE_SECURITY_TEST__ = {
-    _gerarChaveCriptografia,
-    _criptografarPayload,
-    _descriptografarPayload,
-    sanitizarNumero,
-    sanitizarEValidarSimulacao,
-    executarComRetry
-  };
+  // Expõe helpers de teste de segurança estritamente em ambiente de teste automatizado
+  const isTestEnvironment = window.__PACE_ENABLE_SECURITY_TESTS__ === true ||
+    (typeof window.location !== "undefined" && window.location.pathname && window.location.pathname.includes("run_tests.html"));
+
+  if (isTestEnvironment) {
+    window.__PACE_SECURITY_TEST__ = {
+      _gerarChaveCriptografia,
+      _criptografarPayload,
+      _descriptografarPayload,
+      sanitizarNumero,
+      sanitizarEValidarSimulacao,
+      executarComRetry
+    };
+  }
 }
 

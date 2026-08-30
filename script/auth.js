@@ -1,21 +1,10 @@
 // auth.js - Gerenciamento de Autenticação do Supabase (Pace Capital)
 
-// E-mails com privilégio Master (Administradores)
-const MASTER_EMAILS = [
-  "joaopedromeneses129@gmail.com",
-  "willians.novais@pacecapital.com.br",
-  "willians.novais@pacecapital.com"
-];
-
-// Verifica se o usuário atual é Master (validando profile do banco e metadados)
+// Verifica se o usuário atual é Master (validando profile do banco e metadados no servidor)
 function authIsMaster(user) {
   if (!user) return false;
   if (user.role === "master" || user.profile_role === "master") return true;
   if (user.user_metadata?.role === "master") return true;
-  if (user.email) {
-    const emailLower = user.email.toLowerCase().trim();
-    return MASTER_EMAILS.map(e => e.toLowerCase()).includes(emailLower);
-  }
   return false;
 }
 
@@ -63,14 +52,32 @@ function authObterBaseUrlLogin() {
   }
 }
 
-// Gerar novo token de convite (uso exclusivo Master)
+// Helper interno: verifica se o convite ultrapassou o período de validade (7 dias)
+function authConviteExpirou(invite) {
+  if (!invite) return false;
+  if (invite.expires_at) {
+    return new Date(invite.expires_at).getTime() < Date.now();
+  }
+  if (invite.created_at) {
+    // Retrocompatibilidade para convites legados sem expires_at explícito (7 dias)
+    const criado = new Date(invite.created_at).getTime();
+    return (Date.now() - criado) > (7 * 24 * 60 * 60 * 1000);
+  }
+  return false;
+}
+
+// Gerar novo token de convite (uso exclusivo Master com expiração de 7 dias)
 function authGerarConvite(emailRestrito = null) {
   const token = "pace_inv_" + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
   const convites = authObterConvites();
 
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000)).toISOString(); // 7 dias
+
   const novoConvite = {
     id: token,
-    created_at: new Date().toISOString(),
+    created_at: now.toISOString(),
+    expires_at: expiresAt,
     used: false,
     used_at: null,
     used_by: null,
@@ -85,10 +92,11 @@ function authGerarConvite(emailRestrito = null) {
     window.supabaseClient.from('invites').insert([{
       id: token,
       email_restrito: novoConvite.email_restrito,
+      expires_at: expiresAt,
       used: false
     }]).then(({ error }) => {
       if (error) console.warn("[authGerarConvite] Aviso ao registrar no Supabase:", error.message);
-      else console.log("[authGerarConvite] Convite persistido no Supabase:", token);
+      else console.log("[authGerarConvite] Convite persistido no Supabase com TTL de 7 dias:", token);
     }).catch(err => console.warn(err));
   }
 
@@ -101,7 +109,7 @@ function authGerarConvite(emailRestrito = null) {
   };
 }
 
-// Validar token de convite (Suporte a Supabase RPC, Query Direta, LocalStorage e Validação Estrutural)
+// Validar token de convite (Suporte a Supabase RPC, Query Direta, LocalStorage e Validação Estrutural com Checagem de Expiração)
 async function authValidarConvite(token) {
   if (!token) return { valid: false, message: "Nenhum código de convite fornecido." };
 
@@ -114,6 +122,9 @@ async function authValidarConvite(token) {
       // Tenta via RPC seguro primeiro (impede listagem pública da tabela)
       const { data: rpcRes, error: rpcErr } = await client.rpc("validar_convite", { p_token: cleanToken });
       if (!rpcErr && rpcRes && typeof rpcRes === "object" && typeof rpcRes.valid === "boolean") {
+        if (rpcRes.valid && rpcRes.invite && authConviteExpirou(rpcRes.invite)) {
+          return { valid: false, message: "Este link de convite expirou (validade máxima de 7 dias excedida)." };
+        }
         return rpcRes;
       }
 
@@ -127,6 +138,9 @@ async function authValidarConvite(token) {
       if (data) {
         if (data.used) {
           return { valid: false, message: "Este link de convite já foi utilizado por outro usuário." };
+        }
+        if (authConviteExpirou(data)) {
+          return { valid: false, message: "Este link de convite expirou (validade máxima de 7 dias excedida)." };
         }
         return { valid: true, invite: data };
       }
@@ -142,6 +156,9 @@ async function authValidarConvite(token) {
   if (convite) {
     if (convite.used) {
       return { valid: false, message: "Este link de convite já foi utilizado por outro usuário." };
+    }
+    if (authConviteExpirou(convite)) {
+      return { valid: false, message: "Este link de convite expirou (validade máxima de 7 dias excedida)." };
     }
     return { valid: true, invite: convite };
   }
@@ -269,6 +286,9 @@ async function authSair() {
   if (client) {
     await client.auth.signOut();
   }
+  try {
+    localStorage.removeItem("pace_user_cache");
+  } catch (e) {}
   sessionStorage.clear();
   window.location.href = "login.html";
 }
@@ -300,7 +320,7 @@ function authTraduzirMensagemErro(rawMsg) {
     return "A nova senha deve ser diferente da senha antiga.";
   }
   if (msgLower.includes("password should be at least")) {
-    return "A senha deve conter no mínimo 6 caracteres.";
+    return "A senha deve conter no mínimo 8 caracteres.";
   }
   if (msgLower.includes("rate limit") || msgLower.includes("over email rate limit")) {
     return "Muitas tentativas em pouco tempo. Por favor, aguarde alguns minutos antes de tentar novamente.";
@@ -442,31 +462,36 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
   }
 
-  function setModeReset() {
+  let isInviteActivation = false;
+
+  function setModeReset(isInvite = false) {
     isForgotPass = false;
     isResetMode = true;
-    if (title) title.textContent = "Redefinir sua Senha";
-    if (subtitle) subtitle.textContent = "Crie uma nova senha de acesso para sua conta.";
+    isInviteActivation = isInvite;
+    if (title) title.textContent = isInvite ? "Ativar sua Conta" : "Redefinir sua Senha";
+    if (subtitle) subtitle.textContent = isInvite
+      ? "Defina uma senha de acesso para entrar na plataforma."
+      : "Crie uma nova senha de acesso para sua conta.";
     if (groupEmail) groupEmail.classList.add("hidden");
     if (emailInput) emailInput.removeAttribute("required");
     if (groupPassword) groupPassword.classList.remove("hidden");
-    if (labelPassword) labelPassword.textContent = "Nova Senha";
+    if (labelPassword) labelPassword.textContent = isInvite ? "Criar Senha" : "Nova Senha";
     if (passwordInput) {
       passwordInput.setAttribute("required", "required");
-      passwordInput.placeholder = "Digite a nova senha";
+      passwordInput.placeholder = "Digite sua senha (mín. 8 caracteres)";
       passwordInput.value = "";
     }
     if (forgotPasswordWrap) forgotPasswordWrap.classList.add("hidden");
     if (groupConfirmPassword) groupConfirmPassword.classList.remove("hidden");
     if (confirmPasswordInput) {
       confirmPasswordInput.setAttribute("required", "required");
-      confirmPasswordInput.placeholder = "Confirme a nova senha";
+      confirmPasswordInput.placeholder = "Confirme sua senha";
       confirmPasswordInput.value = "";
     }
     if (groupFullname) groupFullname.classList.add("hidden");
     const groupTermos = document.getElementById("group-termos");
     if (groupTermos) groupTermos.classList.add("hidden");
-    if (btnText) btnText.textContent = "Atualizar Senha";
+    if (btnText) btnText.textContent = isInvite ? "Ativar Conta e Entrar" : "Atualizar Senha";
     if (authBackLogin) authBackLogin.classList.remove("hidden");
     if (alertDiv) alertDiv.classList.add("hidden");
     if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
@@ -490,60 +515,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // Verifica se há hash de recuperação de senha na URL
+  // Verifica se há hash de recuperação de senha ou convite de usuário na URL
   const hashStr = window.location.hash || "";
-  if (hashStr.includes("type=recovery") || hashStr.includes("access_token")) {
-    setModeReset();
+  const isInviteUrl = hashStr.includes("type=invite");
+  if (hashStr.includes("type=recovery") || hashStr.includes("access_token") || isInviteUrl) {
+    setModeReset(isInviteUrl);
   }
 
-  // Verificar se há token de convite na URL
-  const urlParams = new URLSearchParams(window.location.search);
-  inviteToken = urlParams.get("invite");
-
-  if (inviteToken && !isResetMode) {
-    const validacao = await authValidarConvite(inviteToken);
-    if (validacao.valid) {
-      activeInvite = validacao.invite;
-      isSignUp = true;
-
-      // Configura formulário em Modo Cadastro por Convite
-      if (title) title.textContent = "Criar Conta de Acesso";
-      if (subtitle) subtitle.textContent = "Convite oficial ativado. Cadastre suas credenciais para acessar a plataforma.";
-      if (groupFullname) groupFullname.classList.remove("hidden");
-      if (fullnameInput) fullnameInput.setAttribute("required", "required");
-      const groupTermos = document.getElementById("group-termos");
-      if (groupTermos) groupTermos.classList.remove("hidden");
-      const checkTermos = document.getElementById("check-termos");
-      if (checkTermos) checkTermos.setAttribute("required", "required");
-      if (btnText) btnText.textContent = "Criar Minha Conta";
-
-      if (activeInvite && activeInvite.email_restrito) {
-        emailInput.value = activeInvite.email_restrito;
-        emailInput.setAttribute("readonly", "readonly");
-      }
-
-      if (toggleArea) toggleArea.classList.add("hidden");
-
-      alertDiv.className = "auth-alert success";
-      alertDiv.textContent = "Convite verificado com sucesso! Preencha seu nome e senha para concluir seu cadastro.";
-      alertDiv.classList.remove("hidden");
-    } else {
-      // Convite inválido ou expirado
-      alertDiv.className = "auth-alert error";
-      alertDiv.textContent = validacao.message + " Exibindo tela de login tradicional.";
-      alertDiv.classList.remove("hidden");
-      if (toggleArea) toggleArea.classList.add("hidden");
-    }
-  } else {
-    // SEM CONVITE: Remove permanentemente a opção pública de cadastro
-    if (toggleArea) {
-      toggleArea.classList.add("hidden");
-    }
+  // Cadastro direto desativado na interface (administração centralizada de usuários via Supabase)
+  if (toggleArea) {
+    toggleArea.classList.add("hidden");
   }
 
-  // Envio do formulário
+  // Envio do formulário (com throttle defensivo contra força bruta / cliques múltiplos)
+  let ultimoEnvioAuth = 0;
   authForm.addEventListener("submit", async (e) => {
     e.preventDefault();
+
+    const agora = Date.now();
+    if (agora - ultimoEnvioAuth < 1500) {
+      return; // Throttle defensivo
+    }
+    ultimoEnvioAuth = agora;
 
     btnSubmit.disabled = true;
     btnSpinner.classList.remove("hidden");
@@ -569,9 +562,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         alertDiv.classList.remove("hidden");
 
       } else if (isResetMode) {
-        // Atualização da Nova Senha
-        if (!password || password.length < 6) {
-          throw new Error("A nova senha deve possuir pelo menos 6 caracteres.");
+        // Atualização da Nova Senha (mínimo 8 caracteres e complexidade)
+        if (!password || password.length < 8) {
+          throw new Error("A nova senha deve possuir pelo menos 8 caracteres.");
+        }
+        if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+          throw new Error("A nova senha deve conter pelo menos uma letra e um número para sua segurança.");
         }
         if (password !== confirmPassword) {
           throw new Error("As senhas digitadas não coincidem. Por favor, confirme a nova senha exatamente igual.");
@@ -585,17 +581,23 @@ document.addEventListener("DOMContentLoaded", async () => {
         await authRedefinirSenha(password);
 
         alertDiv.className = "auth-alert success";
-        alertDiv.textContent = "Senha atualizada com sucesso! Redirecionando para o login...";
+        alertDiv.textContent = isInviteActivation
+          ? "Conta ativada com sucesso! Acessando a plataforma..."
+          : "Senha atualizada com sucesso! Redirecionando para o login...";
         alertDiv.classList.remove("hidden");
 
-        // Limpa hash da URL e retorna ao login após 2.5s
+        // Limpa hash da URL e redireciona
         if (window.history && window.history.replaceState) {
           window.history.replaceState(null, null, window.location.pathname);
         }
 
         setTimeout(() => {
-          setModeLogin();
-        }, 2500);
+          if (isInviteActivation) {
+            window.location.href = "index.html";
+          } else {
+            setModeLogin();
+          }
+        }, 2000);
 
       } else if (isSignUp) {
         // Validação de e-mail válido
@@ -605,6 +607,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (activeInvite && activeInvite.email_restrito && activeInvite.email_restrito !== email.toLowerCase()) {
           throw new Error(`Este convite foi gerado exclusivamente para o e-mail: ${activeInvite.email_restrito}`);
+        }
+
+        // Validação obrigatória de senha forte (mínimo 8 caracteres + complexidade)
+        if (!password || password.length < 8) {
+          throw new Error("A senha de acesso deve possuir pelo menos 8 caracteres.");
+        }
+        if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+          throw new Error("A senha deve conter pelo menos uma letra e um número.");
         }
 
         // Validação obrigatória de consentimento LGPD
@@ -692,17 +702,15 @@ document.addEventListener("click", (e) => {
 // Renderizar informações do usuário na navbar (Dropdown Unificado)
 function renderizarNavAuth(user) {
   const navbar = document.querySelector(".navbar");
-  if (!navbar) return;
+  if (!navbar || !user) return;
 
   // Remove btn-limpar avulso do menu de links se ainda existir
   const btnLimpar = navbar.querySelector(".btn-limpar");
   if (btnLimpar) btnLimpar.remove();
 
-  if (document.getElementById("user-dropdown-wrap")) return;
-
   const email = user.email || "";
   const shortEmail = email.split("@")[0];
-  const userDisplayName = user.user_metadata?.full_name || shortEmail;
+  const userDisplayName = user.user_metadata?.full_name || user.full_name || shortEmail;
   const isMaster = authIsMaster(user);
 
   // Iniciais para o Avatar
@@ -711,9 +719,24 @@ function renderizarNavAuth(user) {
     ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
     : userDisplayName.substring(0, 2).toUpperCase();
 
-  const wrapDiv = document.createElement("div");
-  wrapDiv.id = "user-dropdown-wrap";
-  wrapDiv.className = "user-dropdown-wrap";
+  // Salva no cache local para hidratação ultra-rápida (0ms) nas próximas trocas de tela
+  try {
+    localStorage.setItem("pace_user_cache", JSON.stringify({
+      email: email,
+      full_name: userDisplayName,
+      role: isMaster ? "master" : "assessor"
+    }));
+  } catch (e) {}
+
+  let wrapDiv = document.getElementById("user-dropdown-wrap");
+  const isUpdate = !!wrapDiv;
+
+  if (!wrapDiv) {
+    wrapDiv = document.createElement("div");
+    wrapDiv.id = "user-dropdown-wrap";
+    wrapDiv.className = "user-dropdown-wrap";
+  }
+
   wrapDiv.innerHTML = `
     <button type="button" class="user-dropdown-trigger" id="user-dropdown-trigger" onclick="window.toggleUserDropdown(event)" title="${email}">
       <div class="user-avatar-circle">${initials}</div>
@@ -727,13 +750,6 @@ function renderizarNavAuth(user) {
         <div class="ud-user-name">${window.escapeHTML(userDisplayName)}</div>
         <div class="ud-user-email">${window.escapeHTML(email)}</div>
       </div>
-      <div class="ud-divider"></div>
-      ${isMaster ? `
-        <a href="javascript:void(0)" onclick="if(window.abrirModalMasterEquipe) window.abrirModalMasterEquipe(); window.closeUserDropdown();" class="ud-item">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-          <span>Gestão de Equipe</span>
-        </a>
-      ` : ''}
       <a href="javascript:void(0)" onclick="limparTudo(); window.closeUserDropdown();" class="ud-item warning">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
         <span>Limpar Simulação</span>
@@ -746,11 +762,33 @@ function renderizarNavAuth(user) {
     </div>
   `;
 
-  navbar.appendChild(wrapDiv);
+  if (!isUpdate) {
+    const userSlot = document.getElementById("nav-user-slot");
+    if (userSlot) {
+      userSlot.appendChild(wrapDiv);
+    } else {
+      navbar.appendChild(wrapDiv);
+    }
+  }
 }
 
-// Executa a proteção de rota se não estiver na página de login
+// Hidratação imediata prévia via cache (0ms)
 if (!window.location.pathname.endsWith("login.html")) {
+  try {
+    const cachedStr = localStorage.getItem("pace_user_cache");
+    if (cachedStr) {
+      const cached = JSON.parse(cachedStr);
+      if (cached && cached.email) {
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", () => renderizarNavAuth(cached));
+        } else {
+          renderizarNavAuth(cached);
+        }
+      }
+    }
+  } catch (e) {}
+
+  // Executa a validação de segurança e atualização oficial de rota
   authProtegerRota().then(user => {
     if (user) {
       if (document.readyState === "loading") {

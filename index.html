@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ritmo Wealth Pro — Dashboard de Relatórios</title>
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https: data: blob:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; connect-src 'self' https://dogyopoylekiqsahadlc.supabase.co https://*.supabase.co wss://*.supabase.co;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https: data: blob:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; connect-src 'self' https://dogyopoylekiqsahadlc.supabase.co https://*.supabase.co wss://*.supabase.co https://brasilapi.com.br https://olinda.bcb.gov.br;">
 
   <!-- Google Fonts -->
   <link
@@ -19,7 +19,7 @@
   <link rel="icon" type="image/png" href="img/RITMO.png">
 
   <!-- Lucide Icons & Global UI helpers -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/lucide@0.469.0"></script>
   <script src="script/global_ui.js"></script>
   <script src="script/state.js"></script>
 
@@ -43,6 +43,8 @@
       <a href="evolucao.html">Evolução Patrimonial</a>
       <a href="tributario.html">Prejuízo Tributário</a>
     </div>
+
+    <div id="nav-user-slot" class="nav-user-slot"></div>
   </div>
 
   <!-- MAIN CONTAINER -->
@@ -54,13 +56,7 @@
         <h1>Planejamentos Patrimoniais</h1>
         <p>Acompanhe, gerencie e filtre as simulações e relatórios gerados para seus clientes.</p>
       </div>
-      <div class="dashboard-header-actions" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <button type="button" class="btn-action secondary" onclick="exportarDadosUsuarioLGPD()" title="Exportar dados e relatórios em JSON (Portabilidade LGPD Art. 18)">
-          <i data-lucide="download"></i> Exportar Dados (LGPD)
-        </button>
-        <button type="button" class="btn-action secondary" onclick="abrirModalPrivacidadeLGPD()" title="Diretrizes de Privacidade e LGPD">
-          <i data-lucide="shield"></i> Privacidade
-        </button>
+      <div class="dashboard-header-actions">
         <a href="nova_simulacao.html" class="btn-new-report">
           <i data-lucide="plus-circle"></i>
           Novo Relatório
@@ -141,6 +137,186 @@
       <!-- Os cartões de relatórios serão injetados via JS -->
     </div>
 
+  </div>
+
+  <!-- WIDGET FLUTUANTE DE PRIVACIDADE & LGPD -->
+  <div class="floating-privacy-wrapper" id="floating_privacy_wrapper">
+    <!-- Popover Menu -->
+    <div class="floating-privacy-menu" id="floating_privacy_menu" aria-hidden="true">
+      <div class="floating-menu-header">
+        <div class="floating-menu-badge">
+          <i data-lucide="shield-check"></i>
+          <span>Privacidade &amp; LGPD</span>
+        </div>
+        <button type="button" class="floating-menu-close" id="btn_close_privacy_menu" aria-label="Fechar menu de privacidade">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <p class="floating-menu-desc">Governança, conformidade com a Lei 13.709 e direitos do titular.</p>
+      
+      <div class="floating-menu-items">
+        <button type="button" class="floating-menu-item primary-action" id="btn_floating_resumo" onclick="abrirResumoVisualLGPD()">
+          <div class="menu-item-icon" style="background: #f4f4f5; color: #09090b;">
+            <i data-lucide="file-text"></i>
+          </div>
+          <div class="menu-item-text">
+            <span class="menu-item-title">Resumo Visual / Salvar em PDF</span>
+            <span class="menu-item-sub">Relatório executivo legível para humanos com impressão em PDF</span>
+          </div>
+        </button>
+
+        <button type="button" class="floating-menu-item" id="btn_floating_terms" onclick="abrirModalPrivacidadeLGPD()">
+          <div class="menu-item-icon" style="background: #f4f4f5; color: #09090b;">
+            <i data-lucide="shield"></i>
+          </div>
+          <div class="menu-item-text">
+            <span class="menu-item-title">Diretrizes de Privacidade</span>
+            <span class="menu-item-sub">Políticas, RLS e contato com Encarregado (DPO)</span>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Botão Flutuante (Trigger) -->
+    <button type="button" class="floating-privacy-trigger" id="btn_trigger_privacy" title="Privacidade e Gestão de Dados (LGPD)" aria-expanded="false" aria-controls="floating_privacy_menu">
+      <i data-lucide="shield" class="trigger-icon"></i>
+      <span class="trigger-label">Privacidade &amp; LGPD</span>
+    </button>
+  </div>
+
+  <!-- MODAL DO RESUMO VISUAL / RELATÓRIO PDF (LGPD ART. 18) -->
+  <div class="lgpd-modal-overlay hidden" id="modal_resumo_lgpd" role="dialog" aria-modal="true" aria-labelledby="lgpd_doc_title">
+    <div class="lgpd-modal-container">
+      <!-- Toolbar Superior do Modal (não sai na impressão) -->
+      <div class="lgpd-modal-toolbar">
+        <div class="toolbar-left">
+          <div class="toolbar-badge">
+            <i data-lucide="shield-check"></i>
+            <span>Relatório Oficial de Dados (LGPD)</span>
+          </div>
+        </div>
+        <div class="toolbar-actions">
+          <button type="button" class="btn-toolbar-primary" id="btn_imprimir_lgpd" onclick="imprimirResumoLGPD()">
+            <i data-lucide="printer"></i>
+            <span>Salvar em PDF / Imprimir</span>
+          </button>
+          <button type="button" class="btn-toolbar-close" onclick="fecharResumoVisualLGPD()" aria-label="Fechar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Folha do Documento Executivo (A4 Printable Sheet) -->
+      <div class="lgpd-document-sheet" id="lgpd_document_sheet">
+        <!-- Cabeçalho Timbrado -->
+        <header class="doc-header">
+          <div class="doc-brand">
+            <span class="brand-name">Ritmo</span>
+            <span class="brand-sub">Wealth Pro</span>
+            <span class="brand-badge">Compliance Pace Capital</span>
+          </div>
+          <div class="doc-meta">
+            <div class="doc-meta-item">
+              <label>Data de Emissão:</label>
+              <span id="lgpd_doc_emissao">—</span>
+            </div>
+            <div class="doc-meta-item">
+              <label>Protocolo LGPD:</label>
+              <span id="lgpd_doc_protocolo">—</span>
+            </div>
+          </div>
+        </header>
+
+        <div class="doc-divider"></div>
+
+        <div class="doc-title-block">
+          <h1 id="lgpd_doc_title">Certificado de Portabilidade e Relatório de Dados do Titular</h1>
+          <p>Emitido em conformidade com o Artigo 18 da Lei Federal nº 13.709/2018 (Lei Geral de Proteção de Dados Pessoais).</p>
+        </div>
+
+        <!-- Bloco 1: Identificação do Titular -->
+        <section class="doc-section">
+          <h2 class="doc-section-title"><i data-lucide="user-check"></i> 1. Identificação do Titular da Conta</h2>
+          <div class="doc-info-grid">
+            <div class="doc-info-item">
+              <span class="label">E-mail Cadastrado:</span>
+              <strong id="lgpd_titular_email">—</strong>
+            </div>
+            <div class="doc-info-item">
+              <span class="label">Identificador Seguro (UUID):</span>
+              <code id="lgpd_titular_id">—</code>
+            </div>
+            <div class="doc-info-item">
+              <span class="label">Perfil de Acesso:</span>
+              <span id="lgpd_titular_role" class="badge-role">Assessor / Planejador</span>
+            </div>
+            <div class="doc-info-item">
+              <span class="label">Isolamento de Dados:</span>
+              <span class="badge-status-secure"><i data-lucide="lock"></i> Row Level Security (RLS) Ativo</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Bloco 2: Métricas Consolidadas do Acervo -->
+        <section class="doc-section">
+          <h2 class="doc-section-title"><i data-lucide="bar-chart-3"></i> 2. Síntese do Acervo Patrimonial</h2>
+          <div class="doc-summary-cards">
+            <div class="doc-card">
+              <span class="card-label">Total de Planejamentos</span>
+              <h3 id="lgpd_total_relatorios">0</h3>
+              <span class="card-sub">Simulações ativas</span>
+            </div>
+            <div class="doc-card">
+              <span class="card-label">Patrimônio Global Mapeado</span>
+              <h3 id="lgpd_total_patrimonio">R$ 0,00</h3>
+              <span class="card-sub">Ativos cadastrados</span>
+            </div>
+            <div class="doc-card">
+              <span class="card-label">Prejuízo Sucessório Médio</span>
+              <h3 id="lgpd_total_prejuizo">R$ 0,00</h3>
+              <span class="card-sub">Estimativa consolidada</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Bloco 3: Tabela Detalhada de Simulações e Relatórios -->
+        <section class="doc-section">
+          <h2 class="doc-section-title"><i data-lucide="folder-kanban"></i> 3. Registros e Planejamentos Vinculados</h2>
+          <div class="table-responsive">
+            <table class="doc-table">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Regime de Bens</th>
+                  <th>Patrimônio Mapeado</th>
+                  <th>Prejuízo Estimado</th>
+                  <th>Data de Cadastro</th>
+                </tr>
+              </thead>
+              <tbody id="lgpd_table_body">
+                <tr>
+                  <td colspan="5" style="text-align: center; color: #64748b; padding: 20px;">Carregando registros...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Bloco 4: Termo de Conformidade e Segurança -->
+        <footer class="doc-footer">
+          <div class="doc-security-note">
+            <h4><i data-lucide="shield"></i> Declaração de Governança e Privacidade</h4>
+            <p>
+              Os dados acima pertencem com exclusividade ao titular autenticado e são protegidos por criptografia de ponta a ponta e políticas de Row Level Security (RLS) no Supabase. O Ritmo Wealth Pro não comercializa nem transfere seus dados patrimoniais a terceiros. Para revogação de consentimento, exclusão ou contato com o Encarregado de Dados (DPO), envie solicitação para: <strong>compliance@pacecapital.com.br</strong>.
+            </p>
+          </div>
+          <div class="doc-sign">
+            <span>Ritmo Wealth Pro — Sistema de Planejamento Patrimonial e Sucessório</span>
+            <small>Documento eletrônico autêntico gerado sob os termos da Lei 13.709/2018 (LGPD Art. 18)</small>
+          </div>
+        </footer>
+      </div>
+    </div>
   </div>
 
   <!-- Scripts -->

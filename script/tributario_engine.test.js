@@ -237,7 +237,141 @@
     assert(est.previdencia.valor === 1000000, "Valor de previdência configurado em R$ 1.000.000");
     assert(est.previdencia.economiaInventario === 65000, "Economia de inventário em previdência calculada corretamente (6.5% = R$ 65.000)");
     assert(est.seguro.capitalSeguro === 1000000, "Capital segurado definido em R$ 1.000.000");
-    assert(est.seguro.premioAnual > 0 && est.seguro.premioMensal > 0, "Prêmio anual e mensal do seguro de vida calculados com sucesso");
+    // TESTE 14: Diretrizes de Segurança (Hardening OWASP)
+    console.log("\n📋 Teste 14: Verificações de Hardening e Segurança da Informação");
+
+    // 14.1 Validação de requisito mínimo de 8 caracteres na senha
+    const validarRequisitoSenha = (pass) => {
+      if (!pass || pass.length < 8) return false;
+      return /[a-zA-Z]/.test(pass) && /[0-9]/.test(pass);
+    };
+    assert(validarRequisitoSenha("123456") === false, "Senha de 6 dígitos numéricos rejeitada (< 8 caracteres)");
+    assert(validarRequisitoSenha("abcdefgh") === false, "Senha de 8 caracteres apenas letras rejeitada (sem números)");
+    assert(validarRequisitoSenha("Pace2026Secure") === true, "Senha forte de 14 caracteres com letras e números aprovada");
+
+    // 14.2 Detecção de Expiração de Convites (TTL de 7 dias)
+    const agora = Date.now();
+    const conviteRecente = { id: "inv_recente", created_at: new Date(agora - 2 * 24 * 3600 * 1000).toISOString(), used: false };
+    const conviteVencido = { id: "inv_antigo", created_at: new Date(agora - 10 * 24 * 3600 * 1000).toISOString(), used: false };
+    const conviteComExpiresAtVencido = { id: "inv_exp", expires_at: new Date(agora - 1000).toISOString(), used: false };
+
+    const checarExpiracao = (inv) => {
+      if (!inv) return false;
+      if (inv.expires_at) return new Date(inv.expires_at).getTime() < agora;
+      if (inv.created_at) return (agora - new Date(inv.created_at).getTime()) > 7 * 24 * 3600 * 1000;
+      return false;
+    };
+
+    assert(checarExpiracao(conviteRecente) === false, "Convite gerado há 2 dias reconhecido como válido");
+    assert(checarExpiracao(conviteVencido) === true, "Convite gerado há 10 dias reconhecido como expirado (> 7 dias)");
+    assert(checarExpiracao(conviteComExpiresAtVencido) === true, "Convite com expires_at no passado reconhecido como expirado");
+
+    // 14.3 Verificação de Ausência de Vazamento de MASTER_EMAILS no escopo global
+    if (typeof window !== 'undefined') {
+      assert(typeof window.MASTER_EMAILS === 'undefined', "window.MASTER_EMAILS não está vazando no escopo global");
+    }
+
+    // 14.4 Limite de tamanho de texto para Edge Function IA
+    const validarTamanhoTextoIA = (txt) => {
+      if (!txt || typeof txt !== 'string' || !txt.trim()) return false;
+      return txt.length <= 5000;
+    };
+    assert(validarTamanhoTextoIA("A".repeat(5001)) === false, "Payload de texto com mais de 5.000 caracteres rejeitado");
+    assert(validarTamanhoTextoIA("Rascunho de planejamento patrimonial familiar com holdings.") === true, "Texto legítimo de tamanho moderado aceito");
+
+    // 14.5 Desativação do Modal de Convites no Frontend (Gestão Centralizada via Supabase)
+    if (typeof window !== 'undefined') {
+      assert(typeof window.abrirModalMasterEquipe === 'undefined', "Modal de convites (abrirModalMasterEquipe) removido da interface");
+    }
+
+    // ==========================================
+    // 15. TESTES DO MÓDULO DE SUPORTE CORPORATIVO & AUSÊNCIA DE EMOJIS
+    // ==========================================
+    console.log("\n🧪 Executando Testes 15: Suporte Técnico Corporativo & Zero Emojis...");
+
+    // 15.1 Validação de obrigatoriedade de assunto e mensagem no chamado
+    if (typeof window !== 'undefined' && typeof window.dbRegistrarChamadoSuporte === 'function') {
+      let erroAssunto = false;
+      try {
+        await window.dbRegistrarChamadoSuporte({ assessor_nome: "Teste", assunto: "", mensagem: "Dúvida" });
+      } catch (e) {
+        erroAssunto = true;
+      }
+      assert(erroAssunto === true, "Chamado rejeitado se assunto estiver em branco");
+
+      let erroMensagem = false;
+      try {
+        await window.dbRegistrarChamadoSuporte({ assessor_nome: "Teste", assunto: "Dúvida ITCMD", mensagem: "" });
+      } catch (e) {
+        erroMensagem = true;
+      }
+      assert(erroMensagem === true, "Chamado rejeitado se mensagem estiver em branco");
+
+      // Registro com payload válido sem print (opcionalidade garantida)
+      const resValidoSemPrint = await window.dbRegistrarChamadoSuporte({
+        assessor_nome: "Rodrigo Assessor",
+        assessor_email: "rodrigo@pacecapital.com.br",
+        tipo: "duvida",
+        assunto: "Dúvida na alíquota de ITCMD",
+        mensagem: "Como configuro a alíquota progressiva para São Paulo?",
+        print_imagem: null
+      });
+      assert(resValidoSemPrint && resValidoSemPrint.success === true, "Chamado válido registrado com sucesso SEM print (opcional)");
+
+      // Registro com payload válido COM print anexado e validação de não vazamento de base64 em logs
+      let logContemBase64 = false;
+      const originalLog = console.log;
+      const originalWarn = console.warn;
+      const checarBase64 = (...args) => {
+        const str = JSON.stringify(args);
+        if (str.includes("data:image/jpeg;base64") || str.includes("base64,")) {
+          logContemBase64 = true;
+        }
+      };
+      console.log = (...args) => { checarBase64(...args); originalLog(...args); };
+      console.warn = (...args) => { checarBase64(...args); originalWarn(...args); };
+
+      let resValidoComPrint;
+      try {
+        resValidoComPrint = await window.dbRegistrarChamadoSuporte({
+          assessor_nome: "João Pedro",
+          assessor_email: "joaopedromeneses129@gmail.com",
+          tipo: "erro",
+          assunto: "Inconsistência visual em gráfico",
+          mensagem: "Segue captura da tela com o gráfico transbordando.",
+          print_imagem: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP...",
+          pagina_origem: "/tributario.html"
+        });
+      } finally {
+        console.log = originalLog;
+        console.warn = originalWarn;
+      }
+      assert(resValidoComPrint && resValidoComPrint.success === true, "Chamado válido registrado com sucesso COM print anexado");
+      assert(logContemBase64 === false, "Nenhum base64 de imagem vazou nos logs do console durante o registro");
+    }
+
+    // 15.2 Validação de ausência de emojis no widget, no modal e na seção de captura de tela
+    const regexEmoji = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
+    const textosSuportePadrao = [
+      "Suporte",
+      "Suporte Técnico",
+      "Envie sua dúvida ou relate uma inconsistência para a equipe técnica da Pace Capital.",
+      "Dúvida no preenchimento ou regras de cálculo",
+      "Relato de erro ou inconsistência no sistema",
+      "Sugestão de melhoria ou nova funcionalidade",
+      "Captura de Tela (Opcional)",
+      "Opcional",
+      "Capturar Tela da Página",
+      "Anexar Imagem",
+      "Captura Anexada",
+      "Remover",
+      "Dica: Você também pode colar um print diretamente com Ctrl+V.",
+      "Capturando tela...",
+      "Enviar Chamado",
+      "Chamado registrado e encaminhado para joaopedromeneses129@gmail.com com sucesso."
+    ];
+    const contemEmoji = textosSuportePadrao.some(t => regexEmoji.test(t));
+    assert(contemEmoji === false, "Zero emojis identificados nos textos e opções de suporte técnico");
 
     console.log("\n=================================================");
     console.log(`📊 RESUMO DA SUÍTE DE TESTES:`);

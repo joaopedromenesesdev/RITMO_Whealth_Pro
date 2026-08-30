@@ -4,6 +4,9 @@
 let relatoriosCached = [];
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Ao entrar no Dashboard, encerra qualquer simulação transitória pendente
+  sessionStorage.clear();
+
   // Event listeners para filtros
   document.getElementById("filtro_busca")?.addEventListener("input", filtrarERenderizar);
   document.getElementById("filtro_patrimonio")?.addEventListener("change", filtrarERenderizar);
@@ -13,6 +16,9 @@ document.addEventListener("DOMContentLoaded", () => {
   if (window.lucide) {
     window.lucide.createIcons();
   }
+
+  // Inicializar widget flutuante de LGPD & Privacidade
+  initFloatingPrivacyWidget();
 
   // ── CORREÇÃO DA RACE CONDITION + FALLBACK FILE:// ──
   // O Supabase restaura a sessão de forma assíncrona após a página carregar.
@@ -389,8 +395,9 @@ function restaurarSessao(id) {
     }
   }
 
-  // Sempre define o ID correto por último (garante que não foi sobrescrito)
+  // Sempre define o ID correto e marca como simulação ativa por último
   sessionStorage.setItem("current_report_id", id);
+  sessionStorage.setItem("simulacao_ativa", "true");
 
   return true;
 }
@@ -474,4 +481,204 @@ function abrirModalPrivacidadeLGPD() {
     window.open("termos_privacidade.html", "_blank");
   }
 }
+
+// ─── CONTROLADOR DO WIDGET FLUTUANTE DE PRIVACIDADE & LGPD ───────────────────
+
+function initFloatingPrivacyWidget() {
+  const trigger = document.getElementById("btn_trigger_privacy");
+  const menu = document.getElementById("floating_privacy_menu");
+  const closeBtn = document.getElementById("btn_close_privacy_menu");
+  const wrapper = document.getElementById("floating_privacy_wrapper");
+  const resumoBtn = document.getElementById("btn_floating_resumo");
+  const termsBtn = document.getElementById("btn_floating_terms");
+
+  if (!trigger || !menu) return;
+
+  function toggleMenu(forceState) {
+    const shouldOpen = typeof forceState === "boolean" ? forceState : !menu.classList.contains("is-open");
+    if (shouldOpen) {
+      menu.classList.add("is-open");
+      trigger.classList.add("is-active");
+      trigger.setAttribute("aria-expanded", "true");
+      menu.setAttribute("aria-hidden", "false");
+      if (window.lucide) window.lucide.createIcons();
+    } else {
+      menu.classList.remove("is-open");
+      trigger.classList.remove("is-active");
+      trigger.setAttribute("aria-expanded", "false");
+      menu.setAttribute("aria-hidden", "true");
+    }
+  }
+
+  trigger.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleMenu();
+  });
+
+  closeBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleMenu(false);
+  });
+
+  // Fechar ao clicar fora
+  document.addEventListener("click", (e) => {
+    if (wrapper && !wrapper.contains(e.target)) {
+      toggleMenu(false);
+    }
+  });
+
+  // Fechar com tecla Escape
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && menu.classList.contains("is-open")) {
+      toggleMenu(false);
+      trigger.focus();
+    }
+  });
+
+  // Fecha o menu após clicar em uma das ações
+  resumoBtn?.addEventListener("click", () => toggleMenu(false));
+  termsBtn?.addEventListener("click", () => toggleMenu(false));
+}
+
+// ─── RESUMO VISUAL / RELATÓRIO PDF (LGPD ART. 18) ───────────────────────────
+
+async function abrirResumoVisualLGPD() {
+  try {
+    if (typeof window.PaceUI?.mostrarToast === "function") {
+      window.PaceUI.mostrarToast("Carregando relatório visual dos seus dados...", "info");
+    }
+
+    const payload = await dbExportarDadosCompletos();
+    const titular = payload.titular || {};
+    const relatorios = payload.relatorios || [];
+
+    // Formatação de totais
+    let totalPatrimonioGlobal = 0;
+    let totalPrejuizoGlobal = 0;
+
+    relatorios.forEach(r => {
+      totalPatrimonioGlobal += Number(r.totalPatrimonio) || 0;
+      totalPrejuizoGlobal += Number(r.prejuizoTributario) || Number(r.prejuizoMedio) || 0;
+    });
+
+    const prejuizoMedio = relatorios.length > 0 ? (totalPrejuizoGlobal / relatorios.length) : 0;
+
+    const formatarMoeda = (v) => "R$ " + Number(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formatarData = (d) => d ? new Date(d).toLocaleDateString("pt-BR") : "—";
+
+    // Preenche campos do modal
+    const dataEmissaoEl = document.getElementById("lgpd_doc_emissao");
+    const protocoloEl = document.getElementById("lgpd_doc_protocolo");
+    const emailEl = document.getElementById("lgpd_titular_email");
+    const idEl = document.getElementById("lgpd_titular_id");
+    const roleEl = document.getElementById("lgpd_titular_role");
+    const totalRelatoriosEl = document.getElementById("lgpd_total_relatorios");
+    const totalPatrimonioEl = document.getElementById("lgpd_total_patrimonio");
+    const totalPrejuizoEl = document.getElementById("lgpd_total_prejuizo");
+    const tableBodyEl = document.getElementById("lgpd_table_body");
+
+    const agora = new Date();
+    if (dataEmissaoEl) dataEmissaoEl.textContent = agora.toLocaleDateString("pt-BR") + " às " + agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    if (protocoloEl) protocoloEl.textContent = `LGPD-${agora.getFullYear()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+    if (emailEl) emailEl.textContent = titular.email || "E-mail não informado";
+    if (idEl) idEl.textContent = titular.user_id || "Não identificado";
+    if (roleEl) roleEl.textContent = titular.role === "master" ? "Administrador Master" : "Assessor / Planejador";
+
+    if (totalRelatoriosEl) totalRelatoriosEl.textContent = String(relatorios.length);
+    if (totalPatrimonioEl) totalPatrimonioEl.textContent = formatarMoeda(totalPatrimonioGlobal);
+    if (totalPrejuizoEl) totalPrejuizoEl.textContent = formatarMoeda(prejuizoMedio);
+
+    // Tabela de registros
+    if (tableBodyEl) {
+      if (relatorios.length === 0) {
+        tableBodyEl.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; color: #64748b; padding: 24px;">
+              Nenhum planejamento registrado na sua conta até o momento.
+            </td>
+          </tr>
+        `;
+      } else {
+        const safe = (s) => (typeof window.escapeHTML === "function" ? window.escapeHTML(s) : String(s || "").replace(/[&<>"']/g, ""));
+        let rowsHtml = "";
+        relatorios.forEach(rep => {
+          const nomeCliente = safe(rep.nomeCliente || "Cliente Não Identificado");
+          const regimeBens = safe(rep.regimeBens || rep.dadosSessao?.familia?.regime || "—");
+          const pat = formatarMoeda(rep.totalPatrimonio || 0);
+          const prej = formatarMoeda(rep.prejuizoTributario || rep.prejuizoMedio || 0);
+          const dataCriacao = formatarData(rep.dataCriacao || rep.dataReuniao);
+
+          rowsHtml += `
+            <tr>
+              <td><strong>${nomeCliente}</strong></td>
+              <td>${regimeBens}</td>
+              <td style="font-weight: 600; color: #09090b;">${pat}</td>
+              <td style="font-weight: 600; color: #09090b;">${prej}</td>
+              <td>${dataCriacao}</td>
+            </tr>
+          `;
+        });
+        tableBodyEl.innerHTML = rowsHtml;
+      }
+    }
+
+    // Exibe o modal
+    const modal = document.getElementById("modal_resumo_lgpd");
+    if (modal) {
+      modal.classList.remove("hidden");
+    }
+
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
+  } catch (err) {
+    console.error("[abrirResumoVisualLGPD] Erro ao carregar resumo LGPD:", err);
+    alert("Não foi possível carregar o resumo visual dos dados no momento.");
+  }
+}
+
+function fecharResumoVisualLGPD() {
+  const modal = document.getElementById("modal_resumo_lgpd");
+  if (modal) {
+    modal.classList.add("hidden");
+  }
+}
+
+function imprimirResumoLGPD() {
+  document.body.classList.add("imprimindo-lgpd");
+  window.print();
+  setTimeout(() => {
+    document.body.classList.remove("imprimindo-lgpd");
+  }, 800);
+}
+
+// Fechar com tecla ESC quando o modal de resumo estiver aberto
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    const modal = document.getElementById("modal_resumo_lgpd");
+    if (modal && !modal.classList.contains("hidden")) {
+      fecharResumoVisualLGPD();
+    }
+  }
+});
+
+// Fechar ao clicar no overlay escuro fora do container
+document.addEventListener("DOMContentLoaded", () => {
+  const modal = document.getElementById("modal_resumo_lgpd");
+  if (modal) {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        fecharResumoVisualLGPD();
+      }
+    });
+  }
+});
+
+window.initFloatingPrivacyWidget = initFloatingPrivacyWidget;
+window.abrirResumoVisualLGPD = abrirResumoVisualLGPD;
+window.fecharResumoVisualLGPD = fecharResumoVisualLGPD;
+window.imprimirResumoLGPD = imprimirResumoLGPD;
+
+
 

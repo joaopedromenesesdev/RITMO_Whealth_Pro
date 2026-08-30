@@ -41,6 +41,13 @@
   border: 1px dashed rgba(0, 0, 0, 0.15);
 }
 
+#sucessao_conjuge h4 {
+  font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
 #idades_filhos {
   display: grid;
   grid-template-columns: 1fr 1fr;

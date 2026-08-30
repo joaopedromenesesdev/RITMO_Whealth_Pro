@@ -6,11 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ritmo Wealth Pro — Estrutura Familiar</title>
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https: data: blob:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; connect-src 'self' https://dogyopoylekiqsahadlc.supabase.co https://*.supabase.co wss://*.supabase.co;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https: data: blob:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; connect-src 'self' https://dogyopoylekiqsahadlc.supabase.co https://*.supabase.co wss://*.supabase.co https://brasilapi.com.br https://olinda.bcb.gov.br;">
 
   <link rel="stylesheet" href="style/style.css">
   <link rel="icon" type="image/png" href="img/RITMO.png">
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Icons (Versão Fixa) -->
+  <script src="https://unpkg.com/lucide@0.469.0"></script>
   <script src="script/global_ui.js"></script>
   <script src="script/state.js"></script>
 
@@ -39,6 +40,8 @@
     <a href="evolucao.html">Evolução Patrimonial</a>
     <a href="tributario.html">Prejuízo Tributário</a>
   </div>
+
+  <div id="nav-user-slot" class="nav-user-slot"></div>
 </div>
 
 <!-- WIZARD STEPPER GLOBAL -->
@@ -175,7 +178,7 @@
 
       <div id="sucessao_conjuge" style="display:none;">
         <hr style="opacity: 0.1; margin: 20px 0;">
-        <h4 style="font-size: 11px; color: var(--primary); margin-bottom: 15px;">Herança e Sucessão (Cônjuge)</h4>
+        <h4 style="font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; font-size: 12px; font-weight: 600; color: var(--primary); margin-bottom: 15px; letter-spacing: 0.3px;">Herança e Sucessão (Cônjuge)</h4>
 
         <div class="input-group">
           <label>Cônjuge possui pais vivos?</label>

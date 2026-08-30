@@ -87,7 +87,7 @@ create trigger on_auth_user_created
   for each row execute procedure public.handle_new_user();
 
 
--- 2. TABELA DE CONVITES DE ACESSO (INVITES)
+-- 2. TABELA DE CONVITES DE ACESSO (INVITES) COM EXPIRAÇÃO TEMPORAL (TTL 7 DIAS)
 create table if not exists public.invites (
   id text primary key,
   email_restrito text,
@@ -95,12 +95,14 @@ create table if not exists public.invites (
   used_at timestamptz,
   used_by text,
   created_by uuid references auth.users(id),
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  expires_at timestamptz default (now() + interval '7 days')
 );
 
 -- Índices para invites
 create index if not exists idx_invites_created_by on public.invites(created_by);
 create index if not exists idx_invites_used on public.invites(used);
+create index if not exists idx_invites_expires_at on public.invites(expires_at);
 
 -- Ativar RLS em invites
 alter table public.invites enable row level security;
@@ -125,7 +127,7 @@ create policy "Apenas masters podem atualizar convites diretamente"
   on public.invites for update
   using (public.is_master());
 
--- Função RPC Segura para Validação Pública de Convite (Sem expor lista da tabela)
+-- Função RPC Segura para Validação Pública de Convite (Com Checagem de Expiração de 7 dias)
 create or replace function public.validar_convite(p_token text)
 returns jsonb as $$
 declare
@@ -144,11 +146,16 @@ begin
     return jsonb_build_object('valid', false, 'message', 'Este link de convite já foi utilizado por outro usuário.');
   end if;
 
+  -- Checagem de expiração temporal (TTL de 7 dias)
+  if now() > coalesce(v_invite.expires_at, v_invite.created_at + interval '7 days') then
+    return jsonb_build_object('valid', false, 'message', 'Este link de convite expirou (validade máxima de 7 dias).');
+  end if;
+
   return jsonb_build_object('valid', true, 'invite', to_jsonb(v_invite));
 end;
 $$ language plpgsql security definer;
 
--- Função RPC Segura para Consumir Convite no Cadastro
+-- Função RPC Segura para Consumir Convite no Cadastro (Rejeita Convites Expirados)
 create or replace function public.consumir_convite(p_token text, p_email text)
 returns jsonb as $$
 declare
@@ -158,13 +165,15 @@ begin
   set used = true,
       used_at = now(),
       used_by = trim(p_email)
-  where id = trim(p_token) and used = false;
+  where id = trim(p_token) 
+    and used = false
+    and now() <= coalesce(expires_at, created_at + interval '7 days');
 
   get diagnostics v_count = row_count;
   if v_count > 0 then
     return jsonb_build_object('success', true);
   else
-    return jsonb_build_object('success', false, 'message', 'Convite inválido ou já utilizado.');
+    return jsonb_build_object('success', false, 'message', 'Convite inválido, expirado ou já utilizado.');
   end if;
 end;
 $$ language plpgsql security definer;
@@ -272,3 +281,50 @@ begin
   );
 end;
 $$ language plpgsql security definer;
+
+-- =============================================================================
+-- 6. TABELA DE CHAMADOS DE SUPORTE (ATENDIMENTO CORPORATIVO PACE CAPITAL)
+-- =============================================================================
+create table if not exists public.suporte_chamados (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users on delete set null,
+  assessor_nome text not null,
+  assessor_email text not null,
+  tipo text not null,
+  assunto text not null,
+  mensagem text not null,
+  status text default 'aberto' check (status in ('aberto', 'em_analise', 'resolvido')),
+  pagina_origem text,
+  print_imagem text,
+  created_at timestamptz default now()
+);
+
+-- Garantir adição de colunas caso a tabela já exista previamente (Migração idempotente)
+alter table public.suporte_chamados add column if not exists pagina_origem text;
+alter table public.suporte_chamados add column if not exists print_imagem text;
+
+-- Índices de busca e auditoria
+create index if not exists idx_suporte_chamados_user on public.suporte_chamados(user_id);
+create index if not exists idx_suporte_chamados_status on public.suporte_chamados(status);
+
+-- Ativar RLS
+alter table public.suporte_chamados enable row level security;
+
+-- Políticas de RLS
+drop policy if exists "Assessores podem registrar chamados de suporte" on public.suporte_chamados;
+create policy "Assessores podem registrar chamados de suporte"
+  on public.suporte_chamados for insert
+  with check (auth.uid() = user_id or auth.uid() is not null);
+
+drop policy if exists "Assessores podem ler seus próprios chamados" on public.suporte_chamados;
+create policy "Assessores podem ler seus próprios chamados"
+  on public.suporte_chamados for select
+  using (auth.uid() = user_id or public.is_master());
+
+drop policy if exists "Master pode atualizar status dos chamados" on public.suporte_chamados;
+create policy "Master pode atualizar status dos chamados"
+  on public.suporte_chamados for update
+  using (public.is_master())
+  with check (public.is_master());
+
+

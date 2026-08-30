@@ -1,4 +1,26 @@
 // =========================
+// CONTROLE DE CICLO DE VIDA DA SIMULAÇÃO (WHEALTH PLANNER PRO)
+// =========================
+window.temSimulacaoEmAndamento = function() {
+    return sessionStorage.getItem("simulacao_ativa") === "true";
+};
+
+// Guarda de Rota Imediata (executa síncrono antes do render)
+(function() {
+    const abasPlanejamento = ['patrimonio.html', 'familiar.html', 'evolucao.html', 'tributario.html'];
+    const pathAtual = window.location.pathname;
+
+    // Se o usuário acessar diretamente qualquer uma das 4 telas de planejamento sem ter iniciado simulação,
+    // limpa qualquer resíduo anterior e redireciona imediatamente para a introdução (nova_simulacao.html)
+    if (abasPlanejamento.some(aba => pathAtual.endsWith(aba))) {
+        if (!window.temSimulacaoEmAndamento()) {
+            sessionStorage.clear();
+            window.location.replace('nova_simulacao.html');
+        }
+    }
+})();
+
+// =========================
 // REVEAL ANIMATION (Intersection Observer)
 // =========================
 const observerOptions = {
@@ -38,14 +60,14 @@ document.addEventListener('DOMContentLoaded', () => {
     observerInputs.observe(document.body, { childList: true, subtree: true });
 
     // Intercepta cliques nas 4 abas do planejamento (Patrimônio, Estrutura Familiar, Evolução, Prejuízo Tributário)
-    // Se o usuário NÃO clicou em "Novo Relatório" (sem simulação em andamento), reseta os inputs e abre a animação em nova_simulacao.html
+    // Se o usuário NÃO iniciou uma simulação (sem simulação em andamento), limpa resíduos e abre a introdução em nova_simulacao.html
     const abasPlanejamento = ['patrimonio.html', 'familiar.html', 'evolucao.html', 'tributario.html'];
     
     document.querySelectorAll('a').forEach(link => {
         const href = link.getAttribute('href') || '';
         if (abasPlanejamento.some(aba => href.includes(aba))) {
             link.addEventListener('click', (e) => {
-                if (typeof window.temSimulacaoEmAndamento === 'function' && !window.temSimulacaoEmAndamento()) {
+                if (!window.temSimulacaoEmAndamento()) {
                     e.preventDefault();
                     sessionStorage.clear();
                     window.location.href = 'nova_simulacao.html';
@@ -57,11 +79,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Se a página atual for uma das 4 telas de planejamento sem simulação em andamento, redireciona para a animação em nova_simulacao.html
     const pathAtual = window.location.pathname;
     if (abasPlanejamento.some(aba => pathAtual.endsWith(aba))) {
-        if (typeof window.temSimulacaoEmAndamento === 'function' && !window.temSimulacaoEmAndamento()) {
+        if (!window.temSimulacaoEmAndamento()) {
             sessionStorage.clear();
-            window.location.href = 'nova_simulacao.html';
+            window.location.replace('nova_simulacao.html');
         }
     }
+
+    // Inicializa o botão flutuante de suporte no canto inferior direito
+    inicializarWidgetSuporte();
 });
 
 // =========================
@@ -127,35 +152,6 @@ window.confirmarAcaoCustom = function({
 };
 
 // =========================
-// CHECAGEM DE SIMULAÇÃO EM ANDAMENTO
-// =========================
-window.temSimulacaoEmAndamento = function() {
-    const familia = sessionStorage.getItem("familia");
-    const patrimonioDados = sessionStorage.getItem("patrimonio_dados");
-    const totalPat = Number(sessionStorage.getItem("total_patrimonio")) || 0;
-    const currentReportId = sessionStorage.getItem("current_report_id");
-    const tributarioInputs = sessionStorage.getItem("tributario_inputs");
-    const evolucaoDados = sessionStorage.getItem("evolucao_dados");
-
-    if (currentReportId) return true;
-    if (totalPat > 0) return true;
-    if (familia) {
-        try {
-            const parsed = JSON.parse(familia);
-            if (parsed && (parsed.nome || (parsed.membros && parsed.membros.length > 0))) return true;
-        } catch(e) { return true; }
-    }
-    if (patrimonioDados) {
-        try {
-            const parsed = JSON.parse(patrimonioDados);
-            if (parsed && Object.keys(parsed).some(k => Number(parsed[k]) > 0 || (Array.isArray(parsed[k]) && parsed[k].length > 0))) return true;
-        } catch(e) { return true; }
-    }
-    if (tributarioInputs || evolucaoDados) return true;
-
-    return false;
-};
-
 // =========================
 // LIMPAR TUDO (RESET GLOBAL COM VERIFICAÇÃO DE SIMULAÇÃO)
 // =========================
@@ -173,12 +169,12 @@ function limparTudo() {
 
     window.confirmarAcaoCustom({
         titulo: "Resetar Simulação",
-        mensagem: "Tem certeza que deseja limpar todos os dados salvos da simulação atual?",
+        mensagem: "Tem certeza que deseja limpar todos os dados da simulação atual e voltar ao início?",
         textoConfirmar: "Sim, Resetar",
         tipo: "danger",
         onConfirm: () => {
             sessionStorage.clear();
-            window.location.href = "index.html";
+            window.location.href = "nova_simulacao.html";
         }
     });
 }
@@ -210,7 +206,7 @@ function initLucide() {
         if (!document.getElementById("lucide-cdn-script")) {
             const script = document.createElement("script");
             script.id = "lucide-cdn-script";
-            script.src = "https://unpkg.com/lucide@latest";
+            script.src = "https://unpkg.com/lucide@0.469.0";
             script.onload = () => {
                 try {
                     if (window.lucide && window.lucide.createIcons) {
@@ -222,322 +218,6 @@ function initLucide() {
         }
     } catch(e) {}
 }
-
-// =========================
-// MODAL MASTER — GESTÃO DE EQUIPE (Premium Redesign)
-// =========================
-window.abrirModalMasterEquipe = function() {
-    let overlay = document.getElementById("master-modal-overlay");
-    if (overlay) { overlay.remove(); }
-
-    overlay = document.createElement("div");
-    overlay.id = "master-modal-overlay";
-    overlay.className = "master-modal-overlay";
-    overlay.onclick = (e) => { if (e.target === overlay) window.fecharModalMasterEquipe(); };
-
-    overlay.innerHTML = `
-      <div class="master-modal-card">
-
-        <!-- Header Escuro Gradiente -->
-        <div class="master-modal-header">
-          <div class="mh-left">
-            <div class="mh-icon-wrap"><i data-lucide="shield-check"></i></div>
-            <div>
-              <div class="mh-title">Gestão de Equipe</div>
-              <div class="mh-sub">Ritmo Wealth Pro · Painel Master</div>
-            </div>
-          </div>
-          <button class="master-modal-close" id="btn-fechar-master" onclick="window.fecharModalMasterEquipe()" title="Fechar">
-            <span class="close-x">&times;</span>
-          </button>
-        </div>
-
-        <!-- Body -->
-        <div class="master-modal-body">
-
-          <!-- Card: Gerar Convite -->
-          <div class="mm-card">
-            <div class="mm-card-header">
-              <div class="mm-card-icon blue"><i data-lucide="link-2"></i></div>
-              <div>
-                <div class="mm-card-title">Novo Link de Convite</div>
-                <div class="mm-card-desc">Link de uso único — expira após um cadastro</div>
-              </div>
-            </div>
-            <div class="mm-card-body">
-              <div class="invite-row">
-                <div class="invite-email-wrap">
-                  <i data-lucide="mail" class="invite-mail-icon"></i>
-                  <input type="email" id="master_invite_email" class="invite-email-input"
-                    placeholder="E-mail do destinatário (ex: assessor@ritmowealthpro.com.br)">
-                </div>
-                <div class="invite-actions-wrap">
-                  <button type="button" class="btn-gen-invite" onclick="window.executarGerarConviteMaster()" title="Gerar link de convite">
-                    <span>Gerar Link</span>
-                  </button>
-                  <button type="button" class="btn-send-email-direct" onclick="window.executarEnviarEmailMaster()" title="Gerar e abrir cliente de e-mail">
-                    <i data-lucide="send"></i>
-                    <span>Enviar por E-mail</span>
-                  </button>
-                </div>
-              </div>
-              <div id="master_invite_result" class="invite-result-card hidden" style="display: none;">
-                <div class="invite-result-inner">
-                  <i data-lucide="check-circle" class="invite-result-icon"></i>
-                  <div class="invite-result-text">
-                    <div class="invite-result-label">Link gerado com sucesso!</div>
-                    <div class="invite-url-text" id="master_invite_url"></div>
-                  </div>
-                  <div class="invite-result-btns">
-                    <button type="button" class="btn-copy-link" onclick="window.copiarLinkConviteMaster()">
-                      <i data-lucide="copy"></i>
-                      <span>Copiar</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Card: Histórico de Convites -->
-          <div class="mm-card mm-card-list">
-            <div class="mm-card-header">
-              <div class="mm-card-icon gold"><i data-lucide="history"></i></div>
-              <div>
-                <div class="mm-card-title">Histórico de Convites</div>
-                <div class="mm-card-desc">Gerencie os convites enviados</div>
-              </div>
-            </div>
-            <div id="master_invite_list_container" class="mm-invite-list"></div>
-          </div>
-
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(overlay);
-    initLucide();
-    setTimeout(initLucide, 60);
-    window.renderizarTabelaConvitesMaster();
-};
-
-window.fecharModalMasterEquipe = function() {
-    const overlay = document.getElementById("master-modal-overlay");
-    if (overlay) {
-        overlay.style.animation = "mmFadeOut 0.2s ease forwards";
-        setTimeout(() => overlay.remove(), 200);
-    }
-};
-
-window.executarGerarConviteMaster = function() {
-    const emailInput = document.getElementById("master_invite_email");
-    const emailRestrito = emailInput ? emailInput.value.trim() : null;
-
-    if (window.authGerarConvite) {
-        const res = window.authGerarConvite(emailRestrito || null);
-        const resultDiv = document.getElementById("master_invite_result");
-        const urlDiv = document.getElementById("master_invite_url");
-        if (resultDiv && urlDiv) {
-            urlDiv.textContent = res.url;
-            resultDiv.classList.remove("hidden");
-            resultDiv.style.display = "block";
-            resultDiv.style.animation = "mmSlideUp 0.4s cubic-bezier(0.16,1,0.3,1)";
-        }
-        window.renderizarTabelaConvitesMaster();
-        initLucide();
-    }
-};
-
-function dispararEmailClienteMaster(emailDestino, inviteUrl) {
-    const assuntoText = "Convite Oficial de Acesso — Ritmo Wealth Pro";
-    const corpoText = `Olá!\n\n` +
-        `Você foi convidado para acessar a plataforma Ritmo Wealth Pro.\n\n` +
-        `Clique no link abaixo para criar sua conta de acesso:\n${inviteUrl}\n\n` +
-        `Atenciosamente,\nEquipe Ritmo Wealth Pro`;
-
-    const assunto = encodeURIComponent(assuntoText);
-    const corpo = encodeURIComponent(corpoText);
-
-    try {
-        if (emailDestino && emailDestino.toLowerCase().endsWith("@gmail.com")) {
-            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(emailDestino)}&su=${assunto}&body=${corpo}`;
-            const win = window.open(gmailUrl, "_blank");
-            if (!win) {
-                window.location.href = `mailto:${encodeURIComponent(emailDestino)}?subject=${assunto}&body=${corpo}`;
-            }
-        } else {
-            window.location.href = `mailto:${encodeURIComponent(emailDestino)}?subject=${assunto}&body=${corpo}`;
-        }
-    } catch (e) {
-        console.error("Erro ao disparar cliente de e-mail:", e);
-    }
-}
-
-window.executarEnviarEmailMaster = function() {
-    const emailInput = document.getElementById("master_invite_email");
-    const emailDestino = emailInput ? emailInput.value.trim() : "";
-
-    if (!emailDestino || !emailDestino.includes("@")) {
-        alert("Por favor, digite o e-mail do destinatário no campo antes de enviar.");
-        if (emailInput) emailInput.focus();
-        return;
-    }
-
-    const resultDiv = document.getElementById("master_invite_result");
-    const urlDiv = document.getElementById("master_invite_url");
-    let inviteUrl = "";
-
-    // Se o card já está visível e contém a URL gerada, reutiliza a URL (evita gerar cópia no histórico)
-    if (resultDiv && resultDiv.style.display !== "none" && urlDiv && urlDiv.textContent.trim()) {
-        inviteUrl = urlDiv.textContent.trim();
-    } else if (window.authGerarConvite) {
-        // Se ainda não gerou o link, gera agora
-        const res = window.authGerarConvite(emailDestino);
-        inviteUrl = res.url;
-        if (resultDiv && urlDiv) {
-            urlDiv.textContent = inviteUrl;
-            resultDiv.classList.remove("hidden");
-            resultDiv.style.display = "block";
-        }
-        window.renderizarTabelaConvitesMaster();
-    }
-
-    if (!inviteUrl) return;
-
-    // Dispara a janela de e-mail reutilizando o mesmo link
-    const assuntoText = "Convite Oficial de Acesso — Ritmo Wealth Pro";
-    const corpoText = `Olá!\n\n` +
-        `Você foi convidado para acessar a plataforma Ritmo Wealth Pro.\n\n` +
-        `Clique no link abaixo para criar sua conta de acesso:\n${inviteUrl}\n\n` +
-        `Atenciosamente,\nEquipe Ritmo Wealth Pro`;
-
-    const assunto = encodeURIComponent(assuntoText);
-    const corpo = encodeURIComponent(corpoText);
-
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(emailDestino)}&su=${assunto}&body=${corpo}`;
-    window.open(gmailUrl, "_blank");
-};
-
-window.executarEnviarEmailMasterResult = function() {
-    const urlDiv = document.getElementById("master_invite_url");
-    const inviteUrl = urlDiv ? urlDiv.textContent.trim() : "";
-    const emailInput = document.getElementById("master_invite_email");
-    const emailDestino = emailInput ? emailInput.value.trim() : "";
-
-    if (!inviteUrl) return;
-
-    const assuntoText = "Convite Oficial de Acesso — Ritmo Wealth Pro";
-    const corpoText = `Olá!\n\n` +
-        `Você foi convidado para acessar a plataforma Ritmo Wealth Pro.\n\n` +
-        `Clique no link abaixo para criar sua conta de acesso:\n${inviteUrl}\n\n` +
-        `Atenciosamente,\nEquipe Ritmo Wealth Pro`;
-
-    const assunto = encodeURIComponent(assuntoText);
-    const corpo = encodeURIComponent(corpoText);
-
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(emailDestino)}&su=${assunto}&body=${corpo}`;
-    window.open(gmailUrl, "_blank");
-};
-
-window.copiarLinkConviteMaster = function() {
-    const urlDiv = document.getElementById("master_invite_url");
-    if (!urlDiv) return;
-
-    // SVGs inline para os estados do botão copiar
-    const svgCopy = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
-    const svgCheck = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
-
-    navigator.clipboard.writeText(urlDiv.textContent).then(() => {
-        const btn = document.querySelector(".btn-copy-link");
-        if (btn) {
-            btn.innerHTML = `${svgCheck}<span>Copiado!</span>`;
-            btn.classList.add("copied");
-            setTimeout(() => {
-                btn.innerHTML = `${svgCopy}<span>Copiar</span>`;
-                btn.classList.remove("copied");
-            }, 2500);
-        }
-    });
-};
-
-window.excluirConviteMaster = function(tokenId) {
-    if (!window.authObterConvites || !window.authSalvarConvites) return;
-    const convites = window.authObterConvites().filter(c => c.id !== tokenId);
-    window.authSalvarConvites(convites);
-
-    // Oculta a caixa de resultado com o botão Copiar se o link excluído estiver em exibição
-    const resultDiv = document.getElementById("master_invite_result");
-    const urlDiv = document.getElementById("master_invite_url");
-    if (resultDiv && urlDiv) {
-        if (!tokenId || (urlDiv.textContent && urlDiv.textContent.includes(tokenId))) {
-            resultDiv.style.display = "none";
-            resultDiv.classList.add("hidden");
-            urlDiv.textContent = "";
-        }
-    }
-
-    window.renderizarTabelaConvitesMaster();
-};
-
-// SVGs inline para os ícones dos cards de histórico
-const _svgMail = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`;
-const _svgUserCheck = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>`;
-const _svgX = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
-const _svgInbox = `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>`;
-
-window.renderizarTabelaConvitesMaster = function() {
-    const container = document.getElementById("master_invite_list_container");
-    if (!container || !window.authObterConvites) return;
-
-    const convites = window.authObterConvites().slice().reverse();
-
-    if (convites.length === 0) {
-        container.innerHTML = `
-          <div class="mm-empty-state">
-            ${_svgInbox}
-            <p>Nenhum convite gerado ainda.</p>
-          </div>`;
-        return;
-    }
-
-    let html = "";
-    convites.forEach(c => {
-        const dataStr = new Date(c.created_at).toLocaleString("pt-BR", {
-            day: "2-digit", month: "2-digit", year: "numeric",
-            hour: "2-digit", minute: "2-digit"
-        });
-
-        const destinatario = c.email_restrito ? window.escapeHTML(c.email_restrito) : "Qualquer e-mail";
-        const tokenSafe = window.escapeHTML(c.id);
-        const statusClass = c.used ? "used" : "active";
-        const statusLabel = c.used
-            ? `Usado por <strong>${window.escapeHTML(c.used_by || "—")}</strong>`
-            : "Ativo";
-        const statusDot = c.used ? "dot-used" : "dot-active";
-        const avatarIcon = c.used ? _svgUserCheck : _svgMail;
-        const avatarClass = c.used ? "avatar-used" : "avatar-active";
-
-        html += `
-          <div class="mm-invite-item">
-            <div class="mii-avatar ${avatarClass}">${avatarIcon}</div>
-            <div class="mii-info">
-              <div class="mii-email">${destinatario}</div>
-              <div class="mii-date">${dataStr}</div>
-            </div>
-            <div class="mii-status ${statusClass}">
-              <span class="mii-dot ${statusDot}"></span>
-              ${statusLabel}
-            </div>
-            <button class="btn-delete-invite" onclick="window.excluirConviteMaster('${tokenSafe}')" title="Excluir convite">
-              <span class="btn-x-icon">&times;</span>
-            </button>
-          </div>
-        `;
-    });
-
-    container.innerHTML = html;
-};
 
 // =========================
 // WIZARD STEPPER GLOBAL
@@ -630,8 +310,8 @@ window.PaceUI.mostrarToast = function(mensagem, tipo = 'sucesso', duracaoMs = 30
     let icone = '✓';
     let corBg = 'rgba(16, 185, 129, 0.95)';
     if (tipo === 'erro') { icone = '✕'; corBg = 'rgba(239, 68, 68, 0.95)'; }
-    if (tipo === 'aviso') { icone = '⚠️'; corBg = 'rgba(245, 158, 11, 0.95)'; }
-    if (tipo === 'info') { icone = 'ℹ️'; corBg = 'rgba(59, 130, 246, 0.95)'; }
+    if (tipo === 'aviso') { icone = '!'; corBg = 'rgba(245, 158, 11, 0.95)'; }
+    if (tipo === 'info') { icone = 'i'; corBg = 'rgba(59, 130, 246, 0.95)'; }
 
     toast.style.cssText = `
         background: ${corBg};
@@ -665,5 +345,394 @@ window.PaceUI.mostrarToast = function(mensagem, tipo = 'sucesso', duracaoMs = 30
         toast.style.transform = 'translateY(-10px)';
         setTimeout(() => toast.remove(), 300);
     }, duracaoMs);
+};
+
+// =========================
+// WIDGET FLUTUANTE & MODAL DE SUPORTE TÉCNICO (ZERO EMOJIS)
+// =========================
+function inicializarWidgetSuporte() {
+    const pathAtual = window.location.pathname;
+    // Não exibe na tela de login, termos ou runner de testes
+    if (pathAtual.endsWith('login.html') || pathAtual.endsWith('termos_privacidade.html') || pathAtual.endsWith('run_tests.html')) {
+        return;
+    }
+
+    if (document.getElementById('floating_support_wrapper')) return;
+
+    // Injeta botão flutuante no canto inferior direito
+    const wrapperBtn = document.createElement('div');
+    wrapperBtn.className = 'floating-support-wrapper';
+    wrapperBtn.id = 'floating_support_wrapper';
+    wrapperBtn.innerHTML = `
+        <button type="button" class="floating-support-trigger" id="btn_trigger_support" onclick="window.abrirModalSuporte()" title="Suporte Técnico Pace Capital">
+            <svg class="support-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+            <span>Suporte</span>
+        </button>
+    `;
+    document.body.appendChild(wrapperBtn);
+
+    // Injeta modal de atendimento
+    const modalDiv = document.createElement('div');
+    modalDiv.className = 'support-modal-overlay hidden';
+    modalDiv.id = 'modal_suporte_overlay';
+    modalDiv.setAttribute('role', 'dialog');
+    modalDiv.setAttribute('aria-modal', 'true');
+    modalDiv.setAttribute('aria-labelledby', 'support_modal_title');
+    modalDiv.innerHTML = `
+        <div class="support-modal-card" id="support_modal_card">
+            <div class="support-modal-header">
+                <div>
+                    <h3 class="support-modal-title" id="support_modal_title">Suporte Técnico</h3>
+                    <p class="support-modal-subtitle">Envie sua dúvida ou relate uma inconsistência para a equipe técnica da Pace Capital.</p>
+                </div>
+                <button type="button" class="support-modal-close" onclick="window.fecharModalSuporte()" aria-label="Fechar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+
+            <form id="form_suporte" onsubmit="window.enviarChamadoSuporte(event)">
+                <div class="support-modal-body">
+                    <div id="support_alert_msg" class="support-status-alert" style="display: none;"></div>
+
+                    <div class="support-form-group">
+                        <label for="suporte_assessor">Assessor Solicitante</label>
+                        <input type="text" id="suporte_assessor" class="support-form-input" readonly>
+                    </div>
+
+                    <div class="support-form-group">
+                        <label for="suporte_tipo">Tipo de Solicitação</label>
+                        <select id="suporte_tipo" class="support-form-select" required>
+                            <option value="duvida">Dúvida no preenchimento ou regras de cálculo</option>
+                            <option value="erro">Relato de erro ou inconsistência no sistema</option>
+                            <option value="sugestao">Sugestão de melhoria ou nova funcionalidade</option>
+                        </select>
+                    </div>
+
+                    <div class="support-form-group">
+                        <label for="suporte_assunto">Assunto</label>
+                        <input type="text" id="suporte_assunto" class="support-form-input" placeholder="Resumo do chamado" required maxlength="150" autocomplete="off">
+                    </div>
+
+                    <div class="support-form-group">
+                        <label for="suporte_mensagem">Descrição Detalhada</label>
+                        <textarea id="suporte_mensagem" class="support-form-textarea" placeholder="Descreva o que ocorreu ou a sua dúvida com detalhes..." required maxlength="3000"></textarea>
+                    </div>
+
+                    <div class="support-form-group">
+                        <div class="support-label-row">
+                            <label>Captura de Tela (Opcional)</label>
+                            <span class="support-optional-badge">Opcional</span>
+                        </div>
+                        <div class="support-screenshot-wrapper" id="support_screenshot_wrapper">
+                            <div id="support_screenshot_actions" class="support-screenshot-actions">
+                                <button type="button" class="support-btn-action" id="btn_capturar_tela" onclick="window.capturarPrintTela()">
+                                    <i data-lucide="camera"></i>
+                                    <span>Capturar Tela da Página</span>
+                                </button>
+                                <button type="button" class="support-btn-action-secondary" onclick="document.getElementById('suporte_file_input').click()">
+                                    <i data-lucide="paperclip"></i>
+                                    <span>Anexar Imagem</span>
+                                </button>
+                                <input type="file" id="suporte_file_input" accept="image/png, image/jpeg, image/webp" style="display: none;" onchange="window.handleUploadPrint(event)">
+                            </div>
+                            <div id="support_screenshot_preview_container" class="support-screenshot-preview" style="display: none;">
+                                <img id="support_screenshot_img" src="" alt="Captura da tela">
+                                <div class="support-screenshot-info">
+                                    <span class="support-screenshot-tag">Captura Anexada</span>
+                                    <button type="button" class="support-btn-remove-print" onclick="window.removerPrintTela()" title="Remover captura">
+                                        <i data-lucide="trash-2"></i>
+                                        <span>Remover</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <p class="support-screenshot-hint">Dica: Você também pode colar um print diretamente com Ctrl+V.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="support-modal-footer">
+                    <button type="button" class="support-btn-cancel" onclick="window.fecharModalSuporte()">Cancelar</button>
+                    <button type="submit" class="support-btn-submit" id="btn_enviar_suporte">
+                        <span>Enviar Chamado</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+    document.body.appendChild(modalDiv);
+
+    // Suporte a colar imagem (Ctrl+V) no modal
+    modalDiv.addEventListener('paste', (e) => {
+        const items = (e.clipboardData || window.clipboardData)?.items;
+        if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type && items[i].type.startsWith('image/')) {
+                const blob = items[i].getAsFile();
+                if (blob) {
+                    window.processarArquivoPrint(blob);
+                    break;
+                }
+            }
+        }
+    });
+
+    // Fechar ao clicar fora do card
+    modalDiv.addEventListener('click', (e) => {
+        if (e.target === modalDiv) {
+            window.fecharModalSuporte();
+        }
+    });
+
+    // Fechar com tecla Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modalDiv.classList.contains('hidden')) {
+            window.fecharModalSuporte();
+        }
+    });
+}
+
+// Carregamento dinâmico sob demanda do html2canvas caso não exista na página
+window.carregarHtml2Canvas = async function() {
+    if (window.html2canvas) return window.html2canvas;
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+        script.onload = () => resolve(window.html2canvas);
+        script.onerror = () => reject(new Error('Não foi possível carregar a biblioteca de captura.'));
+        document.head.appendChild(script);
+    });
+};
+
+// Processamento e compressão da imagem do print (JPEG 0.7 max 1280px para evitar sobrecarga)
+window.processarArquivoPrint = function(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 1280;
+            const MAX_HEIGHT = 1280;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+                if (width > MAX_WIDTH) {
+                    height = Math.round(height * (MAX_WIDTH / width));
+                    width = MAX_WIDTH;
+                }
+            } else {
+                if (height > MAX_HEIGHT) {
+                    width = Math.round(width * (MAX_HEIGHT / height));
+                    height = MAX_HEIGHT;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            window.__suporte_screenshot_data = compressedDataUrl;
+
+            const previewImg = document.getElementById('support_screenshot_img');
+            const previewContainer = document.getElementById('support_screenshot_preview_container');
+            const actionsContainer = document.getElementById('support_screenshot_actions');
+
+            if (previewImg) previewImg.src = compressedDataUrl;
+            if (previewContainer) previewContainer.style.display = 'flex';
+            if (actionsContainer) actionsContainer.style.display = 'none';
+
+            if (window.lucide) window.lucide.createIcons();
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+};
+
+// Captura automática da viewport da página atual
+window.capturarPrintTela = async function() {
+    const btnCapturar = document.getElementById('btn_capturar_tela');
+    const overlay = document.getElementById('modal_suporte_overlay');
+    if (!overlay) return;
+
+    if (btnCapturar) {
+        btnCapturar.disabled = true;
+        btnCapturar.innerHTML = `<span>Capturando tela...</span>`;
+    }
+
+    try {
+        await window.carregarHtml2Canvas();
+        // Oculta temporariamente o modal para tirar o print do conteúdo de fundo
+        overlay.style.display = 'none';
+        await new Promise(r => setTimeout(r, 200));
+
+        const canvas = await window.html2canvas(document.body, {
+            useCORS: true,
+            logging: false,
+            scale: 1,
+            ignoreElements: (element) => element.id === 'modal_suporte_overlay' || element.id === 'btn_trigger_support'
+        });
+
+        overlay.style.display = 'flex';
+
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        window.__suporte_screenshot_data = compressedDataUrl;
+
+        const previewImg = document.getElementById('support_screenshot_img');
+        const previewContainer = document.getElementById('support_screenshot_preview_container');
+        const actionsContainer = document.getElementById('support_screenshot_actions');
+
+        if (previewImg) previewImg.src = compressedDataUrl;
+        if (previewContainer) previewContainer.style.display = 'flex';
+        if (actionsContainer) actionsContainer.style.display = 'none';
+
+        if (window.lucide) window.lucide.createIcons();
+
+    } catch (err) {
+        console.warn('[Captura de Tela] Aviso ao capturar tela:', err);
+        overlay.style.display = 'flex';
+    } finally {
+        if (btnCapturar) {
+            btnCapturar.disabled = false;
+            btnCapturar.innerHTML = `<i data-lucide="camera"></i><span>Capturar Tela da Página</span>`;
+            if (window.lucide) window.lucide.createIcons();
+        }
+    }
+};
+
+window.handleUploadPrint = function(event) {
+    const file = event.target?.files?.[0];
+    if (file) {
+        window.processarArquivoPrint(file);
+    }
+};
+
+window.removerPrintTela = function() {
+    window.__suporte_screenshot_data = null;
+    const previewContainer = document.getElementById('support_screenshot_preview_container');
+    const actionsContainer = document.getElementById('support_screenshot_actions');
+    const fileInput = document.getElementById('suporte_file_input');
+    const previewImg = document.getElementById('support_screenshot_img');
+
+    if (previewImg) previewImg.src = '';
+    if (previewContainer) previewContainer.style.display = 'none';
+    if (actionsContainer) actionsContainer.style.display = 'flex';
+    if (fileInput) fileInput.value = '';
+    if (window.lucide) window.lucide.createIcons();
+};
+
+window.abrirModalSuporte = function() {
+    const overlay = document.getElementById('modal_suporte_overlay');
+    if (!overlay) return;
+
+    let nome = "Assessor";
+    let email = "";
+    try {
+        const cached = localStorage.getItem("pace_user_cache");
+        if (cached) {
+            const u = JSON.parse(cached);
+            if (u.full_name) nome = u.full_name;
+            if (u.email) email = u.email;
+        }
+    } catch (e) {}
+
+    const assessorInput = document.getElementById('suporte_assessor');
+    if (assessorInput) {
+        assessorInput.value = email ? `${nome} (${email})` : nome;
+    }
+
+    const alertMsg = document.getElementById('support_alert_msg');
+    if (alertMsg) alertMsg.style.display = 'none';
+
+    const btnSubmit = document.getElementById('btn_enviar_suporte');
+    if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = `<span>Enviar Chamado</span>`;
+    }
+
+    overlay.classList.remove('hidden');
+    overlay.style.display = 'flex';
+    document.getElementById('suporte_assunto')?.focus();
+    if (window.lucide) window.lucide.createIcons();
+};
+
+window.fecharModalSuporte = function() {
+    const overlay = document.getElementById('modal_suporte_overlay');
+    if (overlay) {
+        overlay.classList.add('hidden');
+        overlay.style.display = 'none';
+    }
+};
+
+window.enviarChamadoSuporte = async function(event) {
+    event.preventDefault();
+    const btnSubmit = document.getElementById('btn_enviar_suporte');
+    const alertMsg = document.getElementById('support_alert_msg');
+
+    const tipo = document.getElementById('suporte_tipo')?.value || "duvida";
+    const assunto = document.getElementById('suporte_assunto')?.value.trim() || "";
+    const mensagem = document.getElementById('suporte_mensagem')?.value.trim() || "";
+    const printImagem = window.__suporte_screenshot_data || null;
+
+    if (!assunto || !mensagem) return;
+
+    let nome = "Assessor";
+    let email = "";
+    try {
+        const cached = localStorage.getItem("pace_user_cache");
+        if (cached) {
+            const u = JSON.parse(cached);
+            if (u.full_name) nome = u.full_name;
+            if (u.email) email = u.email;
+        }
+    } catch (e) {}
+
+    if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = `<span>Enviando...</span>`;
+    }
+
+    try {
+        if (typeof window.dbRegistrarChamadoSuporte === 'function') {
+            await window.dbRegistrarChamadoSuporte({
+                assessor_nome: nome,
+                assessor_email: email,
+                tipo: tipo,
+                assunto: assunto,
+                mensagem: mensagem,
+                pagina_origem: window.location.pathname || "",
+                print_imagem: printImagem
+            });
+        }
+
+        if (alertMsg) {
+            alertMsg.className = 'support-status-alert success';
+            alertMsg.textContent = 'Chamado registrado e encaminhado para joaopedromeneses129@gmail.com com sucesso.';
+            alertMsg.style.display = 'flex';
+        }
+
+        const inputAssunto = document.getElementById('suporte_assunto');
+        const inputMensagem = document.getElementById('suporte_mensagem');
+        if (inputAssunto) inputAssunto.value = '';
+        if (inputMensagem) inputMensagem.value = '';
+        window.removerPrintTela();
+
+        setTimeout(() => {
+            window.fecharModalSuporte();
+        }, 2200);
+
+    } catch (err) {
+        if (alertMsg) {
+            alertMsg.className = 'support-status-alert error';
+            alertMsg.textContent = 'Falha ao registrar chamado. Por favor, tente novamente.';
+            alertMsg.style.display = 'flex';
+        }
+        if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = `<span>Enviar Chamado</span>`;
+        }
+    }
 };
 
