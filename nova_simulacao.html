@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ritmo Wealth Pro — Planejamento Patrimonial</title>
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https: data: blob:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; connect-src 'self' https://dogyopoylekiqsahadlc.supabase.co https://*.supabase.co wss://*.supabase.co;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https: data: blob:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; connect-src 'self' https://dogyopoylekiqsahadlc.supabase.co https://*.supabase.co wss://*.supabase.co https://brasilapi.com.br https://olinda.bcb.gov.br;">
 
   <link rel="stylesheet" href="style/style.css">
   <link rel="icon" type="image/png" href="img/RITMO.png">
@@ -15,8 +15,8 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;600;700&family=Playfair+Display:ital,wght@0,700;1,700&family=Outfit:wght@300;400;600;700;800&display=swap"
     rel="stylesheet">
 
-  <!-- Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Icons (Versão Fixa) -->
+  <script src="https://unpkg.com/lucide@0.469.0"></script>
 
   <!-- Supabase & Autenticação -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -500,16 +500,17 @@
 
       erroEl.style.display = 'none';
 
+      // Limpa dados anteriores e define simulação como ativa
+      sessionStorage.clear();
+      sessionStorage.setItem('simulacao_ativa', 'true');
+
       // Persiste o assessor para a próxima sessão (conveniência)
       localStorage.setItem('nome_assessor', assessor);
 
       // Salva os dados da reunião no sessionStorage
-      // Compatível com o campo familia.nome já usado pelo tributario.js
-      const familiaExistente = JSON.parse(sessionStorage.getItem('familia')) || {};
-      familiaExistente.nome = cliente;
-      sessionStorage.setItem('familia', JSON.stringify(familiaExistente));
-
       sessionStorage.setItem('nome_assessor', assessor);
+      sessionStorage.setItem('nome_cliente', cliente);
+      sessionStorage.setItem('familia', JSON.stringify({ nome: cliente }));
       sessionStorage.setItem('data_reuniao',
         data ? new Date(data + 'T12:00:00').toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR')
       );

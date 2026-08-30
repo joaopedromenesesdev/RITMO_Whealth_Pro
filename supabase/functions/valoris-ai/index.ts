@@ -4,17 +4,34 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") || "";
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") || "";
+  let allowed = "*";
+
+  if (ALLOWED_ORIGIN) {
+    allowed = ALLOWED_ORIGIN;
+  } else if (origin) {
+    // Se não há env explícito, reflete o origin da requisição para isolamento em vez de wildcard estático
+    allowed = origin;
+  }
+
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Vary": "Origin"
+  };
+}
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -48,6 +65,13 @@ serve(async (req) => {
     if (!texto || typeof texto !== "string" || !texto.trim()) {
       return new Response(
         JSON.stringify({ error: "O parâmetro 'texto' é obrigatório." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+
+    if (texto.length > 5000) {
+      return new Response(
+        JSON.stringify({ error: "O texto enviado excede o limite máximo de 5.000 caracteres." }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
@@ -95,8 +119,9 @@ serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (err) {
+    console.error("[Valoris AI Edge Function] Erro interno:", err);
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: "Ocorreu um erro interno ao processar a solicitação com o assistente IA." }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }

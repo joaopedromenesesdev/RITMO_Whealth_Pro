@@ -6,7 +6,7 @@
   <title>Ritmo Wealth Pro — Acessar Plataforma</title>
   <meta name="description" content="Acesse a plataforma de planejamento patrimonial do Ritmo Wealth Pro.">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https: data: blob:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; connect-src 'self' https://dogyopoylekiqsahadlc.supabase.co https://*.supabase.co wss://*.supabase.co;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https: data: blob:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; connect-src 'self' https://dogyopoylekiqsahadlc.supabase.co https://*.supabase.co wss://*.supabase.co https://brasilapi.com.br https://olinda.bcb.gov.br;">
 
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -15,8 +15,8 @@
   <link rel="stylesheet" href="style/login.css">
   <link rel="icon" type="image/png" href="img/RITMO.png">
 
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Lucide Icons (Versão Fixa) -->
+  <script src="https://unpkg.com/lucide@0.469.0"></script>
 
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -68,7 +68,7 @@
           <label for="password" id="label-password">Senha</label>
           <div class="input-container">
             <i data-lucide="lock"></i>
-            <input type="password" id="password" required placeholder="••••••••" autocomplete="current-password">
+            <input type="password" id="password" required minlength="8" placeholder="•••••••• (mín. 8 caracteres)" autocomplete="current-password">
           </div>
           <div class="forgot-password-link-wrap" id="forgot-password-wrap">
             <a href="javascript:void(0)" id="link-forgot-password">Esqueceu sua senha?</a>
@@ -80,7 +80,7 @@
           <label for="confirm-password">Confirmar Nova Senha</label>
           <div class="input-container">
             <i data-lucide="lock"></i>
-            <input type="password" id="confirm-password" placeholder="••••••••" autocomplete="new-password">
+            <input type="password" id="confirm-password" minlength="8" placeholder="•••••••• (mín. 8 caracteres)" autocomplete="new-password">
           </div>
         </div>
 
