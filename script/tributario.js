@@ -1954,12 +1954,6 @@ function renderizarNotasRelatorio(scope = document) {
       card.innerHTML = `
         <textarea class="nota-conteudo-textarea" placeholder="Digite sua observação aqui..." oninput="atualizarNotaTexto('${nota.id}', 'conteudo', this.value); autoAjustarTextarea(this);">${conteudoEscaped}</textarea>
         <div class="nota-card-actions no-print">
-          <button type="button" class="btn-valoris-ia" onclick="aprimorarTextoValoris('${nota.id}')" title="Aprimorar observação com a Valoris AI">
-            <span class="btn-valoris-text-group">
-              <span class="btn-valoris-label">Valoris</span>
-              <span class="btn-valoris-subtitle">Assistente de texto IA</span>
-            </span>
-          </button>
           <button type="button" class="btn-delete-nota" onclick="removerObservacaoPagina('${nota.id}')" title="Excluir observação">✕ Apagar</button>
         </div>
       `;
@@ -1972,102 +1966,6 @@ function renderizarNotasRelatorio(scope = document) {
       }
     });
   });
-}
-
-async function aprimorarTextoValoris(notaId) {
-  const card = document.querySelector(`[data-nota-id="${notaId}"]`);
-  if (!card) return;
-
-  const textarea = card.querySelector(".nota-conteudo-textarea");
-  const btn = card.querySelector(".btn-valoris-ia");
-  const label = btn ? btn.querySelector(".btn-valoris-label") : null;
-
-  if (!textarea || !textarea.value.trim()) {
-    if (typeof mostrarToast === "function") {
-      mostrarToast("Digite um rascunho de texto primeiro para a Valoris aprimorar.", "aviso");
-    } else {
-      alert("Por favor, digite um rascunho de texto primeiro para a Valoris aprimorar.");
-    }
-    return;
-  }
-
-  const originalText = textarea.value;
-
-  if (btn) btn.classList.add("loading");
-  if (label) label.innerText = "Valoris aprimorando...";
-
-  try {
-    let resultText = "";
-
-    // 1. Canal Seguro Institucional: Supabase Edge Function (Chave protegida no servidor com validação JWT)
-    if (window.supabaseClient && window.supabaseClient.functions) {
-      try {
-        const { data, error } = await window.supabaseClient.functions.invoke("valoris-ai", {
-          body: { texto: originalText }
-        });
-
-        if (!error && data && data.textoAprimorado) {
-          resultText = data.textoAprimorado.trim();
-        } else if (error) {
-          console.warn("[Valoris AI] Edge Function reportou aviso:", error);
-        }
-      } catch (sErr) {
-        console.warn("[Valoris AI] Edge Function offline ou inacessível:", sErr);
-      }
-    }
-
-    // 2. Fallback Léxico Local Inteligente (sem expor chaves ou dependências de terceiros no browser)
-    if (!resultText) {
-      resultText = polirTextoOfflineValoris(originalText);
-    }
-
-    textarea.value = resultText;
-    autoAjustarTextarea(textarea);
-    atualizarNotaTexto(notaId, "conteudo", resultText);
-
-    if (typeof mostrarToast === "function") {
-      mostrarToast("Texto aprimorado por Valoris!", "sucesso");
-    }
-  } catch (err) {
-    console.error("Erro ao aprimorar texto:", err);
-    const fallbackText = polirTextoOfflineValoris(originalText);
-    textarea.value = fallbackText;
-    autoAjustarTextarea(textarea);
-    atualizarNotaTexto(notaId, "conteudo", fallbackText);
-  } finally {
-    if (btn) btn.classList.remove("loading");
-    if (label) label.innerText = "Valoris";
-  }
-}
-
-function polirTextoOfflineValoris(texto) {
-  if (!texto) return "";
-  let t = texto.trim();
-
-  const substituicoes = [
-    [/\bpra\b/gi, "para"],
-    [/\bvc\b/gi, "você"],
-    [/\btb\b|\btmb\b/gi, "também"],
-    [/\bnao\b/gi, "não"],
-    [/\bja\b/gi, "já"],
-    [/\bate\b/gi, "até"],
-    [/\bso\b/gi, "só"],
-    [/\bfugir do itcmd\b/gi, "otimizar a incidência do ITCMD"],
-    [/\bevitar itcmd\b/gi, "mitigar o impacto do ITCMD"],
-    [/\bpassar pelo inventario\b/gi, "trâmites de inventário"],
-    [/\bdeixar dinheiro pro filho\b/gi, "assegurar a transmissão patrimonial aos herdeiros"],
-    [/\bdeixar dinheiro para o filho\b/gi, "assegurar a transmissão patrimonial aos herdeiros"]
-  ];
-
-  substituicoes.forEach(([regex, sub]) => {
-    t = t.replace(regex, sub);
-  });
-
-  t = t.charAt(0).toUpperCase() + t.slice(1);
-  if (!/[.!?]$/.test(t)) {
-    t += ".";
-  }
-  return t;
 }
 
 
