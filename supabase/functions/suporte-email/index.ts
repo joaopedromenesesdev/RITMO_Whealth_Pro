@@ -28,6 +28,16 @@ function getCorsHeaders(req: Request) {
   };
 }
 
+function escapeHtml(str: string): string {
+  if (!str || typeof str !== "string") return "";
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
@@ -36,16 +46,32 @@ serve(async (req) => {
   }
 
   try {
-    // 1. Validação opcional de Autenticação JWT do Usuário
+    // 1. Validação Obrigatória de Autenticação JWT do Usuário
     const authHeader = req.headers.get("Authorization");
-    if (authHeader && SUPABASE_URL && SUPABASE_ANON_KEY) {
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Acesso não autorizado. Cabeçalho de autorização obrigatório ausente." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+      );
+    }
+
+    if (SUPABASE_URL && SUPABASE_ANON_KEY) {
       try {
         const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
           global: { headers: { Authorization: authHeader } }
         });
-        await supabase.auth.getUser();
+        const { data: { user }, error: authErr } = await supabase.auth.getUser();
+        if (authErr || !user) {
+          return new Response(
+            JSON.stringify({ error: "Sessão inválida ou expirada." }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+          );
+        }
       } catch (e) {
-        console.warn("[suporte-email] Sessão não verificada, prosseguindo com autenticação de sistema:", e);
+        return new Response(
+          JSON.stringify({ error: "Falha na verificação de identidade do usuário." }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+        );
       }
     }
 
@@ -59,9 +85,11 @@ serve(async (req) => {
       mensagem = "",
       pagina_origem = "/",
       print_imagem = null,
-      chamado_id = null,
-      destinatario = DESTINATARIO_PADRAO
+      chamado_id = null
     } = body;
+
+    // Trava de segurança: destinatário fixo e imutável para neutralizar Open Mail Relay
+    const destinatarioFinal = DESTINATARIO_PADRAO;
 
     const dataHoraFormatada = new Date().toLocaleString("pt-BR", {
       timeZone: "America/Sao_Paulo",
@@ -75,7 +103,22 @@ serve(async (req) => {
       sugestao: "Sugestão de melhoria ou nova funcionalidade"
     }[tipo] || tipo;
 
-    // 3. Montagem do Template HTML Institucional
+    // Sanitização e escape estrito contra Injeção de HTML / XSS em templates de e-mail
+    const safeNome = escapeHtml(String(assessor_nome).slice(0, 150));
+    const safeEmail = escapeHtml(String(assessor_email).slice(0, 150));
+    const safeTipo = escapeHtml(String(tipo).slice(0, 50));
+    const safeTipoDesc = escapeHtml(String(tipoDescricao).slice(0, 100));
+    const safeAssunto = escapeHtml(String(assunto).slice(0, 200));
+    const safeMensagem = escapeHtml(String(mensagem).slice(0, 3000));
+    const safePagina = escapeHtml(String(pagina_origem).slice(0, 200));
+    const safeChamadoId = chamado_id ? escapeHtml(String(chamado_id).slice(0, 100)) : "";
+
+    // Validação estrita de imagem para evitar injeção de links arbitrários
+    const safePrint = (print_imagem && typeof print_imagem === "string" && print_imagem.startsWith("data:image/"))
+      ? print_imagem
+      : null;
+
+    // 3. Montagem do Template HTML Institucional Sanitizado
     const htmlEmail = `
       <!DOCTYPE html>
       <html lang="pt-BR">
@@ -106,24 +149,24 @@ serve(async (req) => {
             <p>Pace Capital Multi-Family Office</p>
           </div>
           <div class="content">
-            <span class="badge">${tipo.toUpperCase()}</span>
+            <span class="badge">${safeTipo.toUpperCase()}</span>
             
             <table class="info-table">
               <tr>
                 <td class="label">Assessor:</td>
-                <td class="value"><strong>${assessor_nome}</strong></td>
+                <td class="value"><strong>${safeNome}</strong></td>
               </tr>
               <tr>
                 <td class="label">E-mail:</td>
-                <td class="value"><a href="mailto:${assessor_email}">${assessor_email}</a></td>
+                <td class="value"><a href="mailto:${safeEmail}">${safeEmail}</a></td>
               </tr>
               <tr>
                 <td class="label">Categoria:</td>
-                <td class="value">${tipoDescricao}</td>
+                <td class="value">${safeTipoDesc}</td>
               </tr>
               <tr>
                 <td class="label">Assunto:</td>
-                <td class="value"><strong>${assunto}</strong></td>
+                <td class="value"><strong>${safeAssunto}</strong></td>
               </tr>
               <tr>
                 <td class="label">Data/Hora:</td>
@@ -131,24 +174,24 @@ serve(async (req) => {
               </tr>
               <tr>
                 <td class="label">Página de Origem:</td>
-                <td class="value"><code>${pagina_origem}</code></td>
+                <td class="value"><code>${safePagina}</code></td>
               </tr>
-              ${chamado_id ? `<tr><td class="label">ID Chamado:</td><td class="value"><code>${chamado_id}</code></td></tr>` : ""}
+              ${safeChamadoId ? `<tr><td class="label">ID Chamado:</td><td class="value"><code>${safeChamadoId}</code></td></tr>` : ""}
             </table>
 
             <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #71717a; margin-bottom: 8px;">Descrição do Chamado:</h3>
-            <div class="message-box">${mensagem}</div>
+            <div class="message-box">${safeMensagem}</div>
 
-            ${print_imagem ? `
+            ${safePrint ? `
               <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #71717a; margin-bottom: 8px;">Captura de Tela Anexada:</h3>
               <div class="screenshot-box">
-                <img src="${print_imagem}" alt="Captura do Problema" />
+                <img src="${safePrint}" alt="Captura do Problema" />
               </div>
             ` : ""}
           </div>
           <div class="footer">
             Este é um e-mail automático gerado pelo sistema corporativo <strong>Ritmo Wealth Pro</strong> (Pace Capital).<br/>
-            Para responder ao assessor, utilize o e-mail: ${assessor_email}
+            Para responder ao assessor, utilize o e-mail: ${safeEmail}
           </div>
         </div>
       </body>
@@ -159,9 +202,9 @@ serve(async (req) => {
     if (RESEND_API_KEY) {
       const emailPayload = {
         from: "Ritmo Wealth Pro <onboarding@resend.dev>",
-        to: [destinatario],
+        to: [destinatarioFinal],
         reply_to: assessor_email.includes("@") ? assessor_email : undefined,
-        subject: `[Ritmo Wealth Pro] Chamado de Suporte: ${assunto}`,
+        subject: `[Ritmo Wealth Pro] Chamado de Suporte: ${safeAssunto}`,
         html: htmlEmail
       };
 
@@ -185,19 +228,19 @@ serve(async (req) => {
 
       const resendData = await resendResp.json();
       return new Response(
-        JSON.stringify({ success: true, provider: "resend", id: resendData.id, destinatario }),
+        JSON.stringify({ success: true, provider: "resend", id: resendData.id, destinatario: destinatarioFinal }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
 
     // Se a chave ainda não estiver configurada no Supabase Secrets, registra log do despacho preparado
-    console.log(`[suporte-email] Chamado recebido para despacho a ${destinatario}. Assunto: ${assunto}`);
+    console.log(`[suporte-email] Chamado recebido para despacho a ${destinatarioFinal}. Assunto: ${safeAssunto}`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         provider: "prepared", 
-        destinatario,
+        destinatario: destinatarioFinal,
         aviso: "Configure a secret RESEND_API_KEY no Supabase para envio SMTP automático via gateway." 
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }

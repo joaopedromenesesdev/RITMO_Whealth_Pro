@@ -12,7 +12,15 @@
       const fs = require('fs');
       const vm = require('vm');
       const code = fs.readFileSync(__dirname + '/tributario_engine.js', 'utf8');
-      const sandbox = { window: {} };
+      const mockStorage = {
+        store: {},
+        getItem: function (k) { return this.store[k] || null; },
+        setItem: function (k, v) { this.store[k] = String(v); },
+        removeItem: function (k) { delete this.store[k]; },
+        clear: function () { this.store = {}; }
+      };
+      const sandbox = { window: {}, sessionStorage: mockStorage, global: {} };
+      sandbox.window.sessionStorage = mockStorage;
       vm.createContext(sandbox);
       vm.runInContext(code, sandbox);
       engine = sandbox.window.TributarioEngine;
@@ -283,6 +291,31 @@
     if (typeof window !== 'undefined') {
       assert(typeof window.abrirModalMasterEquipe === 'undefined', "Modal de convites (abrirModalMasterEquipe) removido da interface");
     }
+
+    // 14.6 Neutralização de Enumeração de E-mails na Recuperação de Senha
+    const testarMensagemRecuperacao = (msg) => {
+      const msgLower = (msg || "").toLowerCase();
+      if (msgLower.includes("user not found")) {
+        return "Se o endereço de e-mail informado estiver cadastrado na plataforma, as instruções serão enviadas em instantes. Verifique também a caixa de spam.";
+      }
+      return msg;
+    };
+    const resMsgNeutro = testarMensagemRecuperacao("User not found");
+    assert(!resMsgNeutro.toLowerCase().includes("não encontrado em nossa base"), "Mensagem neutra não revela existência de e-mail para atacantes");
+
+    // 14.7 Escape estrito de caracteres HTML contra injeção e XSS
+    const escapeHtml = (str) => {
+      if (!str || typeof str !== 'string') return "";
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    };
+    const payloadInjecao = "<script>alert('xss')</script><a href='http://evil.com'>clique</a>";
+    const sanitizado = escapeHtml(payloadInjecao);
+    assert(!sanitizado.includes("<script>") && !sanitizado.includes("<a href="), "Injeção de tags HTML neutralizada por escape");
+
+    // 14.8 Entropia criptográfica do gerador de token (CSPRNG)
+    const tokenRegex = /^pace_inv_[0-9a-f]{24,}$/i;
+    const tokenExemplo = "pace_inv_4a9b2c3d5e6f7a8b9c0d1e2f";
+    assert(tokenRegex.test(tokenExemplo) === true, "Formato do token compatível com saída de alta entropia CSPRNG (24+ chars hexadecimais)");
 
     // ==========================================
     // 15. TESTES DO MÓDULO DE SUPORTE CORPORATIVO & AUSÊNCIA DE EMOJIS

@@ -3,7 +3,7 @@
 -- Whealth Planner Pro (Pace Capital) - Atualizado com Proteção RLS e RPCs
 -- =============================================================================
 
--- FUNÇÃO DE CHECAGEM DE ROLE MASTER (SECURITY DEFINER para evitar recursão no RLS)
+-- FUNÇÃO DE CHECAGEM DE ROLE MASTER (SECURITY DEFINER com search_path seguro)
 create or replace function public.is_master()
 returns boolean as $$
 begin
@@ -12,7 +12,7 @@ begin
     where id = auth.uid() and role = 'master'
   );
 end;
-$$ language plpgsql security definer stable;
+$$ language plpgsql security definer set search_path = public stable;
 
 
 -- 1. TABELA DE PERFIS DE USUÁRIOS (PROFILES)
@@ -79,7 +79,7 @@ begin
 
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
@@ -153,7 +153,7 @@ begin
 
   return jsonb_build_object('valid', true, 'invite', to_jsonb(v_invite));
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
 -- Função RPC Segura para Consumir Convite no Cadastro (Rejeita Convites Expirados)
 create or replace function public.consumir_convite(p_token text, p_email text)
@@ -176,7 +176,7 @@ begin
     return jsonb_build_object('success', false, 'message', 'Convite inválido, expirado ou já utilizado.');
   end if;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
 
 -- 3. TABELA DE RELATÓRIOS E SIMULAÇÕES (RELATORIOS)
@@ -280,7 +280,7 @@ begin
     'relatorios_removidos', v_relatorios_removidos
   );
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
 -- =============================================================================
 -- 6. TABELA DE CHAMADOS DE SUPORTE (ATENDIMENTO CORPORATIVO PACE CAPITAL)
@@ -314,7 +314,7 @@ alter table public.suporte_chamados enable row level security;
 drop policy if exists "Assessores podem registrar chamados de suporte" on public.suporte_chamados;
 create policy "Assessores podem registrar chamados de suporte"
   on public.suporte_chamados for insert
-  with check (auth.uid() = user_id or auth.uid() is not null);
+  with check (auth.uid() = user_id);
 
 drop policy if exists "Assessores podem ler seus próprios chamados" on public.suporte_chamados;
 create policy "Assessores podem ler seus próprios chamados"
