@@ -66,9 +66,17 @@ function authConviteExpirou(invite) {
   return false;
 }
 
-// Gerar novo token de convite (uso exclusivo Master com expiração de 7 dias)
+// Gerar novo token de convite com alta entropia criptográfica (uso exclusivo Master com expiração de 7 dias)
 function authGerarConvite(emailRestrito = null) {
-  const token = "pace_inv_" + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
+  let randomHex = "";
+  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+    const bytes = new Uint8Array(12);
+    crypto.getRandomValues(bytes);
+    randomHex = Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
+  } else {
+    randomHex = Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
+  }
+  const token = "pace_inv_" + randomHex;
   const convites = authObterConvites();
 
   const now = new Date();
@@ -326,7 +334,7 @@ function authTraduzirMensagemErro(rawMsg) {
     return "Muitas tentativas em pouco tempo. Por favor, aguarde alguns minutos antes de tentar novamente.";
   }
   if (msgLower.includes("user not found")) {
-    return "Usuário não encontrado em nossa base de dados.";
+    return "Se o endereço de e-mail informado estiver cadastrado na plataforma, as instruções serão enviadas em instantes. Verifique também a caixa de spam.";
   }
   if (msgLower.includes("invalid format") || msgLower.includes("invalid email")) {
     return "Endereço de e-mail em formato inválido.";
