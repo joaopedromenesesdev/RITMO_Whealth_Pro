@@ -52,19 +52,9 @@ create or replace function public.handle_new_user()
 returns trigger as $$
 declare
   v_role text := 'assessor';
-  v_master_emails text[] := array[
-    'joaopedromeneses129@gmail.com',
-    'willians.novais@pacecapital.com.br',
-    'willians.novais@pacecapital.com'
-  ];
 begin
-  -- Atribuição de privilégio Master controlada no servidor (ignora manipulação no client)
-  if lower(trim(new.email)) = any(v_master_emails) then
-    v_role := 'master';
-  else
-    v_role := 'assessor';
-  end if;
-
+  -- Atribuição padrão como 'assessor'. Privilégio 'master' é atribuído exclusivamente
+  -- por administradores existentes via SQL ou painel de controle (sem auto-promoção por e-mail)
   insert into public.profiles (id, email, full_name, role)
   values (
     new.id,
@@ -151,11 +141,17 @@ begin
     return jsonb_build_object('valid', false, 'message', 'Este link de convite expirou (validade máxima de 7 dias).');
   end if;
 
-  return jsonb_build_object('valid', true, 'invite', to_jsonb(v_invite));
+  -- Retorno seguro mínimo: apenas status de validade e data de expiração (sem vazar PII / email_restrito / created_by)
+  return jsonb_build_object(
+    'valid', true,
+    'invite', jsonb_build_object(
+      'expires_at', coalesce(v_invite.expires_at, v_invite.created_at + interval '7 days')
+    )
+  );
 end;
 $$ language plpgsql security definer set search_path = public;
 
--- Função RPC Segura para Consumir Convite no Cadastro (Rejeita Convites Expirados)
+-- Função RPC Segura para Consumir Convite no Cadastro (Rejeita Convites Expirados e Valida Destinatário)
 create or replace function public.consumir_convite(p_token text, p_email text)
 returns jsonb as $$
 declare
@@ -167,13 +163,14 @@ begin
       used_by = trim(p_email)
   where id = trim(p_token) 
     and used = false
+    and (email_restrito is null or lower(trim(email_restrito)) = lower(trim(p_email)))
     and now() <= coalesce(expires_at, created_at + interval '7 days');
 
   get diagnostics v_count = row_count;
   if v_count > 0 then
     return jsonb_build_object('success', true);
   else
-    return jsonb_build_object('success', false, 'message', 'Convite inválido, expirado ou já utilizado.');
+    return jsonb_build_object('success', false, 'message', 'Convite inválido, expirado, já utilizado ou não destinado a este e-mail.');
   end if;
 end;
 $$ language plpgsql security definer set search_path = public;
@@ -248,7 +245,7 @@ create policy "Usuários podem ver seus próprios logs ou master ver todos"
 drop policy if exists "Usuários podem registrar eventos de auditoria" on public.audit_logs;
 create policy "Usuários podem registrar eventos de auditoria"
   on public.audit_logs for insert
-  with check (auth.uid() = user_id or (user_id is null and auth.role() = 'authenticated'));
+  with check (auth.uid() = user_id);
 
 
 -- 5. FUNÇÃO PARA EXPURGO E EXCLUSÃO DE DADOS (LGPD Art. 18, VI)
@@ -302,6 +299,21 @@ create table if not exists public.suporte_chamados (
 -- Garantir adição de colunas caso a tabela já exista previamente (Migração idempotente)
 alter table public.suporte_chamados add column if not exists pagina_origem text;
 alter table public.suporte_chamados add column if not exists print_imagem text;
+
+-- Restrição defensiva de tamanho máximo para print anexado (máximo 3.5 MB)
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'chk_suporte_print_tamanho'
+  ) then
+    alter table public.suporte_chamados
+      add constraint chk_suporte_print_tamanho
+      check (print_imagem is null or length(print_imagem) <= 3500000) not valid;
+  end if;
+end $$;
+
+-- Revoga execução anônima de função LGPD sensível
+revoke execute on function public.solicitar_exclusao_meus_dados() from anon;
 
 -- Índices de busca e auditoria
 create index if not exists idx_suporte_chamados_user on public.suporte_chamados(user_id);
