@@ -91,25 +91,25 @@ function renderizarEstruturaFamiliar() {
 
   // Filhos
   if (familia.temFilhos === "sim" && familia.qtdFilhos) {
-    html += `<li><strong>Filhos:</strong> ${familia.qtdFilhos}</li>`;
-    if (familia.idadesFilhos && familia.idadesFilhos.length > 0) {
+    html += `<li><strong>Filhos:</strong> ${escapeHTML(familia.qtdFilhos)}</li>`;
+    if (Array.isArray(familia.idadesFilhos) && familia.idadesFilhos.length > 0) {
       const idades = familia.idadesFilhos.filter(i => i !== "").join(", ");
       if (idades) {
-        html += `<li><strong>Idades dos filhos:</strong> ${idades} anos</li>`;
+        html += `<li><strong>Idades dos filhos:</strong> ${escapeHTML(idades)} anos</li>`;
       }
     }
   }
 
   // Pais
   if (familia.possuiPais === "sim" && familia.qtdPais) {
-    html += `<li><strong>Pais vivos (Ascendentes):</strong> ${familia.qtdPais}</li>`;
+    html += `<li><strong>Pais vivos (Ascendentes):</strong> ${escapeHTML(familia.qtdPais)}</li>`;
   }
 
   // Colaterais
   if (familia.possuiColaterais === "sim" && familia.qtdColaterais) {
-    html += `<li><strong>Parentes Colaterais:</strong> ${familia.qtdColaterais}`;
+    html += `<li><strong>Parentes Colaterais:</strong> ${escapeHTML(familia.qtdColaterais)}`;
     if (familia.tipoColaterais) {
-      html += ` (${familia.tipoColaterais})`;
+      html += ` (${escapeHTML(familia.tipoColaterais)})`;
     }
     html += `</li>`;
   }
@@ -117,12 +117,12 @@ function renderizarEstruturaFamiliar() {
   // --- Dados Cônjuge Extra ---
   if (familia.estadoCivil === "casado") {
     if (familia.conjugePossuiPais === "sim" && familia.conjugeQtdPais) {
-      html += `<li><strong>Pais vivos do Cônjuge:</strong> ${familia.conjugeQtdPais}</li>`;
+      html += `<li><strong>Pais vivos do Cônjuge:</strong> ${escapeHTML(familia.conjugeQtdPais)}</li>`;
     }
     if (familia.conjugePossuiColaterais === "sim" && familia.conjugeQtdColaterais) {
-      html += `<li><strong>Colaterais do Cônjuge:</strong> ${familia.conjugeQtdColaterais}`;
+      html += `<li><strong>Colaterais do Cônjuge:</strong> ${escapeHTML(familia.conjugeQtdColaterais)}`;
       if (familia.conjugeTipoColaterais) {
-        html += ` (${familia.conjugeTipoColaterais})`;
+        html += ` (${escapeHTML(familia.conjugeTipoColaterais)})`;
       }
       html += `</li>`;
     }
