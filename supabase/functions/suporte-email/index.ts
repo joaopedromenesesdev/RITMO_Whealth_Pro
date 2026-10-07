@@ -12,12 +12,10 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
 
 function getCorsHeaders(req: Request) {
   const origin = req.headers.get("Origin") || "";
-  let allowed = "*";
+  let allowed = ALLOWED_ORIGIN || "*";
 
-  if (ALLOWED_ORIGIN) {
-    allowed = ALLOWED_ORIGIN;
-  } else if (origin) {
-    allowed = origin;
+  if (ALLOWED_ORIGIN && origin) {
+    allowed = (ALLOWED_ORIGIN === origin) ? origin : ALLOWED_ORIGIN;
   }
 
   return {
@@ -46,7 +44,16 @@ serve(async (req) => {
   }
 
   try {
-    // 1. Validação Obrigatória de Autenticação JWT do Usuário
+    // 1. Validação Obrigatória de Configuração do Backend (Fail-Closed)
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      console.error("[suporte-email] SUPABASE_URL ou SUPABASE_ANON_KEY não configurados no ambiente.");
+      return new Response(
+        JSON.stringify({ error: "Configuração do servidor de autenticação incompleta." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      );
+    }
+
+    // 2. Validação Obrigatória de Autenticação JWT do Usuário
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
@@ -55,31 +62,37 @@ serve(async (req) => {
       );
     }
 
-    if (SUPABASE_URL && SUPABASE_ANON_KEY) {
-      try {
-        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-          global: { headers: { Authorization: authHeader } }
-        });
-        const { data: { user }, error: authErr } = await supabase.auth.getUser();
-        if (authErr || !user) {
-          return new Response(
-            JSON.stringify({ error: "Sessão inválida ou expirada." }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
-          );
-        }
-      } catch (e) {
-        return new Response(
-          JSON.stringify({ error: "Falha na verificação de identidade do usuário." }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
-        );
-      }
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authErr } = await supabase.auth.getUser();
+    if (authErr || !user) {
+      return new Response(
+        JSON.stringify({ error: "Sessão inválida ou expirada." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+      );
     }
 
-    // 2. Leitura dos dados do chamado
+    // 3. Rate Limiting Defensivo: máximo de 5 chamados a cada 10 minutos por usuário
+    const dezMinutosAtras = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { count, error: countErr } = await supabase
+      .from("suporte_chamados")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("created_at", dezMinutosAtras);
+
+    if (!countErr && typeof count === "number" && count >= 5) {
+      return new Response(
+        JSON.stringify({ error: "Limite de solicitações de suporte atingido. Por favor, aguarde alguns minutos antes de enviar outro chamado." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 429 }
+      );
+    }
+
+    // 4. Leitura dos dados do chamado
     const body = await req.json();
     const {
       assessor_nome = "Assessor",
-      assessor_email = "Não informado",
       tipo = "duvida",
       assunto = "Sem assunto",
       mensagem = "",
@@ -88,7 +101,8 @@ serve(async (req) => {
       chamado_id = null
     } = body;
 
-    // Trava de segurança: destinatário fixo e imutável para neutralizar Open Mail Relay
+    // Identidade do remetente estritamente ancorada no token JWT autenticado
+    const authoritativeEmail = user.email || "Não informado";
     const destinatarioFinal = DESTINATARIO_PADRAO;
 
     const dataHoraFormatada = new Date().toLocaleString("pt-BR", {
@@ -105,7 +119,7 @@ serve(async (req) => {
 
     // Sanitização e escape estrito contra Injeção de HTML / XSS em templates de e-mail
     const safeNome = escapeHtml(String(assessor_nome).slice(0, 150));
-    const safeEmail = escapeHtml(String(assessor_email).slice(0, 150));
+    const safeEmail = escapeHtml(String(authoritativeEmail).slice(0, 150));
     const safeTipo = escapeHtml(String(tipo).slice(0, 50));
     const safeTipoDesc = escapeHtml(String(tipoDescricao).slice(0, 100));
     const safeAssunto = escapeHtml(String(assunto).slice(0, 200));
@@ -113,12 +127,15 @@ serve(async (req) => {
     const safePagina = escapeHtml(String(pagina_origem).slice(0, 200));
     const safeChamadoId = chamado_id ? escapeHtml(String(chamado_id).slice(0, 100)) : "";
 
-    // Validação estrita de imagem para evitar injeção de links arbitrários
-    const safePrint = (print_imagem && typeof print_imagem === "string" && print_imagem.startsWith("data:image/"))
-      ? print_imagem
-      : null;
+    // Validação estrita de imagem anexada (apenas base64 PNG/JPEG/WEBP até 3.5 MB)
+    const isImageFormat = (
+      typeof print_imagem === "string" &&
+      /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/.test(print_imagem.trim()) &&
+      print_imagem.length <= 3500000
+    );
+    const safePrint = isImageFormat ? print_imagem.trim() : null;
 
-    // 3. Montagem do Template HTML Institucional Sanitizado
+    // 5. Montagem do Template HTML Institucional Sanitizado
     const htmlEmail = `
       <!DOCTYPE html>
       <html lang="pt-BR">
@@ -185,7 +202,7 @@ serve(async (req) => {
             ${safePrint ? `
               <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #71717a; margin-bottom: 8px;">Captura de Tela Anexada:</h3>
               <div class="screenshot-box">
-                <img src="${safePrint}" alt="Captura do Problema" />
+                <img src="${safePrint}" alt="Captura do Problema" style="max-width:100%; height:auto;" />
               </div>
             ` : ""}
           </div>
@@ -198,12 +215,12 @@ serve(async (req) => {
       </html>
     `;
 
-    // 4. Disparo via Resend (se RESEND_API_KEY estiver configurada nos Secrets do Supabase)
+    // 6. Disparo via Resend (se RESEND_API_KEY estiver configurada nos Secrets do Supabase)
     if (RESEND_API_KEY) {
       const emailPayload = {
         from: "Ritmo Wealth Pro <onboarding@resend.dev>",
         to: [destinatarioFinal],
-        reply_to: assessor_email.includes("@") ? assessor_email : undefined,
+        reply_to: authoritativeEmail.includes("@") ? authoritativeEmail : undefined,
         subject: `[Ritmo Wealth Pro] Chamado de Suporte: ${safeAssunto}`,
         html: htmlEmail
       };
@@ -221,7 +238,7 @@ serve(async (req) => {
         const errorText = await resendResp.text();
         console.warn("[suporte-email] Erro ao despachar via Resend:", errorText);
         return new Response(
-          JSON.stringify({ success: true, provider: "resend_error", message: "Gravado com aviso de gateway", details: errorText }),
+          JSON.stringify({ success: true, provider: "resend_error", message: "Gravado com aviso de gateway" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
         );
       }
@@ -249,7 +266,7 @@ serve(async (req) => {
   } catch (err) {
     console.error("[suporte-email] Erro interno na Edge Function:", err);
     return new Response(
-      JSON.stringify({ error: "Erro ao processar envio de e-mail.", details: err.message }),
+      JSON.stringify({ error: "Erro interno ao processar envio de e-mail de suporte." }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
