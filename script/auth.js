@@ -1,11 +1,11 @@
 // auth.js - Gerenciamento de Autenticação do Supabase (Pace Capital)
 
-// Verifica se o usuário atual é Master (validando profile do banco e metadados no servidor)
+// Verifica se o usuário atual é Master.
+// Fonte de verdade: profiles.role (lido do banco em authObterUsuario). NÃO usar user_metadata,
+// pois é editável pelo próprio usuário via auth.updateUser() — as permissões reais ficam na RLS (is_master()).
 function authIsMaster(user) {
   if (!user) return false;
-  if (user.role === "master" || user.profile_role === "master") return true;
-  if (user.user_metadata?.role === "master") return true;
-  return false;
+  return user.role === "master" || user.profile_role === "master";
 }
 
 // Verifica se o e-mail é válido para cadastro (qualquer e-mail com link de convite ativo)
@@ -157,21 +157,8 @@ async function authValidarConvite(token) {
     }
   }
 
-  // 2. Fallback: LocalStorage do navegador local (apenas se gerado neste navegador pelo Master)
-  const convites = authObterConvites();
-  const convite = convites.find(c => c.id === cleanToken);
-
-  if (convite) {
-    if (convite.used) {
-      return { valid: false, message: "Este link de convite já foi utilizado por outro usuário." };
-    }
-    if (authConviteExpirou(convite)) {
-      return { valid: false, message: "Este link de convite expirou (validade máxima de 7 dias excedida)." };
-    }
-    return { valid: true, invite: convite };
-  }
-
-  // SEM FALLBACK ESTRUTURAL FRAUDULENTO. Se não foi emitido no Supabase ou localmente, rejeita o token.
+  // Sem fallback via LocalStorage: tokens locais podem ser forjados pelo próprio navegador.
+  // A validação é exclusivamente server-side (RPC validar_convite).
   return { valid: false, message: "Link de convite inválido, expirado ou não encontrado." };
 }
 
@@ -296,6 +283,11 @@ async function authSair() {
   }
   try {
     localStorage.removeItem("pace_user_cache");
+    localStorage.removeItem("pace_invite_tokens");
+    // Remove backups locais de relatórios (dados patrimoniais) ao encerrar a sessão
+    Object.keys(localStorage)
+      .filter(k => k.startsWith("relatorios_backup_"))
+      .forEach(k => localStorage.removeItem(k));
   } catch (e) {}
   sessionStorage.clear();
   window.location.href = "login.html";
@@ -746,8 +738,8 @@ function renderizarNavAuth(user) {
   }
 
   wrapDiv.innerHTML = `
-    <button type="button" class="user-dropdown-trigger" id="user-dropdown-trigger" onclick="window.toggleUserDropdown(event)" title="${email}">
-      <div class="user-avatar-circle">${initials}</div>
+    <button type="button" class="user-dropdown-trigger" id="user-dropdown-trigger" onclick="window.toggleUserDropdown(event)" title="${window.escapeHTML(email)}">
+      <div class="user-avatar-circle">${window.escapeHTML(initials)}</div>
       <span class="user-dropdown-name">${window.escapeHTML(userDisplayName)}</span>
       ${isMaster ? '<span class="badge-master">MASTER</span>' : ''}
       <svg class="dropdown-chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>

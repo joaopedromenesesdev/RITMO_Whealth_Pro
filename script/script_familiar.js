@@ -73,7 +73,7 @@ document.getElementById("tem_filhos").addEventListener("change", function () {
 // =========================
 document.getElementById("qtd_filhos").addEventListener("input", function () {
 
-  let qtd = Number(this.value);
+  let qtd = Math.min(Math.max(parseInt(this.value, 10) || 0, 0), 30); // Limite defensivo contra travamento do navegador
   let container = document.getElementById("idades_filhos");
 
   container.innerHTML = "";
@@ -245,10 +245,13 @@ window.onload = function () {
     let container = document.getElementById("idades_filhos");
     container.innerHTML = "";
 
-    for (let i = 0; i < dados.qtdFilhos; i++) {
+    const qtdFilhosSegura = Math.min(Math.max(parseInt(dados.qtdFilhos, 10) || 0, 0), 30);
+    const idadesSalvas = Array.isArray(dados.idadesFilhos) ? dados.idadesFilhos : [];
+
+    for (let i = 0; i < qtdFilhosSegura; i++) {
       container.innerHTML += `
         <h5>Idade do filho ${i + 1}</h5>
-        <input type="number" class="idade_filho" value="${dados.idadesFilhos[i] || ""}">
+        <input type="number" class="idade_filho" value="${escapeHTML(idadesSalvas[i])}">
       `;
     }
   }

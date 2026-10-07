@@ -192,10 +192,11 @@ function renderizarRelatorios(relatorios) {
 
     const formattedPat = "R$ " + totalPat.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
     const formattedPrej = "R$ " + totalPrej.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
-    const formattedDate = rep.dataReuniao || new Date(rep.dataCriacao).toLocaleDateString("pt-BR");
+    const safeId = String(rep.id || "").replace(/[^a-zA-Z0-9_-]/g, "");
+    if (!safeId) return;
 
     html += `
-      <div class="report-card reveal active" id="card_${rep.id}">
+      <div class="report-card reveal active" id="card_${safeId}">
         <div class="report-card-header">
           <div class="report-client-info">
             <h3 class="report-client-name">${escapeHTML(rep.nomeCliente)}</h3>
@@ -225,13 +226,13 @@ function renderizarRelatorios(relatorios) {
           </div>
         </div>
         <div class="report-card-footer">
-          <button class="btn-action danger-icon" onclick="excluirRelatorio('${rep.id}')" title="Excluir Simulação">
+          <button class="btn-action danger-icon" onclick="excluirRelatorio('${safeId}')" title="Excluir Simulação">
             <i data-lucide="trash-2"></i>
           </button>
-          <button class="btn-action secondary" onclick="editarSimulacao('${rep.id}')">
+          <button class="btn-action secondary" onclick="editarSimulacao('${safeId}')">
             <i data-lucide="edit-3"></i> Editar
           </button>
-          <button class="btn-action primary" onclick="visualizarPDF('${rep.id}')">
+          <button class="btn-action primary" onclick="visualizarPDF('${safeId}')">
             <i data-lucide="file-text"></i> PDF
           </button>
         </div>

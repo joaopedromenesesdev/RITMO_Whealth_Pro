@@ -584,6 +584,17 @@ async function dbSolicitarExclusaoConta() {
 async function dbRegistrarChamadoSuporte(dados) {
   if (!dados || typeof dados !== "object") throw new Error("Dados do chamado inválidos.");
 
+  let safePrint = null;
+  if (dados.print_imagem && typeof dados.print_imagem === "string") {
+    const rawPrint = dados.print_imagem.trim();
+    const isImageFormat = /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/.test(rawPrint);
+    if (isImageFormat && rawPrint.length <= 3500000) {
+      safePrint = rawPrint;
+    } else {
+      console.warn("[dbRegistrarChamadoSuporte] Imagem anexada descartada: formato não permitido ou tamanho superior a 3.5MB.");
+    }
+  }
+
   const payload = {
     assessor_nome: String(dados.assessor_nome || "").trim().slice(0, 150),
     assessor_email: String(dados.assessor_email || "").trim().slice(0, 150),
@@ -591,7 +602,7 @@ async function dbRegistrarChamadoSuporte(dados) {
     assunto: String(dados.assunto || "").trim().slice(0, 200),
     mensagem: String(dados.mensagem || "").trim().slice(0, 3000),
     pagina_origem: String(dados.pagina_origem || (typeof window !== "undefined" ? window.location.pathname : "")).trim().slice(0, 200),
-    print_imagem: dados.print_imagem ? String(dados.print_imagem) : null,
+    print_imagem: safePrint,
     status: "aberto"
   };
 
@@ -649,9 +660,17 @@ if (typeof window !== "undefined") {
     console.warn("[Segurança/Resiliência] Exceção assíncrona interceptada:", event.reason);
   });
 
-  // Expõe helpers de teste de segurança estritamente em ambiente de teste automatizado
-  const isTestEnvironment = window.__PACE_ENABLE_SECURITY_TESTS__ === true ||
-    (typeof window.location !== "undefined" && window.location.pathname && window.location.pathname.includes("run_tests.html"));
+  // Expõe helpers de teste de segurança estritamente em ambiente de desenvolvimento local / runner de testes
+  const isLocalHost = typeof window !== "undefined" && window.location && (
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1" ||
+    window.location.protocol === "file:"
+  );
+
+  const isTestEnvironment = isLocalHost && (
+    window.__PACE_ENABLE_SECURITY_TESTS__ === true ||
+    (typeof window.location !== "undefined" && window.location.pathname && window.location.pathname.includes("run_tests.html"))
+  );
 
   if (isTestEnvironment) {
     window.__PACE_SECURITY_TEST__ = {
