@@ -195,6 +195,17 @@ function renderizarRelatorios(relatorios) {
     const safeId = String(rep.id || "").replace(/[^a-zA-Z0-9_-]/g, "");
     if (!safeId) return;
 
+    let formattedDate = rep.dataReuniao || "";
+    if (!formattedDate && rep.dataCriacao) {
+      try {
+        const d = new Date(rep.dataCriacao);
+        formattedDate = isNaN(d.getTime()) ? String(rep.dataCriacao) : d.toLocaleDateString("pt-BR");
+      } catch (e) {
+        formattedDate = String(rep.dataCriacao);
+      }
+    }
+    if (!formattedDate) formattedDate = "Data não inf.";
+
     html += `
       <div class="report-card reveal active" id="card_${safeId}">
         <div class="report-card-header">
@@ -202,7 +213,7 @@ function renderizarRelatorios(relatorios) {
             <h3 class="report-client-name">${escapeHTML(rep.nomeCliente)}</h3>
             <span class="report-advisor-name">Assessor: ${escapeHTML(rep.nomeAssessor)}</span>
           </div>
-          <span class="report-date-pill">${formattedDate}</span>
+          <span class="report-date-pill">${escapeHTML(formattedDate)}</span>
         </div>
         <div class="report-card-body">
           <div class="report-data-item">
