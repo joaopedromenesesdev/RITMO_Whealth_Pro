@@ -1024,7 +1024,6 @@ function calcularPrejuizo() {
   }
 
   const elTempoAtual = document.getElementById("tempo_atual_doacao");
-  const elTempoProj = document.getElementById("tempo_projetado_doacao");
 
   function formatarTempoMeses(prejuizo, doacaoAnual) {
     if (doacaoAnual <= 0 || prejuizo <= 0) return "—";
@@ -1039,10 +1038,8 @@ function calcularPrejuizo() {
 
   if (doacaoVal > 0) {
     if (elTempoAtual) elTempoAtual.innerText = formatarTempoMeses(prejuizoAtual, doacaoVal);
-    if (elTempoProj) elTempoProj.innerText = formatarTempoMeses(prejuizoProjetado, doacaoVal);
   } else {
     if (elTempoAtual) elTempoAtual.innerText = "—";
-    if (elTempoProj) elTempoProj.innerText = "—";
   }
 
   // Preenche tabela da Estratégia 2: Doação dentro da isenção
@@ -1247,7 +1244,6 @@ function calcularPrejuizo() {
 
 function atualizarPreservacaoPDF() {
   const elTempoAtual = document.getElementById("tempo_atual_doacao");
-  const elTempoProj = document.getElementById("tempo_projetado_doacao");
   const elAvistaITCMD = document.getElementById("avista_custo_itcmd");
   const elAvistaTotal = document.getElementById("avista_custo_total");
   const elPrevImposto = document.getElementById("previdencia_imposto");
@@ -1258,7 +1254,6 @@ function atualizarPreservacaoPDF() {
   const elSeguroEconomia = document.getElementById("seguro_resultado_economia");
 
   const pdfTempoAtual = document.getElementById("pdf_tempo_atual_doacao");
-  const pdfTempoProj = document.getElementById("pdf_tempo_projetado_doacao");
   const pdfAvistaITCMD = document.getElementById("pdf_avista_custo_itcmd");
   const pdfAvistaTotal = document.getElementById("pdf_avista_custo_total");
   const pdfPrevImposto = document.getElementById("pdf_previdencia_imposto");
@@ -1269,7 +1264,6 @@ function atualizarPreservacaoPDF() {
   const pdfSeguroEconomia = document.getElementById("pdf_seguro_economia");
 
   if (pdfTempoAtual && elTempoAtual) pdfTempoAtual.innerText = elTempoAtual.innerText;
-  if (pdfTempoProj && elTempoProj) pdfTempoProj.innerText = elTempoProj.innerText;
 
   if (pdfAvistaITCMD && elAvistaITCMD) {
     pdfAvistaITCMD.innerText = elAvistaITCMD.innerText;
