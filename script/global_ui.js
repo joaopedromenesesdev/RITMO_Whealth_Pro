@@ -351,6 +351,10 @@ window.PaceUI.mostrarToast = function(mensagem, tipo = 'sucesso', duracaoMs = 30
 // WIDGET FLUTUANTE & MODAL DE SUPORTE TÉCNICO (ZERO EMOJIS)
 // =========================
 function inicializarWidgetSuporte() {
+    // DESATIVADO TEMPORARIAMENTE PARA O PILOTO DA PACE CAPITAL
+    // Impede a renderização do botão flutuante e do modal na interface dos assessores
+    return;
+
     const pathAtual = window.location.pathname;
     // Não exibe na tela de login, termos ou runner de testes
     if (pathAtual.endsWith('login.html') || pathAtual.endsWith('termos_privacidade.html') || pathAtual.endsWith('run_tests.html')) {
