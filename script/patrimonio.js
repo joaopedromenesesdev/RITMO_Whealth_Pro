@@ -74,78 +74,199 @@ function animateValue(id, start, end, duration) {
 }
 
 // =========================
-// EMPRESAS DINÂMICAS (INLINE)
+// HELPER SANITIZAÇÃO
+// =========================
+function escapeHTML(str) {
+  if (!str) return "";
+  return String(str).replace(/[&<>"']/g, m => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  })[m]);
+}
+
+// =========================
+// EMPRESAS DINÂMICAS (ACCORDION MODERNO)
 // =========================
 
-document.getElementById("tem_empresas").addEventListener("change", function () {
-  let area = document.getElementById("area_empresas");
+function atualizarResumoEmpresasBadge() {
+  const itens = document.querySelectorAll(".empresa_item");
+  let totalFatias = 0;
+  const count = itens.length;
 
-  if (this.value === "sim") {
-    area.style.display = "block";
-  } else {
-    area.style.display = "none";
-    document.getElementById("inputs_empresas").innerHTML = "";
-    document.getElementById("qtd_empresas").value = "";
+  itens.forEach((item, idx) => {
+    const valInput = item.querySelector(".empresa_valor");
+    const pctInput = item.querySelector(".empresa_pct");
+    const cnpjInput = item.querySelector(".empresa_cnpj");
+    const subEl = item.querySelector(".empresa-header-sub");
+
+    const vTexto = valInput ? valInput.value.replace(/\./g, "").replace(",", ".") : "0";
+    const v = Number(vTexto) || 0;
+    const p = pctInput ? Number(pctInput.value) || 0 : 0;
+    const fatia = v * (p / 100);
+    totalFatias += fatia;
+
+    const chipPct = item.querySelector(".empresa-chip-pct");
+    const chipFatia = item.querySelector(".empresa-chip-fatia");
+    const feedbackValor = item.querySelector(".empresa-fatia-valor-texto");
+    const fatiaStr = "R$ " + fatia.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    if (chipPct) chipPct.textContent = p > 0 ? `${p}% da cota` : "0% da cota";
+    if (chipFatia) chipFatia.textContent = fatiaStr;
+    if (feedbackValor) feedbackValor.textContent = fatiaStr;
+
+    if (subEl) {
+      if (cnpjInput && cnpjInput.value.trim()) {
+        subEl.textContent = cnpjInput.value.trim();
+      } else {
+        subEl.textContent = "Toque para configurar";
+      }
+    }
+  });
+
+  const badgeVal = document.getElementById("total_empresas_badge");
+  const badgeQtd = document.getElementById("qtd_empresas_badge");
+  const hiddenQtd = document.getElementById("qtd_empresas");
+
+  if (badgeVal) {
+    badgeVal.textContent = "R$ " + totalFatias.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
+  if (badgeQtd) {
+    badgeQtd.textContent = count === 1 ? "1 empresa" : `${count} empresas`;
+  }
+  if (hiddenQtd) {
+    hiddenQtd.value = count;
+  }
+}
+window.atualizarResumoEmpresasBadge = atualizarResumoEmpresasBadge;
 
-  salvarPatrimonio();
-});
+window.toggleEmpresaCard = function (headerEl) {
+  const card = headerEl.closest(".empresa-accordion-card");
+  if (!card) return;
+  card.classList.toggle("is-open");
+};
 
-document.getElementById("qtd_empresas").addEventListener("input", function () {
-  let qtd = Number(this.value);
-  let container = document.getElementById("inputs_empresas");
+function calcularFatiaEmpresaFormatada(valorStr, pctStr) {
+  const v = Number(String(valorStr || '').replace(/\./g, "").replace(",", ".")) || 0;
+  const p = Number(pctStr) || 0;
+  const fatia = v * (p / 100);
+  return "R$ " + fatia.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
-  let html = "";
+function adicionarEmpresa(dadosIniciais = null, aberta = true) {
+  const container = document.getElementById("inputs_empresas");
+  if (!container) return;
 
-  for (let i = 1; i <= qtd; i++) {
-    html += `
-      <div class="empresa_item" style="background: #fafafa; padding: 20px; border-radius: 12px; border: 1px dashed rgba(0, 0, 0, 0.15); margin-top: 15px;">
-        <h5 class="empresa_nome_display" style="margin-bottom: 10px; color: #09090b; font-size: 14px;">Empresa ${i}</h5>
-        
-        <div class="input-group">
-          <label>CNPJ (Autopreenchimento Inteligente)</label>
-          <input type="text" class="empresa_cnpj" placeholder="00.000.000/0000-00">
+  const indexAtual = container.querySelectorAll(".empresa_item").length + 1;
+  const nomePadrao = (dadosIniciais && dadosIniciais.nome && !dadosIniciais.nome.startsWith("Empresa "))
+    ? dadosIniciais.nome
+    : `Empresa ${indexAtual}`;
+  const cnpjPadrao = (dadosIniciais && dadosIniciais.cnpj) ? dadosIniciais.cnpj : "";
+  const valorPadrao = (dadosIniciais && dadosIniciais.valor) ? formatarValorRestaurado(dadosIniciais.valor) : "";
+  const pctPadrao = (dadosIniciais && dadosIniciais.pct !== undefined) ? dadosIniciais.pct : "";
+  const fatiaInicialStr = calcularFatiaEmpresaFormatada(valorPadrao, pctPadrao);
+
+  const card = document.createElement("div");
+  card.className = `empresa_item empresa-accordion-card ${aberta ? "is-open" : ""}`;
+  card.innerHTML = `
+    <div class="empresa-card-header" onclick="window.toggleEmpresaCard(this)">
+      <div class="empresa-header-left">
+        <div class="empresa-icon-box">
+          <i data-lucide="building-2" style="width: 15px; height: 15px;"></i>
         </div>
+        <div class="empresa-header-texts">
+          <h5 class="empresa_nome_display">${escapeHTML(nomePadrao)}</h5>
+          <span class="empresa-header-sub">${cnpjPadrao ? escapeHTML(cnpjPadrao) : 'Toque para configurar'}</span>
+        </div>
+      </div>
+      <div class="empresa-header-right">
+        <div class="empresa-value-tag">
+          <span class="empresa-chip-fatia">${fatiaInicialStr}</span>
+          <span class="empresa-chip-pct">${pctPadrao ? `${escapeHTML(pctPadrao)}% da cota` : '0% da cota'}</span>
+        </div>
+        <div class="empresa-chevron">
+          <i data-lucide="chevron-down" style="width: 15px; height: 15px;"></i>
+        </div>
+      </div>
+    </div>
 
-        <div class="input-group" style="margin-top: 10px;">
+    <div class="empresa-card-body">
+      <div class="input-group">
+        <div class="empresa-label-row">
+          <label>CNPJ</label>
+          <span class="empresa-badge-auto">Busca automática</span>
+        </div>
+        <input type="text" class="empresa_cnpj input-premium" placeholder="00.000.000/0000-00" value="${escapeHTML(cnpjPadrao)}">
+      </div>
+
+      <div class="empresa-inputs-grid">
+        <div class="input-group">
           <label>Valor da Empresa</label>
           <div class="input-box">
             <span>R$</span>
-            <input type="text" class="empresa_valor">
+            <input type="text" class="empresa_valor input-premium" value="${escapeHTML(valorPadrao)}">
           </div>
         </div>
 
-        <div class="input-group" style="margin-top: 10px;">
-          <label>Sua participação (%)</label>
-          <input type="number" class="empresa_pct" placeholder="Ex: 50">
+        <div class="input-group">
+          <label>Sua Participação (%)</label>
+          <div class="input-box input-pct-box">
+            <input type="number" class="empresa_pct input-premium" placeholder="Ex: 50" min="0" max="100" value="${escapeHTML(pctPadrao)}">
+            <span class="pct-symbol">%</span>
+          </div>
         </div>
       </div>
-    `;
+
+      <div class="empresa-card-footer">
+        <div class="empresa-share-stat">
+          <span>Sua cota no patrimônio</span>
+          <strong class="empresa-fatia-valor-texto">${fatiaInicialStr}</strong>
+        </div>
+        <button type="button" class="btn-excluir-empresa" title="Remover empresa" onclick="removerEmpresa(event, this)">
+          <i data-lucide="trash-2" style="width: 13px; height: 13px;"></i>
+          <span>Excluir</span>
+        </button>
+      </div>
+    </div>
+  `;
+
+  container.appendChild(card);
+  vincularEventosItemEmpresa(card);
+
+  if (window.lucide && typeof window.lucide.createIcons === "function") {
+    window.lucide.createIcons();
   }
 
-  container.innerHTML = html;
+  window.atualizarResumoEmpresasBadge();
+}
 
-  adicionarEventosEmpresas();
-  salvarPatrimonio();
-});
+function vincularEventosItemEmpresa(item) {
+  const valInput = item.querySelector(".empresa_valor");
+  const pctInput = item.querySelector(".empresa_pct");
+  const cnpjInput = item.querySelector(".empresa_cnpj");
 
-function adicionarEventosEmpresas() {
-  document.querySelectorAll(".empresa_valor").forEach(input => {
-    input.addEventListener("input", function () {
+  if (valInput) {
+    valInput.addEventListener("input", function () {
       formatar(this);
+      window.atualizarResumoEmpresasBadge();
       salvarPatrimonio();
     });
-  });
+  }
 
-  document.querySelectorAll(".empresa_pct").forEach(input => {
-    input.addEventListener("input", salvarPatrimonio);
-  });
+  if (pctInput) {
+    pctInput.addEventListener("input", function () {
+      window.atualizarResumoEmpresasBadge();
+      salvarPatrimonio();
+    });
+  }
 
-  document.querySelectorAll(".empresa_cnpj").forEach(input => {
-    input.addEventListener("input", async function () {
+  if (cnpjInput) {
+    cnpjInput.addEventListener("input", async function () {
       let cnpj = this.value.replace(/\D/g, "");
 
-      // Aplicar Máscara
+      // Aplicar Máscara CNPJ
       if (cnpj.length <= 14) {
         let m = cnpj;
         if (m.length > 12) m = m.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{1,2}).*/, "$1.$2.$3/$4-$5");
@@ -155,37 +276,106 @@ function adicionarEventosEmpresas() {
         this.value = m;
       }
 
-      let displayEl = this.closest(".empresa_item").querySelector(".empresa_nome_display");
+      const displayEl = item.querySelector(".empresa_nome_display");
+      const subEl = item.querySelector(".empresa-header-sub");
+
+      if (subEl) {
+        subEl.textContent = this.value || "Toque para configurar";
+      }
 
       if (cnpj.length === 14) {
-        if (displayEl) displayEl.innerHTML = `<span class="loading-dots">Buscando dados da empresa</span>`;
+        if (displayEl) displayEl.innerHTML = `<span class="loading-dots" style="font-size: 11px; color: var(--primary);">Buscando CNPJ...</span>`;
         try {
-          let response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+          const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
           if (response.ok) {
-            let data = await response.json();
-            let nomeFinal = escapeHTML(data.nome_fantasia || data.razao_social);
-            if (displayEl) displayEl.innerHTML = `<i class="icon-check" style="color: #1D6F42"></i> ${nomeFinal}`;
+            const data = await response.json();
+            const nomeFinal = escapeHTML(data.nome_fantasia || data.razao_social || "Empresa");
+            if (displayEl) {
+              displayEl.innerHTML = `<i class="icon-check" style="color: #16a34a; margin-right: 4px;"></i> ${nomeFinal}`;
+            }
 
             if (data.capital_social > 0) {
-              let valorInput = this.closest(".empresa_item").querySelector(".empresa_valor");
-              if (valorInput) {
-                valorInput.value = (data.capital_social * 100).toString();
-                formatar(valorInput);
-                valorInput.classList.add("filled");
+              if (valInput) {
+                valInput.value = (data.capital_social * 100).toString();
+                formatar(valInput);
+                valInput.classList.add("filled");
               }
             }
           } else {
             if (displayEl) displayEl.innerText = "Empresa não encontrada";
           }
         } catch (e) {
-          if (displayEl) displayEl.innerText = "Erro na conexão";
+          if (displayEl) displayEl.innerText = "Erro na consulta";
         }
+        window.atualizarResumoEmpresasBadge();
         salvarPatrimonio();
       } else if (cnpj.length === 0) {
-        if (displayEl) displayEl.innerText = "Empresa";
+        if (displayEl && displayEl.innerText.includes("Empresa")) {
+          const idx = Array.from(document.querySelectorAll(".empresa_item")).indexOf(item) + 1;
+          displayEl.innerText = `Empresa ${idx}`;
+        }
+        window.atualizarResumoEmpresasBadge();
         salvarPatrimonio();
       }
     });
+  }
+}
+
+window.removerEmpresa = function (event, btnEl) {
+  if (event) {
+    event.stopPropagation();
+  }
+
+  const card = btnEl.closest(".empresa_item");
+  if (!card) return;
+
+  card.style.opacity = "0";
+  card.style.transform = "scale(0.95)";
+  card.style.transition = "all 0.2s ease";
+
+  setTimeout(() => {
+    card.remove();
+
+    // Renumera empresas que ainda possuam nome genérico
+    const itens = document.querySelectorAll(".empresa_item");
+    itens.forEach((it, i) => {
+      const nomeEl = it.querySelector(".empresa_nome_display");
+      if (nomeEl && /^Empresa\s*\d+$/i.test(nomeEl.innerText.trim())) {
+        nomeEl.innerText = `Empresa ${i + 1}`;
+      }
+    });
+
+    window.atualizarResumoEmpresasBadge();
+    salvarPatrimonio();
+  }, 180);
+};
+
+// Eventos de ativação e botão adicionar
+document.getElementById("tem_empresas").addEventListener("change", function () {
+  const area = document.getElementById("area_empresas");
+  const container = document.getElementById("inputs_empresas");
+
+  if (this.value === "sim") {
+    area.style.display = "block";
+    if (container.children.length === 0) {
+      adicionarEmpresa(null, true);
+    }
+  } else {
+    area.style.display = "none";
+    container.innerHTML = "";
+    document.getElementById("qtd_empresas").value = "0";
+  }
+
+  window.atualizarResumoEmpresasBadge();
+  salvarPatrimonio();
+});
+
+const btnAddEmp = document.getElementById("btn_adicionar_empresa");
+if (btnAddEmp) {
+  btnAddEmp.addEventListener("click", function () {
+    document.querySelectorAll(".empresa-accordion-card").forEach(c => c.classList.remove("is-open"));
+    adicionarEmpresa(null, true);
+    salvarPatrimonio();
   });
 }
 
@@ -587,10 +777,16 @@ function calcular() {
     options: baseOptions(true, true)
   });
 
+  let nomesEmpresas = [];
+  document.querySelectorAll(".empresa_item").forEach((it, i) => {
+    let nEl = it.querySelector(".empresa_nome_display");
+    nomesEmpresas.push(nEl && nEl.innerText.trim() ? nEl.innerText.trim() : `Empresa ${i + 1}`);
+  });
+
   g4 = new Chart(document.getElementById("g4"), {
     type: "doughnut",
     data: {
-      labels: temE ? distribuicaoEmpresas.map((_, i) => "Empresa " + (i + 1)) : ["Sem dados"],
+      labels: temE ? nomesEmpresas : ["Sem dados"],
       datasets: [{
         data: temE ? distribuicaoEmpresas : [1],
         backgroundColor: temE ? coresPizza.slice(0, Math.max(1, distribuicaoEmpresas.length)) : ["#e2e8f0"],
@@ -733,32 +929,10 @@ window.onload = function () {
 
   if (dados.empresas && dados.empresas.length > 0) {
     dados.empresas.forEach((emp, i) => {
-      container.innerHTML += `
-        <div class="empresa_item empresa-card-box">
-          <h5 class="empresa_nome_display emp-card-title">${escapeHTML(emp.nome) || `Empresa ${i + 1}`}</h5>
-          
-          <div class="input-group">
-            <label>CNPJ (AUTOPREENCHIMENTO INTELIGENTE)</label>
-            <input type="text" class="empresa_cnpj input-premium" placeholder="00.000.000/0000-00" value="${escapeHTML(emp.cnpj || '')}">
-          </div>
-
-          <div class="input-group">
-            <label>VALOR DA EMPRESA</label>
-            <div class="input-box">
-              <span>R$</span>
-              <input type="text" class="empresa_valor input-premium" value="${formatarValorRestaurado(emp.valor)}">
-            </div>
-          </div>
-
-          <div class="input-group">
-            <label>SUA PARTICIPAÇÃO (%)</label>
-            <input type="number" class="empresa_pct input-premium" placeholder="Ex: 50" value="${escapeHTML(emp.pct || '')}">
-          </div>
-        </div>
-      `;
+      adicionarEmpresa(emp, i === 0);
     });
-
-    adicionarEventosEmpresas();
+  } else if (dados.temEmpresas === "sim") {
+    adicionarEmpresa(null, true);
   }
 
   window.atualizarResumoEmpresasBadge();
