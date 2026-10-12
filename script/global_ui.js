@@ -255,6 +255,21 @@ window.renderizarStepperGlobal = function(passoAtual) {
     container.innerHTML = html;
 };
 
+// Inicialização automática do Stepper Global e Ícones Lucide
+document.addEventListener("DOMContentLoaded", () => {
+    const container = document.getElementById("global-stepper-container");
+    if (container && (!container.children || container.children.length === 0)) {
+        const path = window.location.pathname.toLowerCase();
+        if (path.includes("patrimonio")) window.renderizarStepperGlobal(1);
+        else if (path.includes("familiar")) window.renderizarStepperGlobal(2);
+        else if (path.includes("evolucao")) window.renderizarStepperGlobal(3);
+        else if (path.includes("tributario")) window.renderizarStepperGlobal(4);
+    }
+    if (window.lucide && typeof window.lucide.createIcons === "function") {
+        window.lucide.createIcons();
+    }
+});
+
 // =========================
 // NOTIFICAÇÃO DE AUTO-SAVE
 // =========================

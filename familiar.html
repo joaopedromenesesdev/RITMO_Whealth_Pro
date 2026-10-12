@@ -46,7 +46,6 @@
 
 <!-- WIZARD STEPPER GLOBAL -->
 <div id="global-stepper-container"></div>
-<script>document.addEventListener('DOMContentLoaded', () => window.renderizarStepperGlobal(2));</script>
 
 <div class="container_global">
   <h1 class="reveal">Estrutura Familiar</h1>
@@ -75,7 +74,7 @@
 
       <!-- Pergunta Estratégica para Viúvos -->
       <div id="pergunta_viuvo" class="input-group"
-        style="display:none; background: rgba(11, 83, 184, 0.05); padding: 15px; border-radius: 12px; border-left: 4px solid var(--primary);">
+        style="display:none; background: rgba(9, 9, 11, 0.04); padding: 15px; border-radius: 12px; border: 1px solid rgba(0, 0, 0, 0.08); border-left: 4px solid var(--primary);">
         <label><i class="icon-info"></i> O inventário do cônjuge falecido já foi concluído?</label>
         <select id="inventario_concluido">
           <option value="sim">Sim, inventário finalizado</option>
@@ -87,7 +86,7 @@
 
       <!-- Pergunta Estratégica para Divorciados -->
       <div id="pergunta_divorciado" class="input-group"
-        style="display:none; background: rgba(11, 83, 184, 0.05); padding: 15px; border-radius: 12px; border-left: 4px solid var(--primary);">
+        style="display:none; background: rgba(9, 9, 11, 0.04); padding: 15px; border-radius: 12px; border: 1px solid rgba(0, 0, 0, 0.08); border-left: 4px solid var(--primary);">
         <label><i class="icon-info"></i> A partilha de bens do divórcio já foi averbada?</label>
         <select id="partilha_concluida">
           <option value="sim">Sim, partilha resolvida</option>
@@ -223,7 +222,11 @@
   </div>
 
   <!-- 🔥 BOTÃO -->
-  <div style="text-align:center; margin: 40px 0;">
+  <div style="display: flex; justify-content: center; align-items: center; gap: 16px; margin: 40px 0 60px 0; flex-wrap: wrap;">
+    <a href="patrimonio.html" class="btn-prev" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 10px; border: 1px solid #e4e4e7; background: #ffffff; color: #27272a; font-weight: 600; font-size: 14px; text-decoration: none; transition: all 0.2s ease; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);">
+      <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
+      <span>Voltar: Patrimônio</span>
+    </a>
     <a href="evolucao.html" class="btn-next">
       <span>Próximo Passo: Evolução Patrimonial</span>
       <i data-lucide="arrow-right"></i>
@@ -232,9 +235,6 @@
 </div>
 
 <script src="script/script_familiar.js"></script>
-<script>
-  if (window.lucide) { lucide.createIcons(); }
-</script>
 
 </body>
 

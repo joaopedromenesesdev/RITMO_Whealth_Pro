@@ -288,7 +288,7 @@ async function authSair() {
     Object.keys(localStorage)
       .filter(k => k.startsWith("relatorios_backup_"))
       .forEach(k => localStorage.removeItem(k));
-  } catch (e) {}
+  } catch (e) { }
   sessionStorage.clear();
   window.location.href = "login.html";
 }
@@ -624,7 +624,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         // O role é atribuído de forma segura exclusivamente no servidor pelo PostgreSQL
-        await authCadastrar(email, password, { 
+        await authCadastrar(email, password, {
           full_name: fullname,
           termos_aceitos_em: new Date().toISOString()
         });
@@ -666,10 +666,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
   }
+
+  if (window.lucide && typeof window.lucide.createIcons === "function") {
+    window.lucide.createIcons();
+  }
 });
 
 // Toggle e Fechamento do Dropdown de Usuário
-window.toggleUserDropdown = function(e) {
+window.toggleUserDropdown = function (e) {
   if (e) e.stopPropagation();
   const dropdown = document.getElementById("user-dropdown-menu");
   const trigger = document.getElementById("user-dropdown-trigger");
@@ -685,7 +689,7 @@ window.toggleUserDropdown = function(e) {
   }
 };
 
-window.closeUserDropdown = function() {
+window.closeUserDropdown = function () {
   const dropdown = document.getElementById("user-dropdown-menu");
   const trigger = document.getElementById("user-dropdown-trigger");
   if (dropdown) dropdown.classList.remove("show");
@@ -726,7 +730,7 @@ function renderizarNavAuth(user) {
       full_name: userDisplayName,
       role: isMaster ? "master" : "assessor"
     }));
-  } catch (e) {}
+  } catch (e) { }
 
   let wrapDiv = document.getElementById("user-dropdown-wrap");
   const isUpdate = !!wrapDiv;
@@ -786,7 +790,7 @@ if (!window.location.pathname.endsWith("login.html")) {
         }
       }
     }
-  } catch (e) {}
+  } catch (e) { }
 
   // Executa a validação de segurança e atualização oficial de rota
   authProtegerRota().then(user => {
