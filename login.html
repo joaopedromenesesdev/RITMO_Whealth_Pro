@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ritmo Wealth Pro — Acessar Plataforma</title>
   <meta name="description" content="Acesse a plataforma de planejamento patrimonial do Ritmo Wealth Pro.">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; connect-src 'self' https://dogyopoylekiqsahadlc.supabase.co https://*.supabase.co wss://*.supabase.co https://brasilapi.com.br https://olinda.bcb.gov.br; object-src 'none'; base-uri 'self'; form-action 'self';">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; connect-src 'self' https://dogyopoylekiqsahadlc.supabase.co https://*.supabase.co wss://*.supabase.co https://brasilapi.com.br https://olinda.bcb.gov.br; object-src 'none'; base-uri 'self'; form-action 'self';">
 
   <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap"
+    rel="stylesheet">
 
   <!-- Estilos -->
   <link rel="stylesheet" href="style/login.css">
@@ -22,6 +26,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="script/supabase_config.js"></script>
 </head>
+
 <body>
 
   <div class="login-wrapper">
@@ -68,7 +73,8 @@
           <label for="password" id="label-password">Senha</label>
           <div class="input-container">
             <i data-lucide="lock"></i>
-            <input type="password" id="password" required minlength="8" placeholder="•••••••• (mín. 8 caracteres)" autocomplete="current-password">
+            <input type="password" id="password" required minlength="8" placeholder="•••••••• (mín. 8 caracteres)"
+              autocomplete="current-password">
           </div>
           <div class="forgot-password-link-wrap" id="forgot-password-wrap">
             <a href="javascript:void(0)" id="link-forgot-password">Esqueceu sua senha?</a>
@@ -80,7 +86,8 @@
           <label for="confirm-password">Confirmar Nova Senha</label>
           <div class="input-container">
             <i data-lucide="lock"></i>
-            <input type="password" id="confirm-password" minlength="8" placeholder="•••••••• (mín. 8 caracteres)" autocomplete="new-password">
+            <input type="password" id="confirm-password" minlength="8" placeholder="•••••••• (mín. 8 caracteres)"
+              autocomplete="new-password">
           </div>
         </div>
 
@@ -89,7 +96,8 @@
           <label class="checkbox-container">
             <input type="checkbox" id="check-termos">
             <span class="checkbox-custom"></span>
-            <span class="checkbox-label">Declaro que li e concordo com os <a href="termos_privacidade.html" target="_blank" rel="noopener noreferrer">Termos de Uso e Política de Privacidade</a> (LGPD).</span>
+            <span class="checkbox-label">Declaro que li e concordo com os <a href="termos_privacidade.html"
+                target="_blank" rel="noopener noreferrer">Termos de Uso e Política de Privacidade</a> (LGPD).</span>
           </label>
         </div>
 
@@ -119,6 +127,6 @@
   </div>
 
   <script src="script/auth.js"></script>
-  <script>lucide.createIcons();</script>
 </body>
+
 </html>
