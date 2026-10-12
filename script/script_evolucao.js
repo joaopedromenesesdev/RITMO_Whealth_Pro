@@ -347,8 +347,8 @@ function renderChart(labels, data, cdi, ipca) {
 
   // Gradient Background
   const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-  gradient.addColorStop(0, "rgba(37, 99, 235, 0.25)");
-  gradient.addColorStop(1, "rgba(37, 99, 235, 0.0)");
+  gradient.addColorStop(0, "rgba(9, 9, 11, 0.20)");
+  gradient.addColorStop(1, "rgba(9, 9, 11, 0.0)");
 
   if (grafico) {
     grafico.destroy();
@@ -362,14 +362,14 @@ function renderChart(labels, data, cdi, ipca) {
         {
           label: "Projeção Estimada",
           data: data,
-          borderColor: "#2563EB",
+          borderColor: "#09090b",
           backgroundColor: gradient,
           fill: true,
           tension: 0.4,
           borderWidth: 4,
           pointRadius: 0,
           pointHoverRadius: 6,
-          pointHoverBackgroundColor: "#2563EB",
+          pointHoverBackgroundColor: "#09090b",
           pointHoverBorderColor: "#fff",
           pointHoverBorderWidth: 3
         },
