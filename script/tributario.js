@@ -185,12 +185,12 @@ function renderizarGraficoEvolucao(scope = document) {
 
   // Criar gradiente de fundo azul transparente elegante
   const canvasCtx = ctx.getContext ? ctx.getContext('2d') : null;
-  let bgGradient = "rgba(11, 83, 184, 0.08)";
+  let bgGradient = "rgba(9, 9, 11, 0.05)";
   if (canvasCtx && canvasCtx.createLinearGradient) {
     bgGradient = canvasCtx.createLinearGradient(0, 0, 0, 300);
-    bgGradient.addColorStop(0, "rgba(37, 99, 235, 0.25)");
-    bgGradient.addColorStop(0.7, "rgba(37, 99, 235, 0.03)");
-    bgGradient.addColorStop(1, "rgba(37, 99, 235, 0.0)");
+    bgGradient.addColorStop(0, "rgba(9, 9, 11, 0.18)");
+    bgGradient.addColorStop(0.7, "rgba(9, 9, 11, 0.03)");
+    bgGradient.addColorStop(1, "rgba(9, 9, 11, 0.0)");
   }
 
   // Recuperar premissas globais salvas como fallback 2
@@ -255,17 +255,17 @@ function renderizarGraficoEvolucao(scope = document) {
   const datasets = [{
     label: labelPat,
     data: resultados,
-    borderColor: "#2563EB",
+    borderColor: "#09090b",
     backgroundColor: bgGradient,
     borderWidth: 3,
     tension: 0.35,
     clip: false,
     pointBackgroundColor: "#ffffff",
-    pointBorderColor: "#2563EB",
+    pointBorderColor: "#09090b",
     pointBorderWidth: 2,
     pointRadius: 4,
     pointHoverRadius: 6,
-    pointHoverBackgroundColor: "#2563EB",
+    pointHoverBackgroundColor: "#09090b",
     pointHoverBorderColor: "#ffffff",
     pointHoverBorderWidth: 2,
     fill: true

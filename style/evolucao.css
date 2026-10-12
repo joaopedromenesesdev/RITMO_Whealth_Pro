@@ -138,7 +138,7 @@
   padding: 0 !important;
   margin: 0 !important;
   font-weight: 700;
-  color: #1a2b49;
+  color: #09090b;
   font-size: 18px !important;
   pointer-events: none;
 }
@@ -182,7 +182,7 @@
   margin-right: 4px;
 }
 
-.sua-projecao { background: #2563EB; }
+.sua-projecao { background: #09090b; }
 .cdi { background: #10B981; }
 .ipca { background: #EF4444; }
 
@@ -222,7 +222,7 @@
 .magic-card p {
   margin: 0;
   font-size: 15px;
-  color: #1a2b49;
+  color: #27272a;
   line-height: 1.6;
 }
 

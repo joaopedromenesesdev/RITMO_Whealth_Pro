@@ -69,23 +69,57 @@ document.getElementById("tem_filhos").addEventListener("change", function () {
 
 
 // =========================
-// GERAR IDADES DOS FILHOS
+// GERAR IDADES DOS FILHOS (COM PRESERVAÇÃO DE DADOS)
 // =========================
-document.getElementById("qtd_filhos").addEventListener("input", function () {
+function safeEscape(str) {
+  if (typeof window.escapeHTML === "function") return window.escapeHTML(str);
+  if (!str) return "";
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
 
-  let qtd = Math.min(Math.max(parseInt(this.value, 10) || 0, 0), 30); // Limite defensivo contra travamento do navegador
-  let container = document.getElementById("idades_filhos");
+function atualizarCamposFilhos(qtd, valoresFornecidos = null) {
+  const container = document.getElementById("idades_filhos");
+  if (!container) return;
 
+  // Se não foram fornecidos valores salvos, preserva o que o usuário já digitou na tela
+  let idadesAtuais = valoresFornecidos;
+  if (!idadesAtuais) {
+    idadesAtuais = [];
+    container.querySelectorAll(".idade_filho").forEach(input => {
+      idadesAtuais.push(input.value);
+    });
+  }
+
+  const qtdSegura = Math.min(Math.max(parseInt(qtd, 10) || 0, 0), 30);
   container.innerHTML = "";
 
-  for (let i = 1; i <= qtd; i++) {
-    container.innerHTML += `
-      <h5>Idade do filho ${i}</h5>
-      <input type="number" class="idade_filho" min="0">
+  for (let i = 0; i < qtdSegura; i++) {
+    const val = (idadesAtuais[i] !== undefined && idadesAtuais[i] !== null && idadesAtuais[i] !== "")
+      ? idadesAtuais[i]
+      : "";
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "filho-input-item";
+    wrapper.style.cssText = "display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px;";
+    wrapper.innerHTML = `
+      <label style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:2px;">Idade do filho ${i + 1}</label>
+      <input type="number" class="idade_filho" min="0" max="120" placeholder="Ex: 15" value="${val !== "" ? safeEscape(val) : ""}">
     `;
+
+    const inputEl = wrapper.querySelector(".idade_filho");
+    inputEl.addEventListener("input", function () {
+      checkFilled(this);
+      salvarDados();
+    });
+
+    container.appendChild(wrapper);
   }
 
   salvarDados();
+}
+
+document.getElementById("qtd_filhos").addEventListener("input", function () {
+  atualizarCamposFilhos(this.value);
 });
 
 
@@ -177,7 +211,8 @@ function salvarDados() {
 
   let idades = [];
   document.querySelectorAll(".idade_filho").forEach(input => {
-    idades.push(Number(input.value) || 0);
+    const val = input.value.trim();
+    idades.push(val === "" ? "" : (Number(val) || 0));
   });
 
   const dados = {
@@ -242,18 +277,8 @@ window.onload = function () {
   document.getElementById("qtd_filhos").value = dados.qtdFilhos || "";
 
   if (dados.qtdFilhos) {
-    let container = document.getElementById("idades_filhos");
-    container.innerHTML = "";
-
-    const qtdFilhosSegura = Math.min(Math.max(parseInt(dados.qtdFilhos, 10) || 0, 0), 30);
     const idadesSalvas = Array.isArray(dados.idadesFilhos) ? dados.idadesFilhos : [];
-
-    for (let i = 0; i < qtdFilhosSegura; i++) {
-      container.innerHTML += `
-        <h5>Idade do filho ${i + 1}</h5>
-        <input type="number" class="idade_filho" value="${escapeHTML(idadesSalvas[i])}">
-      `;
-    }
+    atualizarCamposFilhos(dados.qtdFilhos, idadesSalvas);
   }
 
   // ===== PAIS =====
