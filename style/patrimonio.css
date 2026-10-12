@@ -171,3 +171,322 @@
     padding: 18px 14px;
   }
 }
+
+/* ==========================================================================
+   SEÇÃO EMPRESAS / HOLDING — DESIGN PREMIUM ACCORDION & GESTÃO DINÂMICA
+   (PALETA PADRÃO DO SISTEMA: #09090b / #71717a / #f4f4f5 / #ffffff)
+   ========================================================================== */
+
+.area-empresas-container {
+  margin-top: 18px;
+}
+
+/* Card de Resumo Consolidado */
+.empresas-resumo-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #fafafa;
+  border: 1px solid #e4e4e7;
+  border-radius: 12px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.empresas-resumo-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.empresas-resumo-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #71717a);
+}
+
+.empresas-resumo-valor {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--primary, #09090b);
+  letter-spacing: -0.02em;
+}
+
+.empresas-resumo-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: #ffffff;
+  color: #52525b;
+  border: 1px solid #e4e4e7;
+}
+
+/* Lista de Acordeão */
+.empresas-accordion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+/* Card Individual de Empresa */
+.empresa-accordion-card {
+  background: #ffffff;
+  border: 1px solid #e4e4e7;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.empresa-accordion-card:hover {
+  border-color: #a1a1aa;
+}
+
+.empresa-accordion-card.is-open {
+  border-color: var(--primary, #09090b);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+/* Header do Card */
+.empresa-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+  background: #ffffff;
+  transition: background 0.15s ease;
+  gap: 10px;
+}
+
+.empresa-card-header:hover {
+  background: #fafafa;
+}
+
+.empresa-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.empresa-icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #f4f4f5;
+  color: var(--primary, #09090b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.empresa-header-texts {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.empresa-header-texts .empresa_nome_display {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary, #09090b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.empresa-header-sub {
+  font-size: 11px;
+  color: var(--text-muted, #71717a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.empresa-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.empresa-value-tag {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.empresa-chip-fatia {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary, #09090b);
+}
+
+.empresa-chip-pct {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted, #71717a);
+}
+
+.empresa-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted, #71717a);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.empresa-accordion-card.is-open .empresa-chevron {
+  transform: rotate(180deg);
+  color: var(--primary, #09090b);
+}
+
+/* Corpo do Card (Colapsável) */
+.empresa-card-body {
+  display: none;
+  padding: 16px;
+  border-top: 1px solid #f4f4f5;
+  background: #fafafa;
+}
+
+.empresa-accordion-card.is-open .empresa-card-body {
+  display: block;
+  animation: empresaFadeIn 0.2s ease-out;
+}
+
+@keyframes empresaFadeIn {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.empresa-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.empresa-badge-auto {
+  font-size: 10px;
+  font-weight: 600;
+  color: #71717a;
+  background: #e4e4e7;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.empresa-inputs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.input-pct-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.pct-symbol {
+  position: absolute;
+  right: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #71717a);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.input-pct-box input {
+  padding-right: 28px !important;
+}
+
+/* Rodapé de Ações do Card */
+.empresa-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed #e4e4e7;
+}
+
+.empresa-share-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.empresa-share-stat span {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  color: var(--text-muted, #71717a);
+}
+
+.empresa-share-stat strong {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--primary, #09090b);
+}
+
+.btn-excluir-empresa {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.btn-excluir-empresa:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* Botão Adicionar Empresa */
+.btn-adicionar-empresa {
+  width: 100%;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px dashed #d4d4d8;
+  border-radius: 10px;
+  color: var(--primary, #09090b);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  margin-top: 6px;
+}
+
+.btn-adicionar-empresa:hover {
+  background: #f4f4f5;
+  border-color: var(--primary, #09090b);
+  transform: translateY(-1px);
+}
+
+.btn-adicionar-empresa:active {
+  transform: translateY(0);
+}
+

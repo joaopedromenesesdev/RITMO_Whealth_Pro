@@ -52,7 +52,6 @@
 
   <!-- WIZARD STEPPER GLOBAL -->
   <div id="global-stepper-container"></div>
-  <script>document.addEventListener('DOMContentLoaded', () => window.renderizarStepperGlobal(1));</script>
 
   <div class="container_global">
     <div style="text-align: center; margin-bottom: 40px;">
@@ -169,10 +168,25 @@
             </select>
           </div>
 
-          <div id="area_empresas" style="display:none;">
-            <label>Qtd. de empresas</label>
-            <input type="number" id="qtd_empresas" min="1">
-            <div id="inputs_empresas"></div>
+          <div id="area_empresas" style="display:none;" class="area-empresas-container">
+            <div class="empresas-resumo-card" id="empresas_resumo_card">
+              <div class="empresas-resumo-info">
+                <span class="empresas-resumo-label">Total em Participações</span>
+                <span class="empresas-resumo-valor" id="total_empresas_badge">R$ 0,00</span>
+              </div>
+              <div class="empresas-resumo-badge" id="qtd_empresas_badge">
+                0 empresas
+              </div>
+            </div>
+
+            <input type="hidden" id="qtd_empresas" value="0">
+
+            <div id="inputs_empresas" class="empresas-accordion-list"></div>
+
+            <button type="button" id="btn_adicionar_empresa" class="btn-adicionar-empresa">
+              <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i>
+              <span>Adicionar Empresa / Holding</span>
+            </button>
           </div>
         </div>
       </div>
@@ -221,9 +235,6 @@
   </div>
 
   <script src="script/patrimonio.js"></script>
-  <script>
-    if (window.lucide) { lucide.createIcons(); }
-  </script>
 </body>
 
 </html>
