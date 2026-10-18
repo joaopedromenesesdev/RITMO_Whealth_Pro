@@ -9,9 +9,11 @@
   if (!engine && typeof require !== 'undefined') {
     // Para execução em ambiente de teste Node.js
     try {
-      const fs = require('fs');
-      const vm = require('vm');
-      const code = fs.readFileSync(__dirname + '/tributario_engine.js', 'utf8');
+      const path = require('path');
+      const scriptPath = fs.existsSync(path.join(__dirname, '../script/tributario_engine.js'))
+        ? path.join(__dirname, '../script/tributario_engine.js')
+        : path.join(__dirname, 'tributario_engine.js');
+      const code = fs.readFileSync(scriptPath, 'utf8');
       const mockStorage = {
         store: {},
         getItem: function (k) { return this.store[k] || null; },

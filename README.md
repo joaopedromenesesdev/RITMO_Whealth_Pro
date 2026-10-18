@@ -61,35 +61,51 @@ O sistema permite que assessores de investimentos analisem a composição patrim
 ## 📂 Estrutura do Projeto
 
 ```
-d:\projeto_BTG/
+Whealth-Planner-Pro/
 ├── index.html               # Dashboard principal com métricas e lista de simulações
-├── login.html               # Tela de login e cadastro de assessores
-├── nova_simulacao.html      # Formulário de criação/inicialização de novo relatório
-├── patrimonio.html          # Módulo 1: Inventário e alocação de bens
-├── familiar.html            # Módulo 2: Estrutura familiar e regime de bens
-├── evolucao.html            # Módulo 3: Projeção de evolução patrimonial
+├── login.html               # Tela de autenticação e controle de acesso
+├── nova_simulacao.html      # Formulário de criação/inicialização de novo planejamento
+├── patrimonio.html          # Módulo 1: Inventário e alocação de bens e ativos
+├── familiar.html            # Módulo 2: Estrutura familiar, organograma e regime de bens
+├── evolucao.html            # Módulo 3: Projeção de evolução patrimonial composta
 ├── tributario.html          # Módulo 4: Análise de prejuízo tributário e relatório PDF
-├── teste_agentes.html       # Suíte de testes e simulações internas
-├── img/                     # Favicon e ativos gráficos
-├── script/                  # Lógica de JavaScript modularizada
+├── termos_privacidade.html  # Governança, termos de uso e conformidade LGPD
+├── run_tests.html           # Ponto de entrada / redirecionamento para suíte de testes
+├── img/                     # Identidade visual, logotipos e favicons
+├── script/                  # Camada de lógica JavaScript modularizada (ES6+)
 │   ├── auth.js              # Controle de autenticação e proteção de rotas
-│   ├── dashboard.js         # Lógica do dashboard, estatísticas e listagem
-│   ├── db.js                # Camada de abstração de dados (Supabase + LocalStorage)
-│   ├── global_ui.js         # Utilitários de UI (toasts, botões, modais)
-│   ├── patrimonio.js        # Formatação e cálculos do inventário de bens
-│   ├── script_evolucao.js   # Algoritmo de projeção e gráficos de evolução
-│   ├── script_familiar.js   # Regras de regime de casamento e herdeiros
-│   ├── supabase_config.js   # Credenciais de conexão do Supabase
-│   ├── theme.js             # Gerenciamento de tema (claro/escuro)
-│   └── tributario.js        # Motor tributário (ITCMD, estratégias e PDF engine)
-└── style/                   # Arquivos de estilização CSS
-    ├── dashboard.css
-    ├── evolucao.css
-    ├── familiar.css
-    ├── login.css
-    ├── patrimonio.css
-    ├── style.css            # Estilos globais e componentes base
-    └── tributario.css       # Estilos da página tributária e impressão PDF
+│   ├── dashboard.js         # Lógica do dashboard executivo e métricas
+│   ├── db.js                # Abstração de persistência (Supabase DB + LocalStorage fallback)
+│   ├── evolucao.js          # Algoritmo de projeção e renderização da curva patrimonial
+│   ├── familiar.js          # Regras de regime de bens, herdeiros e organograma
+│   ├── global_ui.js         # Componentes transversais de UI (toasts, modais, temas)
+│   ├── nova_simulacao.js    # Inicialização de formulário e dados do cliente
+│   ├── patrimonio.js        # Formatação, cálculos de inventário e acordions
+│   ├── state.js             # Gestão de estado da sessão de simulação
+│   ├── supabase_config.js   # Credenciais de conexão Supabase
+│   ├── theme.js             # Gerenciamento de tema
+│   ├── tributario.js        # Orquestração do módulo tributário e relatórios PDF
+│   ├── tributario_charts.js # Renderização dos gráficos de custos sucessórios
+│   └── tributario_engine.js # Motor matemático determinístico de cálculo de ITCMD
+├── style/                   # Folhas de estilo modulares (CSS3 Vanilla)
+│   ├── dashboard.css
+│   ├── evolucao.css
+│   ├── familiar.css
+│   ├── login.css
+│   ├── nova_simulacao.css
+│   ├── patrimonio.css
+│   ├── style.css            # Design system global, variáveis e componentes base
+│   ├── termos_privacidade.css
+│   └── tributario.css       # Estilos da página tributária e impressão PDF
+├── supabase/                # Infraestrutura e backend Supabase (PostgreSQL)
+│   ├── schema.sql           # Schema completo do banco, tabelas, RLS e RPCs
+│   ├── migrations/          # Migrações versionadas de segurança e infraestrutura
+│   └── functions/           # Edge Functions (ex: suporte-email)
+└── tests/                   # Suíte de testes automatizados e validação matemática
+    ├── run_tests.html       # Runner visual dos testes no navegador
+    ├── run_tests.js         # Interface do test runner e captura de logs
+    ├── run_tests.css        # Estilos da interface de teste
+    └── tributario_engine.test.js # Testes unitários do motor tributário e ITCMD
 ```
 
 ---

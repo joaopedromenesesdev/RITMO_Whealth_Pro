@@ -392,7 +392,7 @@ function inicializarWidgetSuporte() {
 
     const pathAtual = window.location.pathname;
     // Não exibe na tela de login, termos ou runner de testes
-    if (pathAtual.endsWith('login.html') || pathAtual.endsWith('termos_privacidade.html') || pathAtual.endsWith('run_tests.html')) {
+    if (pathAtual.endsWith('login.html') || pathAtual.endsWith('termos_privacidade.html') || pathAtual.includes('run_tests.html')) {
         return;
     }
 

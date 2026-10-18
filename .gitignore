@@ -1,16 +1,34 @@
-# Gemini / AI
+# Gemini / Antigravity AI
 .gemini/
 antigravity/
 brain/
 
-# OS files
+# Ambientes e Segredos
+.env
+.env.local
+.env.*.local
+*.local
+
+# Node / Dependencias (se instaladas localmente)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Sistema Operacional
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Logs and temp
+# Logs e Arquivos Temporarios
 *.log
 temp/
 tmp/
+*.tmp
+*.bak
 
-# IDE
+# Editores e IDEs
 .vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
