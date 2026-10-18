@@ -161,7 +161,8 @@
 
 .chart-header h3 {
   margin: 0;
-  font-family: 'Playfair Display', serif;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: -0.01em;
   font-size: 18px;
   color: #09090b;
 }
@@ -196,34 +197,6 @@
 /* --- MAGIC INSIGHTS --- */
 .magic-insights {
   margin-top: 30px;
-}
-
-.magic-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  padding: 30px;
-  border-radius: 20px;
-  border-left: 6px solid #09090b;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-}
-
-.magic-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 700;
-  color: #09090b;
-  margin-bottom: 10px;
-  text-transform: uppercase;
-  font-size: 12px;
-  letter-spacing: 1px;
-}
-
-.magic-card p {
-  margin: 0;
-  font-size: 15px;
-  color: #27272a;
-  line-height: 1.6;
 }
 
 /* --- BOTÕES (LADO A LADO) --- */

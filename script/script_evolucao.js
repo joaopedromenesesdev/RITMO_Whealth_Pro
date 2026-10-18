@@ -272,7 +272,6 @@ function calcular() {
 
   updateDashboard(valoresArr[valoresArr.length - 1], valorInicial);
   renderChart(anosArr, valoresArr, cdiArr, ipcaArr);
-  generateMagicInsight(taxaAnual, aporteMensal, anosProjecao, valoresArr[valoresArr.length - 1]);
 
   // Salva persistência
   const elCDIManual = document.getElementById("cdi_manual");
@@ -324,20 +323,6 @@ function animateValue(id, start, end, duration, suffix = "") {
   window.requestAnimationFrame(step);
 }
 
-function generateMagicInsight(taxa, aporte, tempo, totalFinal) {
-  const magicText = document.getElementById("magic_text");
-  if (!magicText) return;
-
-  if (taxa > 0.12) {
-    magicText.innerHTML = "🚀 <b>Perfil Arrojado:</b> Sua rentabilidade projetada está acima da média de mercado. Certifique-se de diversificar ativos para mitigar riscos de volatilidade.";
-  } else if (aporte > 10000) {
-    magicText.innerHTML = "💰 <b>Poder de Aporte:</b> Seu aporte mensal é o maior motor do seu crescimento. Em " + tempo + " anos, os aportes representarão uma fatia significativa do seu montante total.";
-  } else if (tempo > 20) {
-    magicText.innerHTML = "⏳ <b>Juros Compostos:</b> O tempo é seu maior aliado. Note como a curva do gráfico se torna exponencial nos últimos 5 anos da projeção.";
-  } else {
-    magicText.innerHTML = "💡 <b>Dica Ritmo Wealth Pro:</b> Aumentar seu aporte mensal em 20% poderia antecipar sua meta financeira em quase 4 anos.";
-  }
-}
 
 // =========================
 // RENDERIZAÇÃO DO GRÁFICO
