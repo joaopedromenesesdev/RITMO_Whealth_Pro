@@ -14,6 +14,7 @@
 
   <!-- CSS SOMENTE DESSA PÁGINA -->
   <link rel="stylesheet" href="style/tributario.css?v=4">
+  <link rel="stylesheet" href="style/pitch_mode.css">
   <link rel="icon" type="image/png" href="img/RITMO.png">
 
   <!-- PDF -->
@@ -359,6 +360,10 @@
       <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
       <span>Voltar: Evolução Patrimonial</span>
     </a>
+    <button type="button" onclick="abrirConfiguracaoPitch()" class="btn-pitch-mode" id="btn_abrir_pitch_mode">
+      <i data-lucide="presentation"></i>
+      <span>Modo Apresentação (Pitch Mode)</span>
+    </button>
     <button onclick="abrirPreview()" class="btn-pdf">
       Visualizar Relatório PDF
     </button>
@@ -792,6 +797,7 @@
   <script src="script/tributario_engine.js"></script>
   <script src="script/tributario_charts.js"></script>
   <script src="script/tributario.js"></script>
+  <script src="script/pitch_mode.js"></script>
 </body>
 
 </html>
