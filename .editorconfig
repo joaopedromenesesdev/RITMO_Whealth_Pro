@@ -1,0 +1,21 @@
+# EditorConfig é um padrão para definir e manter estilos de codificação consistentes entre diferentes editores e IDEs.
+# Mais informações: https://editorconfig.org
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.sql]
+indent_size = 2
+
+[*.json]
+indent_size = 2

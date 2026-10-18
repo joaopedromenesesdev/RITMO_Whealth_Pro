@@ -129,7 +129,7 @@ O sistema calcula três principais componentes de custo:
 
 ## 4. Direito Sucessório e Regimes de Bens
 
-O módulo `script/script_familiar.js` implementa as regras da legislação civil brasileira (Código Civil / 2002):
+O módulo `script/familiar.js` implementa as regras da legislação civil brasileira (Código Civil / 2002):
 
 ### 4.1 Comunhão Parcial de Bens
 - **Meação (50%)**: Incide apenas sobre os bens adquiridos a título oneroso durante a constância do casamento (Aquestos).
