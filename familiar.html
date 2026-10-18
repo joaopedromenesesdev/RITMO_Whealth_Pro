@@ -6,7 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ritmo Wealth Pro — Estrutura Familiar</title>
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; connect-src 'self' https://dogyopoylekiqsahadlc.supabase.co https://*.supabase.co wss://*.supabase.co https://brasilapi.com.br https://olinda.bcb.gov.br; object-src 'none'; base-uri 'self'; form-action 'self';">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; connect-src 'self' https://dogyopoylekiqsahadlc.supabase.co https://*.supabase.co wss://*.supabase.co https://brasilapi.com.br https://olinda.bcb.gov.br; object-src 'none'; base-uri 'self'; form-action 'self';">
 
   <link rel="stylesheet" href="style/style.css">
   <link rel="icon" type="image/png" href="img/RITMO.png">
@@ -27,214 +28,253 @@
 </head>
 
 <body>
-<!-- NAVBAR -->
-<div class="navbar">
-  <div class="logo">
-    <span class="logo-brand">Ritmo</span> <span>Wealth Pro</span>
+  <!-- NAVBAR -->
+  <div class="navbar">
+    <div class="logo">
+      <span class="logo-brand">Ritmo</span> <span>Wealth Pro</span>
+    </div>
+
+    <div class="menu">
+      <a href="index.html">Dashboard</a>
+      <a href="patrimonio.html">Patrimônio</a>
+      <a href="familiar.html" class="active">Estrutura Familiar</a>
+      <a href="evolucao.html">Evolução Patrimonial</a>
+      <a href="tributario.html">Prejuízo Tributário</a>
+    </div>
+
+    <div id="nav-user-slot" class="nav-user-slot"></div>
   </div>
 
-  <div class="menu">
-    <a href="index.html">Dashboard</a>
-    <a href="patrimonio.html">Patrimônio</a>
-    <a href="familiar.html" class="active">Estrutura Familiar</a>
-    <a href="evolucao.html">Evolução Patrimonial</a>
-    <a href="tributario.html">Prejuízo Tributário</a>
-  </div>
+  <!-- WIZARD STEPPER GLOBAL -->
+  <div id="global-stepper-container"></div>
 
-  <div id="nav-user-slot" class="nav-user-slot"></div>
-</div>
+  <div class="container_global">
+    <h1 class="reveal">Estrutura Familiar</h1>
 
-<!-- WIZARD STEPPER GLOBAL -->
-<div id="global-stepper-container"></div>
+    <div class="container_familia">
 
-<div class="container_global">
-  <h1 class="reveal">Estrutura Familiar</h1>
+      <!-- BLOCO 1 -->
+      <div class="bloco card-premium reveal delay-1">
+        <h2>Dados do Cliente</h2>
 
-  <div class="container_familia">
-
-    <!-- BLOCO 1 -->
-    <div class="bloco card-premium reveal delay-1">
-      <h2>Dados do Cliente</h2>
-
-      <div class="input-group">
-        <label>Nome do Cliente</label>
-        <input type="text" id="nome_cliente" autocomplete="new-password" data-lpignore="true">
-      </div>
-
-      <div class="input-group">
-        <label>Estado Civil</label>
-        <select id="estado_civil">
-          <option value="">Selecione</option>
-          <option value="solteiro">Solteiro</option>
-          <option value="casado">Casado</option>
-          <option value="divorciado">Divorciado</option>
-          <option value="viuvo">Viúvo</option>
-        </select>
-      </div>
-
-      <!-- Pergunta Estratégica para Viúvos -->
-      <div id="pergunta_viuvo" class="input-group"
-        style="display:none; background: rgba(9, 9, 11, 0.04); padding: 15px; border-radius: 12px; border: 1px solid rgba(0, 0, 0, 0.08); border-left: 4px solid var(--primary);">
-        <label><i class="icon-info"></i> O inventário do cônjuge falecido já foi concluído?</label>
-        <select id="inventario_concluido">
-          <option value="sim">Sim, inventário finalizado</option>
-          <option value="nao">Não, ainda em andamento / Não iniciado</option>
-        </select>
-        <p style="font-size: 11px; margin-top: 5px; opacity: 0.7;">* Se não concluído, 50% do patrimônio pode pertencer
-          aos herdeiros do falecido.</p>
-      </div>
-
-      <!-- Pergunta Estratégica para Divorciados -->
-      <div id="pergunta_divorciado" class="input-group"
-        style="display:none; background: rgba(9, 9, 11, 0.04); padding: 15px; border-radius: 12px; border: 1px solid rgba(0, 0, 0, 0.08); border-left: 4px solid var(--primary);">
-        <label><i class="icon-info"></i> A partilha de bens do divórcio já foi averbada?</label>
-        <select id="partilha_concluida">
-          <option value="sim">Sim, partilha resolvida</option>
-          <option value="nao">Não, bens ainda em comum com ex-cônjuge</option>
-        </select>
-      </div>
-
-      <div id="dados_casamento" style="display:none;">
         <div class="input-group">
-          <label>Nome do Cônjuge</label>
-          <input type="text" id="nome_conjuge" autocomplete="new-password" data-lpignore="true">
+          <label>Nome do Cliente</label>
+          <input type="text" id="nome_cliente" autocomplete="new-password" data-lpignore="true">
         </div>
 
         <div class="input-group">
-          <label>Regime de Casamento</label>
-          <select id="regime">
+          <label>Estado Civil</label>
+          <select id="estado_civil">
             <option value="">Selecione</option>
-            <option>Comunhão Parcial de Bens</option>
-            <option>Comunhão Universal de Bens</option>
-            <option>Separação Total de Bens</option>
-            <option>Participação Final nos Aquestos</option>
+            <option value="solteiro">Solteiro</option>
+            <option value="casado">Casado</option>
+            <option value="divorciado">Divorciado</option>
+            <option value="viuvo">Viúvo</option>
           </select>
         </div>
 
-      </div>
-
-
-      <div class="input-group">
-        <label>Possui filhos?</label>
-        <select id="tem_filhos">
-          <option value="">Selecione</option>
-          <option value="nao">Não</option>
-          <option value="sim">Sim</option>
-        </select>
-      </div>
-
-      <div id="area_filhos" style="display:none;">
-        <div class="input-group">
-          <label>Quantidade de filhos</label>
-          <input type="number" id="qtd_filhos" min="1">
-        </div>
-        <div id="idades_filhos"></div>
-      </div>
-    </div>
-
-    <!-- BLOCO 2 -->
-    <div class="bloco card-premium reveal delay-2">
-      <h2>Herança e Sucessão</h2>
-
-      <div class="input-group">
-        <label>Possui pais vivos? (Ascendentes)</label>
-        <select id="possui_pais">
-          <option value="">Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-      </div>
-
-      <div id="dados_pais" style="display:none;">
-        <div class="input-group">
-          <label>Quantidade de pais vivos</label>
-          <input type="number" id="qtd_pais" min="1" max="2">
-        </div>
-      </div>
-
-      <hr style="opacity: 0.1; margin: 20px 0;">
-
-      <div class="input-group" id="pergunta_colaterais">
-        <label>Possui irmãos ou parentes? (Colaterais)</label>
-        <select id="possui_colaterais">
-          <option value="">Selecione</option>
-          <option value="sim">Sim</option>
-          <option value="nao">Não</option>
-        </select>
-      </div>
-
-      <div id="dados_colaterais" style="display:none;">
-        <div class="input-group">
-          <label>Quantidade</label>
-          <input type="number" id="qtd_colaterais" min="1">
+        <!-- Pergunta Estratégica para Viúvos -->
+        <div id="pergunta_viuvo" class="input-group"
+          style="display:none; background: rgba(9, 9, 11, 0.04); padding: 15px; border-radius: 12px; border: 1px solid rgba(0, 0, 0, 0.08); border-left: 4px solid var(--primary);">
+          <label><i class="icon-info"></i> O inventário do cônjuge falecido já foi concluído?</label>
+          <select id="inventario_concluido">
+            <option value="sim">Sim, inventário finalizado</option>
+            <option value="nao">Não, ainda em andamento / Não iniciado</option>
+          </select>
+          <p style="font-size: 11px; margin-top: 5px; opacity: 0.7;">* Se não concluído, 50% do patrimônio pode
+            pertencer
+            aos herdeiros do falecido.</p>
         </div>
 
+        <!-- Pergunta Estratégica para Divorciados -->
+        <div id="pergunta_divorciado" class="input-group"
+          style="display:none; background: rgba(9, 9, 11, 0.04); padding: 15px; border-radius: 12px; border: 1px solid rgba(0, 0, 0, 0.08); border-left: 4px solid var(--primary);">
+          <label><i class="icon-info"></i> A partilha de bens do divórcio já foi averbada?</label>
+          <select id="partilha_concluida">
+            <option value="sim">Sim, partilha resolvida</option>
+            <option value="nao">Não, bens ainda em comum com ex-cônjuge</option>
+          </select>
+        </div>
+
+        <div id="dados_casamento" style="display:none;">
+          <div class="input-group">
+            <label>Nome do Cônjuge</label>
+            <input type="text" id="nome_conjuge" autocomplete="new-password" data-lpignore="true">
+          </div>
+
+          <div class="input-group">
+            <label>Regime de Casamento</label>
+            <select id="regime">
+              <option value="">Selecione</option>
+              <option>Comunhão Parcial de Bens</option>
+              <option>Comunhão Universal de Bens</option>
+              <option>Separação Total de Bens</option>
+              <option>Participação Final nos Aquestos</option>
+            </select>
+          </div>
+
+        </div>
+
+
         <div class="input-group">
-          <label>Tipo</label>
-          <input type="text" id="tipo_colaterais" placeholder="Ex: irmãos, primos, sobrinhos">
+          <label>Possui filhos?</label>
+          <select id="tem_filhos">
+            <option value="">Selecione</option>
+            <option value="nao">Não</option>
+            <option value="sim">Sim</option>
+          </select>
+        </div>
+
+        <div id="area_filhos" style="display:none;">
+          <div class="input-group">
+            <label>Quantidade de filhos</label>
+            <input type="number" id="qtd_filhos" min="1">
+          </div>
+          <div id="idades_filhos"></div>
         </div>
       </div>
 
-      <div id="sucessao_conjuge" style="display:none;">
-        <hr style="opacity: 0.1; margin: 20px 0;">
-        <h4 style="font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; font-size: 12px; font-weight: 600; color: var(--primary); margin-bottom: 15px; letter-spacing: 0.3px;">Herança e Sucessão (Cônjuge)</h4>
+      <!-- BLOCO 2 -->
+      <div class="bloco card-premium reveal delay-2">
+        <h2>Herança e Sucessão</h2>
 
         <div class="input-group">
-          <label>Cônjuge possui pais vivos?</label>
-          <select id="conjuge_possui_pais">
+          <label>Possui pais vivos? (Ascendentes)</label>
+          <select id="possui_pais">
             <option value="">Selecione</option>
             <option value="sim">Sim</option>
             <option value="nao">Não</option>
           </select>
         </div>
 
-        <div id="dados_pais_conjuge" style="display:none;">
+        <div id="dados_pais" style="display:none;">
           <div class="input-group">
-            <label>Qtd. de pais vivos (Cônjuge)</label>
-            <input type="number" id="conjuge_qtd_pais" min="1" max="2">
+            <label>Quantidade de pais vivos</label>
+            <input type="number" id="qtd_pais" min="1" max="2">
           </div>
         </div>
 
-        <div id="pergunta_colaterais_conjuge" style="display:none;">
+        <hr style="opacity: 0.1; margin: 20px 0;">
+
+        <div class="input-group" id="pergunta_colaterais">
+          <label>Possui irmãos ou parentes? (Colaterais)</label>
+          <select id="possui_colaterais">
+            <option value="">Selecione</option>
+            <option value="sim">Sim</option>
+            <option value="nao">Não</option>
+          </select>
+        </div>
+
+        <div id="dados_colaterais" style="display:none;">
           <div class="input-group">
-            <label>Cônjuge possui colaterais?</label>
-            <select id="conjuge_possui_colaterais">
+            <label>Quantidade</label>
+            <input type="number" id="qtd_colaterais" min="1">
+          </div>
+
+          <div class="input-group">
+            <label>Tipo</label>
+            <input type="text" id="tipo_colaterais" placeholder="Ex: irmãos, primos, sobrinhos">
+          </div>
+        </div>
+
+        <div id="sucessao_conjuge" style="display:none;">
+          <hr style="opacity: 0.1; margin: 20px 0;">
+          <h4
+            style="font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; font-size: 12px; font-weight: 600; color: var(--primary); margin-bottom: 15px; letter-spacing: 0.3px;">
+            Herança e Sucessão (Cônjuge)</h4>
+
+          <div class="input-group">
+            <label>Cônjuge possui pais vivos?</label>
+            <select id="conjuge_possui_pais">
               <option value="">Selecione</option>
               <option value="sim">Sim</option>
               <option value="nao">Não</option>
             </select>
           </div>
 
-          <div id="dados_colaterais_conjuge" style="display:none;">
+          <div id="dados_pais_conjuge" style="display:none;">
             <div class="input-group">
-              <label>Quantidade (Cônjuge)</label>
-              <input type="number" id="conjuge_qtd_colaterais" min="1">
+              <label>Qtd. de pais vivos (Cônjuge)</label>
+              <input type="number" id="conjuge_qtd_pais" min="1" max="2">
             </div>
+          </div>
+
+          <div id="pergunta_colaterais_conjuge" style="display:none;">
             <div class="input-group">
-              <label>Tipo (Cônjuge)</label>
-              <input type="text" id="conjuge_tipo_colaterais" placeholder="Ex: irmãos, sobrinhos">
+              <label>Cônjuge possui colaterais?</label>
+              <select id="conjuge_possui_colaterais">
+                <option value="">Selecione</option>
+                <option value="sim">Sim</option>
+                <option value="nao">Não</option>
+              </select>
+            </div>
+
+            <div id="dados_colaterais_conjuge" style="display:none;">
+              <div class="input-group">
+                <label>Quantidade (Cônjuge)</label>
+                <input type="number" id="conjuge_qtd_colaterais" min="1">
+              </div>
+              <div class="input-group">
+                <label>Tipo (Cônjuge)</label>
+                <input type="text" id="conjuge_tipo_colaterais" placeholder="Ex: irmãos, sobrinhos">
+              </div>
             </div>
           </div>
         </div>
       </div>
+
     </div>
 
+    <!-- ========================================== -->
+    <!-- 🌳 ORGANOGRAMA E MAPEAMENTO SUCESSÓRIO -->
+    <!-- ========================================== -->
+    <div class="organograma-section card-premium reveal" id="organograma_section" style="display: none;">
+      <div class="organograma-header">
+        <div class="organograma-title-box">
+          <h2>Mapeamento Sucessório & Organograma Familiar</h2>
+          <p class="organograma-sub">
+            Visualização em tempo real das linhas de herança, meação e regras do Código Civil (Art. 1.829 e 1.846).
+          </p>
+        </div>
+
+        <div class="organograma-metricas-rapidas" id="organograma_metricas_rapidas">
+          <!-- Injetado dinamicamente via JS -->
+        </div>
+      </div>
+
+      <!-- ÁRVORE VISUAL -->
+      <div class="tree-canvas" id="tree_canvas">
+        <!-- Injetado dinamicamente via JS -->
+      </div>
+
+      <!-- ALERTAS DE RISCO SUCESSÓRIO -->
+      <div class="alertas-sucessorios-container" id="alertas_sucessorios_container">
+        <!-- Alertas inteligentes calculados automaticamente -->
+      </div>
+    </div>
+
+    <!-- 🔥 AÇÕES E NAVEGAÇÃO -->
+    <div class="familiar-acoes">
+      <a href="patrimonio.html" class="btn-prev">
+        <i data-lucide="arrow-left"></i>
+        <span>Voltar: Patrimônio</span>
+      </a>
+
+      <button type="button" id="btn_toggle_organograma" class="btn-toggle-organograma"
+        onclick="window.alternarVisualizacaoOrganograma()">
+        <i data-lucide="network"></i>
+        <span id="btn_toggle_organograma_label">Ver Organograma Sucessório</span>
+        <i data-lucide="chevron-down" class="btn-toggle-icon"></i>
+      </button>
+
+      <a href="evolucao.html" class="btn-next">
+        <span>Próximo Passo: Evolução Patrimonial</span>
+        <i data-lucide="arrow-right"></i>
+      </a>
+    </div>
   </div>
 
-  <!-- 🔥 BOTÃO -->
-  <div style="display: flex; justify-content: center; align-items: center; gap: 16px; margin: 40px 0 60px 0; flex-wrap: wrap;">
-    <a href="patrimonio.html" class="btn-prev" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 10px; border: 1px solid #e4e4e7; background: #ffffff; color: #27272a; font-weight: 600; font-size: 14px; text-decoration: none; transition: all 0.2s ease; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);">
-      <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
-      <span>Voltar: Patrimônio</span>
-    </a>
-    <a href="evolucao.html" class="btn-next">
-      <span>Próximo Passo: Evolução Patrimonial</span>
-      <i data-lucide="arrow-right"></i>
-    </a>
-  </div>
-</div>
-
-<script src="script/script_familiar.js"></script>
+  <script src="script/script_familiar.js"></script>
 
 </body>
 
