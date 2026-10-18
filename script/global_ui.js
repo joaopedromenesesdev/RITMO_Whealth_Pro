@@ -85,6 +85,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Inicializa ergonomia de digitação (auto-seleção de valores numéricos ao focar)
+    inicializarAutoSelectInputs();
+
     // Inicializa o botão flutuante de suporte no canto inferior direito
     inicializarWidgetSuporte();
 });
@@ -295,6 +298,23 @@ window.notificarAutoSave = function(status = "salvo") {
         setTimeout(() => toast.classList.remove("visible"), 3500);
     }
 };
+
+// =========================
+// ERGONOMIA: AUTO-SELEÇÃO EM CAMPOS MONETÁRIOS E NUMÉRICOS
+// =========================
+function inicializarAutoSelectInputs() {
+    document.addEventListener("focusin", (e) => {
+        const el = e.target;
+        if (!el || el.tagName !== "INPUT") return;
+        if (el.type === "text" || el.type === "number") {
+            setTimeout(() => {
+                try {
+                    if (document.activeElement === el) el.select();
+                } catch (_) {}
+            }, 30);
+        }
+    });
+}
 
 // =========================
 // SISTEMA PACE UI TOAST

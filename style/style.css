@@ -1,4 +1,4 @@
- @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@100;300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap');
+ @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@100;300;400;500;600;700;800&display=swap');
 
  :root {
    --primary: #09090b;
@@ -71,8 +71,9 @@
  h3,
  h4,
  .logo-capa {
-   font-family: 'Playfair Display', serif !important;
+   font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
    font-weight: 700;
+   letter-spacing: -0.01em;
  }
 
  /* Força os números a serem sempre Sans-Serif para legibilidade */
@@ -335,6 +336,51 @@
  .btn-next:hover i,
  .btn-next:hover svg {
    transform: translateX(4px);
+ }
+
+ /* --- BOTÃO DE TRANSIÇÃO GLOBAL (VOLTAR) --- */
+ .btn-prev {
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+   gap: 10px;
+   background: #ffffff;
+   color: #18181b !important;
+   border: 1.5px solid #e4e4e7;
+   padding: 15px 32px;
+   border-radius: 100px;
+   text-decoration: none !important;
+   font-family: 'Outfit', 'Inter', sans-serif;
+   font-size: 15px;
+   font-weight: 600;
+   cursor: pointer;
+   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+   user-select: none;
+ }
+
+ .btn-prev:hover {
+   transform: translateY(-2px);
+   background: #f4f4f5;
+   border-color: #a1a1aa;
+   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+   color: #09090b !important;
+ }
+
+ .btn-prev:active {
+   transform: translateY(0);
+ }
+
+ .btn-prev i,
+ .btn-prev svg {
+   width: 18px;
+   height: 18px;
+   transition: transform 0.3s ease;
+ }
+
+ .btn-prev:hover i,
+ .btn-prev:hover svg {
+   transform: translateX(-4px);
  }
 
  /* --- RESPONSIVIDADE NAVBAR --- */
