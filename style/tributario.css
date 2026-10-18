@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@300;400;600;700;800&display=swap');
 
 :root {
   --primary: #09090b;
@@ -580,14 +580,180 @@ body.pdf-exporting .capa {
 }
 
 .estrutura-familiar-pdf {
-  margin: 30px 0;
-  padding: 20px;
-  background: #fafafa;
-  border-radius: 8px;
-  border-left: 4px solid #09090b;
-  border: 1px solid #e4e4e7;
-  border-left-width: 4px;
+  margin: 10px 0 15px 0;
+  padding: 0;
+  background: transparent;
+  border: none;
 }
+
+.pdf-organograma-box {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+
+.pdf-organograma-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pdf-organograma-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pdf-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 100px;
+  letter-spacing: 0.3px;
+}
+
+.pdf-pill-legitima {
+  background: #f1f5f9;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+}
+
+.pdf-pill-disponivel {
+  background: #f0f9ff;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.pdf-pill-meacao {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.pdf-tree-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.pdf-tree-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+}
+
+.pdf-couple-row {
+  position: relative;
+}
+
+.pdf-marriage-bridge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.pdf-marriage-line {
+  width: 28px;
+  height: 2px;
+  background: #cbd5e1;
+}
+
+.pdf-regime-badge {
+  background: #09090b;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 100px;
+  white-space: nowrap;
+}
+
+.pdf-node-card {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 8px 14px;
+  min-width: 140px;
+  max-width: 190px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pdf-node-titular {
+  border-color: #09090b;
+  background: #fafafa;
+  border-left: 3px solid #09090b;
+}
+
+.pdf-node-conjuge {
+  border-color: #3b82f6;
+  background: #f8fafc;
+  border-left: 3px solid #3b82f6;
+}
+
+.pdf-node-filho {
+  border-color: #e2e8f0;
+  min-width: 120px;
+  max-width: 160px;
+}
+
+.pdf-node-filho.pdf-menor {
+  border-color: #f59e0b;
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+}
+
+.pdf-node-role {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.3px;
+}
+
+.pdf-node-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #09090b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pdf-node-sub {
+  font-size: 10px;
+  color: #475569;
+}
+
+.pdf-tree-connector-down {
+  width: 2px;
+  height: 14px;
+  background: #cbd5e1;
+  margin: 0 auto 8px auto;
+}
+
+.pdf-children-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
 
 @media (max-width: 1024px) {
   .tributario-dashboard {
@@ -726,7 +892,7 @@ body.pdf-exporting .capa {
   font-size: 12px;
   margin-bottom: 5px;
   color: #333;
-  font-family: 'Playfair Display', serif !important;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
 }
 
 .grafico-pdf-sm {
@@ -860,8 +1026,10 @@ body.pdf-exporting .capa {
 }
 
 .reducao-title {
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif !important;
   font-size: 20px;
   font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--primary-dark);
   margin-bottom: 5px;
 }
