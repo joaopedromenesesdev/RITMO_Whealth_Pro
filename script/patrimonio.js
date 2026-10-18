@@ -616,6 +616,33 @@ function atualizarBadgeOffshore() {
   }
 }
 
+// =========================
+// TOGGLE VISIBILIDADE DOS GRÁFICOS
+// =========================
+window.alternarVisualizacaoGraficos = function () {
+  const secao = document.getElementById("secao_graficos_patrimonio");
+  const btn = document.getElementById("btn_toggle_graficos");
+  const label = document.getElementById("btn_toggle_graficos_label");
+  if (!secao) return;
+
+  const estaOculto = secao.style.display === "none";
+
+  if (estaOculto) {
+    secao.style.display = "block";
+    if (btn) btn.classList.add("ativo");
+    if (label) label.textContent = "Ocultar Gráficos";
+    // Força cálculo e renderização com dimensões de canvas calculadas
+    calcular();
+    setTimeout(() => {
+      secao.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  } else {
+    secao.style.display = "none";
+    if (btn) btn.classList.remove("ativo");
+    if (label) label.textContent = "Ver Gráficos do Patrimônio";
+  }
+};
+
 function calcular() {
 
   let valoresEmpresas = document.querySelectorAll(".empresa_valor");
@@ -676,6 +703,10 @@ function calcular() {
   window.valorTotalAntigo = totalGeral;
 
   animateValue("total", valorAnterior, totalGeral, 650);
+
+  // Não renderiza gráficos no canvas caso a seção esteja oculta pelo botão
+  const secaoGraficos = document.getElementById("secao_graficos_patrimonio");
+  if (secaoGraficos && secaoGraficos.style.display === "none") return;
 
   if (totalGeral === 0) return;
 
