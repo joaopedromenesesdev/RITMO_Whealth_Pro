@@ -188,3 +188,24 @@ O relatório é montado dinamicamente dentro de `<div id="area-relatorio" class=
 1. **Tokens JWT Supabase**: Gerenciados pelo SDK no cliente com renovação automática de refresh token.
 2. **Guards de Navegação**: Executados pela função `protegerPagina()` em `script/auth.js`.
 3. **Row Level Security (RLS)**: Impede que um assessor visualize ou altere registros de outro usuário no banco de dados através da regra `auth.uid() = user_id`.
+
+---
+
+## 8. Modo Apresentação Executivo (Pitch Mode)
+
+O **Modo Apresentação** (`script/pitch_mode.js` e `style/pitch_mode.css`) é uma interface de projeção imersiva em tela cheia (*Private Banking Dark* — `#09090b`) desenvolvida para reuniões de fechamento presenciais ou por videoconferência (Zoom/Google Meet):
+
+- **Ponto de Acionamento**: Botão no módulo [tributario.html](file:///c:/Users/João%20Pedro/OneDrive/Desktop/projetos/Pace%20Capital/Whealth-Planner-Pro-main/tributario.html).
+- **Personalização Prévia (Modal de Presets)**:
+  - Presets Rápidos: *Completa* (todos os 6 slides), *Foco Sucessório* (Governança e Riscos de Inventário) e *Foco Patrimonial* (Ativos e Estratégias).
+  - Toggles individuais de slides para seleção pontual da narrativa pelo assessor.
+- **Blocos de Slides Dinâmicos**:
+  1. *Capa do Planejamento*: Identificação nobre do cliente, assessor e confidencialidade.
+  2. *Raio-X Patrimonial*: Métricas consolidadas, liquidez vs. ilíquidos e gráfico em canvas.
+  3. *Governança & Organograma*: Regime de bens, meação e legítima de herdeiros necessários.
+  4. *Diagnóstico de Risco*: Prejuízo tributário (ITCMD por alíquota estadual + cartório + advogados).
+  5. *Estratégias de Preservação*: Soluções práticas de doação, previdência e seguro sucessório.
+  6. *Projeção de Longo Prazo*: Curva composta futura e encerramento com atalho para o Relatório PDF.
+- **Navegação & Acessibilidade**:
+  - Teclas: Setas `←` / `→` e `Espaço` (navegar slides), `F` (tela cheia nativa) e `Esc` (fechar).
+  - Barra de controle inferior translúcida com indicador de progresso e botões táteis.
