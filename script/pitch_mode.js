@@ -1,21 +1,23 @@
 /**
  * =============================================================================
- * PITCH MODE — MODO APRESENTAÇÃO EXECUTIVO
- * Ritmo Wealth Pro (Pace Capital) — Apresentação Interativa em Tela Cheia
+ * PITCH MODE — MODO APRESENTAÇÃO
+ * Ritmo Wealth Pro — Apresentação em tela cheia a partir do módulo tributário.
+ *
+ * Os valores exibidos seguem exatamente as mesmas regras de calcularPrejuizo()
+ * em tributario.js (mesma base, mesmas taxas), para que slides e tela batam.
  * =============================================================================
  */
 
 (function () {
   'use strict';
 
-  // Definição dos blocos disponíveis
   const TODOS_BLOCOS = [
-    { id: 1, chave: 'capa', nome: 'Capa do Planejamento', desc: 'Identificação do cliente, assessor e confidencialidade' },
-    { id: 2, chave: 'patrimonio', nome: 'Raio-X Patrimonial', desc: 'Composição de ativos, liquidez e offshore' },
-    { id: 3, chave: 'familia', nome: 'Governança & Organograma', desc: 'Regime de bens, meação e sucessão familiar' },
-    { id: 4, chave: 'custos', nome: 'Diagnóstico de Prejuízo de Inventário', desc: 'Custo tributário (ITCMD), cartório e advogados' },
-    { id: 5, chave: 'estrategias', nome: 'Estratégias de Preservação', desc: 'Comparativo de doação, previdência, seguro e holding' },
-    { id: 6, chave: 'evolucao', nome: 'Projeção de Crescimento & Encerramento', desc: 'Curva composta de longo prazo e próximos passos' }
+    { id: 1, nome: 'Capa do Planejamento', desc: 'Cliente, assessor e data da reunião' },
+    { id: 2, nome: 'Raio-X Patrimonial', desc: 'Composição de ativos e liquidez' },
+    { id: 3, nome: 'Estrutura Familiar', desc: 'Regime de bens, herdeiros e legítima' },
+    { id: 4, nome: 'Custo do Inventário', desc: 'ITCMD, honorários e custas' },
+    { id: 5, nome: 'Estratégias de Preservação', desc: 'Doação em vida, previdência e seguro' },
+    { id: 6, nome: 'Projeção e Próximos Passos', desc: 'Evolução patrimonial e encerramento' }
   ];
 
   const PRESETS = {
@@ -28,10 +30,50 @@
   let presetAtual = 'completa';
   let slideIndexAtual = 0;
   let slidesMontados = [];
+  let dadosApresentacao = null;
   let graficosPitch = [];
 
   // =============================================================================
-  // MODAL DE CONFIGURAÇÃO PRÉVIA
+  // UTILITÁRIOS
+  // =============================================================================
+
+  function escapeHtml(valor) {
+    return String(valor == null ? '' : valor)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function parseValor(v) {
+    if (!v) return 0;
+    if (typeof v === 'number') return v;
+    const s = v.toString().replace('R$', '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
+    return parseFloat(s) || 0;
+  }
+
+  function brl(valor) {
+    return 'R$ ' + Math.round(Number(valor) || 0).toLocaleString('pt-BR');
+  }
+
+  function lerJSON(chave, padrao) {
+    try {
+      const raw = sessionStorage.getItem(chave);
+      return raw ? (JSON.parse(raw) || padrao) : padrao;
+    } catch (e) {
+      return padrao;
+    }
+  }
+
+  function textoElemento(id) {
+    const el = document.getElementById(id);
+    const txt = el ? (el.innerText || '').trim() : '';
+    return txt && txt !== '—' && txt !== '-' ? txt : '';
+  }
+
+  // =============================================================================
+  // MODAL DE CONFIGURAÇÃO
   // =============================================================================
 
   window.abrirConfiguracaoPitch = function () {
@@ -62,6 +104,7 @@
     if (index > -1) {
       if (blocosAtivos.length <= 1) {
         if (window.mostrarToast) window.mostrarToast('Selecione ao menos um slide para a apresentação', 'aviso');
+        atualizarUIConfiguracao();
         return;
       }
       blocosAtivos.splice(index, 1);
@@ -80,11 +123,11 @@
     overlay.style.display = 'none';
 
     overlay.innerHTML = `
-      <div class="pitch-config-modal">
+      <div class="pitch-config-modal" role="dialog" aria-modal="true" aria-labelledby="pitch_config_titulo">
         <div class="pitch-config-header">
           <div>
-            <h3>Configurar Modo Apresentação</h3>
-            <p>Personalize os blocos e a narrativa que serão projetados para o cliente.</p>
+            <h3 id="pitch_config_titulo">Configurar Modo Apresentação</h3>
+            <p>Escolha quais slides serão apresentados ao cliente.</p>
           </div>
           <button type="button" class="btn-pitch-close-config" onclick="fecharConfiguracaoPitch()" title="Fechar">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -93,29 +136,26 @@
 
         <div class="pitch-config-body">
           <div>
-            <div class="pitch-presets-label">Narrativas Recomendadas (Presets Rápidos)</div>
+            <div class="pitch-section-label">Roteiros sugeridos</div>
             <div class="pitch-presets-grid">
-              <div class="pitch-preset-card ativo" id="preset_completa" onclick="selecionarPresetPitch('completa')">
-                <span class="preset-icon">💎</span>
+              <div class="pitch-preset-card" id="preset_completa" onclick="selecionarPresetPitch('completa')">
                 <span class="preset-name">Completa</span>
-                <span class="preset-desc">Todos os 6 slides (Visão 360° patrimonial e sucessória)</span>
+                <span class="preset-desc">Todos os 6 slides</span>
               </div>
               <div class="pitch-preset-card" id="preset_sucessorio" onclick="selecionarPresetPitch('sucessorio')">
-                <span class="preset-icon">⚖️</span>
                 <span class="preset-name">Foco Sucessório</span>
-                <span class="preset-desc">Governança familiar, riscos de inventário e blindagem</span>
+                <span class="preset-desc">Família, custo do inventário e estratégias</span>
               </div>
               <div class="pitch-preset-card" id="preset_patrimonial" onclick="selecionarPresetPitch('patrimonial')">
-                <span class="preset-icon">📊</span>
                 <span class="preset-name">Foco Patrimonial</span>
-                <span class="preset-desc">Composição de ativos, custos fiscais e projeção futura</span>
+                <span class="preset-desc">Ativos, custos, estratégias e projeção</span>
               </div>
             </div>
           </div>
 
           <div>
-            <div class="pitch-presets-label">Seleção Individual de Slides</div>
-            <div class="pitch-blocks-list" id="pitch_blocks_list">
+            <div class="pitch-section-label">Slides</div>
+            <div class="pitch-blocks-list">
               ${TODOS_BLOCOS.map(b => `
                 <div class="pitch-block-item" onclick="toggleBlocoPitch(${b.id})">
                   <div class="pitch-block-info">
@@ -139,8 +179,8 @@
           <div class="pitch-config-stats">
             Slides ativos: <strong id="pitch_active_count">6</strong> de ${TODOS_BLOCOS.length}
           </div>
-          <button type="button" class="btn-pitch-launch" onclick="iniciarApresentacaoPitch()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          <button type="button" class="btn-pitch-launch" id="btn_pitch_iniciar" onclick="iniciarApresentacaoPitch()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
             <span>Iniciar Apresentação</span>
           </button>
         </div>
@@ -148,7 +188,7 @@
     `;
 
     overlay.addEventListener('click', function (e) {
-      if (e.target === overlay) fecharConfiguracaoPitch();
+      if (e.target === overlay) window.fecharConfiguracaoPitch();
     });
 
     return overlay;
@@ -157,17 +197,12 @@
   function atualizarUIConfiguracao() {
     ['completa', 'sucessorio', 'patrimonial'].forEach(p => {
       const el = document.getElementById(`preset_${p}`);
-      if (el) {
-        if (presetAtual === p) el.classList.add('ativo');
-        else el.classList.remove('ativo');
-      }
+      if (el) el.classList.toggle('ativo', presetAtual === p);
     });
 
     TODOS_BLOCOS.forEach(b => {
       const chk = document.getElementById(`chk_pitch_${b.id}`);
-      if (chk) {
-        chk.checked = blocosAtivos.includes(b.id);
-      }
+      if (chk) chk.checked = blocosAtivos.includes(b.id);
     });
 
     const countEl = document.getElementById('pitch_active_count');
@@ -175,11 +210,11 @@
   }
 
   // =============================================================================
-  // MOTOR DE APRESENTAÇÃO (FULLSCREEN PITCH OVERLAY)
+  // APRESENTAÇÃO
   // =============================================================================
 
   window.iniciarApresentacaoPitch = function () {
-    fecharConfiguracaoPitch();
+    window.fecharConfiguracaoPitch();
 
     let pitchOverlay = document.getElementById('pitch_fullscreen_overlay');
     if (!pitchOverlay) {
@@ -187,44 +222,36 @@
       document.body.appendChild(pitchOverlay);
     }
 
-    // Compila os dados da simulação
-    const dadosSimulacao = coletarDadosSimulacao();
+    // Garante que os números da tela estão atualizados antes de coletar
+    if (typeof window.calcularPrejuizo === 'function') {
+      try { window.calcularPrejuizo(); } catch (e) { /* mantém valores atuais */ }
+    }
 
-    // Monta os slides ativos
-    slidesMontados = blocosAtivos.map(id => {
-      return gerarHTMLSlide(id, dadosSimulacao);
-    });
+    dadosApresentacao = coletarDadosSimulacao();
+    slidesMontados = blocosAtivos.map(id => gerarSlide(id, dadosApresentacao));
 
-    renderizarSlidesNoDOM(pitchOverlay);
-    slideIndexAtual = 0;
-    mostrarSlide(slideIndexAtual);
+    const container = pitchOverlay.querySelector('#pitch_slide_container');
+    container.innerHTML = slidesMontados.map((s, idx) => `
+      <section class="pitch-slide" id="pitch_slide_${idx}">${s.html}</section>
+    `).join('');
 
     pitchOverlay.style.display = 'flex';
     document.body.style.overflow = 'hidden';
-
-    // Registra listeners de teclado
     window.addEventListener('keydown', lidarComTecladoPitch);
 
-    // Inicializa gráficos do slide ativo se houver
-    setTimeout(() => {
-      renderizarGraficosSlide(slideIndexAtual, dadosSimulacao);
-    }, 150);
+    slideIndexAtual = 0;
+    mostrarSlide(0);
   };
 
   window.fecharApresentacaoPitch = function () {
     const pitchOverlay = document.getElementById('pitch_fullscreen_overlay');
-    if (pitchOverlay) {
-      pitchOverlay.style.display = 'none';
-    }
+    if (pitchOverlay) pitchOverlay.style.display = 'none';
     document.body.style.overflow = '';
     window.removeEventListener('keydown', lidarComTecladoPitch);
-
-    // Destrói instâncias de Chart.js
     destruirGraficosPitch();
 
-    // Se estiver em fullscreen nativo, encerra
     if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {});
+      document.exitFullscreen().catch(() => { });
     }
   };
 
@@ -245,12 +272,16 @@
   window.pitchAlternarFullscreen = function () {
     const pitchOverlay = document.getElementById('pitch_fullscreen_overlay');
     if (!pitchOverlay) return;
-
     if (!document.fullscreenElement) {
-      pitchOverlay.requestFullscreen().catch(() => {});
+      pitchOverlay.requestFullscreen().catch(() => { });
     } else {
-      document.exitFullscreen().catch(() => {});
+      document.exitFullscreen().catch(() => { });
     }
+  };
+
+  window.pitchAbrirRelatorio = function () {
+    window.fecharApresentacaoPitch();
+    if (typeof window.abrirPreview === 'function') window.abrirPreview();
   };
 
   function lidarComTecladoPitch(e) {
@@ -276,53 +307,38 @@
     overlay.style.display = 'none';
 
     overlay.innerHTML = `
-      <!-- Progresso Linear -->
       <div class="pitch-progress-track">
         <div class="pitch-progress-bar" id="pitch_progress_bar" style="width: 0%;"></div>
       </div>
 
-      <!-- Barra Superior -->
       <header class="pitch-top-bar">
-        <div class="pitch-brand-badge">
-          <div class="pitch-brand-logo">
-            RITMO <span>WEALTH PRO</span>
-          </div>
-          <div class="pitch-badge-live">Modo Apresentação</div>
-        </div>
-
+        <div class="pitch-brand-logo">Ritmo <span>Wealth Pro</span></div>
         <div class="pitch-top-controls">
-          <button type="button" class="pitch-btn-icon" onclick="pitchAlternarFullscreen()" title="Tela Cheia (F)">
+          <button type="button" class="pitch-btn-icon" onclick="pitchAlternarFullscreen()" title="Tela cheia (F)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
           </button>
-          <button type="button" class="pitch-btn-icon" onclick="fecharApresentacaoPitch()" title="Fechar (Esc)">
+          <button type="button" class="pitch-btn-icon" id="btn_pitch_fechar" onclick="fecharApresentacaoPitch()" title="Fechar (Esc)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
         </div>
       </header>
 
-      <!-- Palco Central dos Slides -->
       <main class="pitch-stage">
         <div class="pitch-slide-container" id="pitch_slide_container"></div>
       </main>
 
-      <!-- Barra de Controle Inferior Flutuante -->
       <div class="pitch-bottom-bar">
-        <button type="button" class="pitch-btn-nav" id="btn_pitch_prev" onclick="pitchSlideAnterior()" title="Slide Anterior (←)">
+        <button type="button" class="pitch-btn-nav" id="btn_pitch_prev" onclick="pitchSlideAnterior()" title="Slide anterior">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
         </button>
-
-        <div class="pitch-counter" id="pitch_slide_counter">
-          Slide <strong>1</strong> de 6
-        </div>
-
-        <button type="button" class="pitch-btn-nav" id="btn_pitch_next" onclick="pitchProximoSlide()" title="Próximo Slide (→ ou Espaço)">
+        <div class="pitch-counter" id="pitch_slide_counter">Slide <strong>1</strong> de 1</div>
+        <button type="button" class="pitch-btn-nav" id="btn_pitch_next" onclick="pitchProximoSlide()" title="Próximo slide">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
         </button>
-
         <div class="pitch-hint">
-          <span class="pitch-kbd">←</span> <span class="pitch-kbd">→</span> Navegar
-          <span class="pitch-kbd" style="margin-left: 6px;">F</span> Tela Cheia
-          <span class="pitch-kbd" style="margin-left: 6px;">Esc</span> Sair
+          <span class="pitch-kbd">&larr;</span><span class="pitch-kbd">&rarr;</span> navegar
+          <span class="pitch-kbd">F</span> tela cheia
+          <span class="pitch-kbd">Esc</span> sair
         </div>
       </div>
     `;
@@ -330,608 +346,492 @@
     return overlay;
   }
 
-  function renderizarSlidesNoDOM(pitchOverlay) {
-    const container = pitchOverlay.querySelector('#pitch_slide_container');
-    if (!container) return;
-
-    container.innerHTML = slidesMontados.map((s, idx) => `
-      <div class="pitch-slide" id="pitch_slide_${idx}">
-        ${s.html}
-      </div>
-    `).join('');
-  }
-
   function mostrarSlide(idx) {
     const container = document.getElementById('pitch_slide_container');
     if (!container) return;
 
     const total = slidesMontados.length;
-    const slides = container.querySelectorAll('.pitch-slide');
-
-    slides.forEach((sl, i) => {
-      sl.classList.remove('ativo', 'anterior');
-      if (i === idx) {
-        sl.classList.add('ativo');
-      } else if (i < idx) {
-        sl.classList.add('anterior');
-      }
+    container.querySelectorAll('.pitch-slide').forEach((sl, i) => {
+      sl.classList.toggle('ativo', i === idx);
+      sl.classList.toggle('anterior', i < idx);
     });
 
-    // Atualiza barra de progresso linear
     const progressBar = document.getElementById('pitch_progress_bar');
-    if (progressBar) {
-      const pct = total > 1 ? (idx / (total - 1)) * 100 : 100;
-      progressBar.style.width = `${pct}%`;
-    }
+    if (progressBar) progressBar.style.width = `${total > 1 ? (idx / (total - 1)) * 100 : 100}%`;
 
-    // Atualiza contador
     const counter = document.getElementById('pitch_slide_counter');
-    if (counter) {
-      counter.innerHTML = `Slide <strong>${idx + 1}</strong> de ${total}`;
-    }
+    if (counter) counter.innerHTML = `Slide <strong>${idx + 1}</strong> de ${total}`;
 
-    // Atualiza botões
     const btnPrev = document.getElementById('btn_pitch_prev');
     const btnNext = document.getElementById('btn_pitch_next');
     if (btnPrev) btnPrev.disabled = idx === 0;
     if (btnNext) btnNext.disabled = idx === total - 1;
 
-    // Renderiza gráficos associados ao slide atual
-    const dados = coletarDadosSimulacao();
-    renderizarGraficosSlide(idx, dados);
+    renderizarGraficosSlide(idx);
   }
 
   // =============================================================================
-  // COLETA E TRATAMENTO DE DADOS DA SIMULAÇÃO
+  // DADOS (mesmas regras de calcularPrejuizo em tributario.js)
   // =============================================================================
 
   function coletarDadosSimulacao() {
-    const familia = JSON.parse(sessionStorage.getItem('familia')) || {};
-    const dadosPatrimonio = JSON.parse(sessionStorage.getItem('patrimonio_dados')) || {};
-    const evolucao = JSON.parse(sessionStorage.getItem('evolucao_dados')) || {};
+    const familia = lerJSON('familia', {});
+    const pat = lerJSON('patrimonio_dados', {});
+    const evolucao = lerJSON('evolucao_dados', {});
+    const inputsTrib = lerJSON('tributario_inputs', {});
 
-    const nomeCliente = (familia.nome || '').trim() || 'Cliente';
-    const nomeAssessor = sessionStorage.getItem('nome_assessor') || 'Assessor Especialista';
-    const dataReuniao = sessionStorage.getItem('data_reuniao') || new Date().toLocaleDateString('pt-BR');
-
-    // Patrimônio bruto
-    const totalPatrimonioRaw = Number(sessionStorage.getItem('total_patrimonio')) || 0;
-
-    // Categorias de patrimônio
-    const rf = parseValor(dadosPatrimonio.rf);
-    const rv = parseValor(dadosPatrimonio.rv);
-    const inter = parseValor(dadosPatrimonio.inter);
-    const prev = parseValor(dadosPatrimonio.prev);
-    const offshore = parseValor(dadosPatrimonio.offshore);
+    const rf = parseValor(pat.rf);
+    const rv = parseValor(pat.rv);
+    const inter = parseValor(pat.inter);
+    const prev = parseValor(pat.prev);
+    const offshore = parseValor(pat.offshore);
     const totalFinanceiro = rf + rv + inter + prev + offshore;
-
-    const apt = parseValor(dadosPatrimonio.apt);
-    const casa = parseValor(dadosPatrimonio.casa);
-    const terr = parseValor(dadosPatrimonio.terr);
-    const galp = parseValor(dadosPatrimonio.galp);
-    const totalImoveis = apt + casa + terr + galp;
+    const totalImoveis = parseValor(pat.apt) + parseValor(pat.casa) + parseValor(pat.terr) + parseValor(pat.galp);
 
     let totalEmpresas = 0;
-    if (dadosPatrimonio.empresas && Array.isArray(dadosPatrimonio.empresas)) {
-      dadosPatrimonio.empresas.forEach(emp => {
-        const val = parseValor(emp.valor);
-        const pct = Number(emp.pct) || 0;
-        totalEmpresas += val * (pct / 100);
+    if (Array.isArray(pat.empresas)) {
+      pat.empresas.forEach(emp => {
+        totalEmpresas += parseValor(emp.valor) * ((Number(emp.pct) || 0) / 100);
       });
     }
+    const outrosBens = parseValor(pat.bens);
 
-    const outrosBens = parseValor(dadosPatrimonio.bens);
+    // Base de cálculo idêntica a tributario.js
+    const calc = window.dadosCalculo || {};
+    const totalAtual = Number(calc.totalAtual) || Number(sessionStorage.getItem('total_patrimonio')) || 0;
+    const resultados = Array.isArray(evolucao.resultados) ? evolucao.resultados : [];
+    const resultadosPrev = Array.isArray(evolucao.resultadosPrev) ? evolucao.resultadosPrev : [];
+    const totalProjetado = Number(calc.totalProjetado) || (resultados.length ? resultados[resultados.length - 1] : totalAtual);
+    const prevProjetado = Number(calc.prevProjetado) || (resultadosPrev.length ? resultadosPrev[resultadosPrev.length - 1] : prev);
+    const regime = calc.regime || familia.regime || 'Não informado';
 
-    // Prejuízo e custos (coletados de elementos calculados no DOM)
-    const itcmdTaxa = document.getElementById('taxa_itcmd') ? document.getElementById('taxa_itcmd').value : '4';
-    const itcmdValorEl = document.getElementById('itcmd');
-    const custasCartorioEl = document.getElementById('custas_cartorio');
-    const honorariosEl = document.getElementById('honorarios');
-    const totalCustosEl = document.getElementById('total_custos');
-    const totalProjetadoEl = document.getElementById('total_projetado');
-    const prejuizoProjetadoEl = document.getElementById('prejuizo_projetado');
+    const taxaItcmd = Number(document.getElementById('taxa_itcmd')?.value) || 0;
+    const taxaHonorarios = Number(document.getElementById('taxa_honorarios')?.value) || 0;
+    const taxaCustas = Number(document.getElementById('taxa_custas')?.value) || 0;
+    const taxaTotal = taxaItcmd + taxaHonorarios + taxaCustas;
 
-    const itcmdFormatado = itcmdValorEl ? itcmdValorEl.innerText : 'R$ 0,00';
-    const custasFormatadas = custasCartorioEl ? custasCartorioEl.innerText : 'R$ 0,00';
-    const honorariosFormatados = honorariosEl ? honorariosEl.innerText : 'R$ 0,00';
-    const totalCustosFormatado = totalCustosEl ? totalCustosEl.innerText : 'R$ 0,00';
-    const totalProjetadoFormatado = totalProjetadoEl ? totalProjetadoEl.innerText : 'R$ 0,00';
-    const prejuizoProjetadoFormatado = prejuizoProjetadoEl ? prejuizoProjetadoEl.innerText : 'R$ 0,00';
+    const regimeLower = String(regime).toLowerCase();
+    const multiplicadorRegime = (regimeLower.includes('comunhão') || regimeLower.includes('participação final') || regimeLower.includes('aquestos')) ? 0.5 : 1;
 
-    // Estratégias
-    const doacaoEcoEl = document.getElementById('doacao_economia');
-    const seguroCapEl = document.getElementById('seguro_resultado_capital');
-    const seguroParcEl = document.getElementById('seguro_resultado_parcela');
-    const seguroEcoEl = document.getElementById('seguro_resultado_economia');
+    const baseAtual = Math.max(0, totalAtual - prev) * multiplicadorRegime;
+    const baseProjetada = Math.max(0, totalProjetado - prevProjetado) * multiplicadorRegime;
+
+    const custoItcmd = baseAtual * (taxaItcmd / 100);
+    const custoHonorarios = baseAtual * (taxaHonorarios / 100);
+    const custoCustas = baseAtual * (taxaCustas / 100);
+    const prejuizoAtual = baseAtual * (taxaTotal / 100);
+    const prejuizoProjetado = baseProjetada * (taxaTotal / 100);
+
+    // Liquidez: mesma composição do alarme de liquidez em tributario.js
+    const liquidez = rf + prev + inter + offshore;
+
+    const estadoCivil = String(familia.estadoCivil || '').toLowerCase();
+    const temFilhos = familia.temFilhos === 'sim';
+    const idadesFilhos = Array.isArray(familia.idadesFilhos) ? familia.idadesFilhos : [];
+    const qtdFilhos = temFilhos ? Math.max(parseInt(familia.qtdFilhos) || 0, idadesFilhos.length) : 0;
 
     return {
-      cliente: nomeCliente,
-      assessor: nomeAssessor,
-      data: dataReuniao,
-      totalPatrimonio: totalPatrimonioRaw,
-      totalPatrimonioFormatado: 'R$ ' + Math.round(totalPatrimonioRaw).toLocaleString('pt-BR'),
-      totalFinanceiro,
-      totalFinanceiroFormatado: 'R$ ' + Math.round(totalFinanceiro).toLocaleString('pt-BR'),
-      totalImoveis,
-      totalImoveisFormatado: 'R$ ' + Math.round(totalImoveis).toLocaleString('pt-BR'),
-      totalEmpresas,
-      totalEmpresasFormatado: 'R$ ' + Math.round(totalEmpresas).toLocaleString('pt-BR'),
-      outrosBens,
-      previdencia: prev,
-      offshore,
-      familia,
-      itcmdTaxa,
-      itcmdFormatado,
-      custasFormatadas,
-      honorariosFormatados,
-      totalCustosFormatado,
-      totalProjetadoFormatado,
-      prejuizoProjetadoFormatado,
-      doacaoEconomia: doacaoEcoEl ? doacaoEcoEl.innerText : 'R$ 0,00',
-      seguroCapital: seguroCapEl ? seguroCapEl.innerText : '—',
-      seguroParcela: seguroParcEl ? seguroParcEl.innerText : '—',
-      seguroEconomia: seguroEcoEl ? seguroEcoEl.innerText : '—',
-      evolucao
+      cliente: (familia.nome || '').trim() || 'Cliente',
+      assessor: (sessionStorage.getItem('nome_assessor') || '').trim(),
+      data: sessionStorage.getItem('data_reuniao') || new Date().toLocaleDateString('pt-BR'),
+
+      totalAtual, totalProjetado, totalFinanceiro, totalImoveis, totalEmpresas, outrosBens,
+      previdencia: prev, offshore, liquidez,
+
+      regime, estadoCivil, temFilhos, qtdFilhos,
+      nomeConjuge: (familia.conjuge || '').trim(),
+      possuiPais: familia.possuiPais === 'sim',
+
+      taxaItcmd, taxaHonorarios, taxaCustas, taxaTotal, multiplicadorRegime,
+      baseAtual, custoItcmd, custoHonorarios, custoCustas, prejuizoAtual, prejuizoProjetado,
+
+      doacaoAnual: Number(inputsTrib.doacao) || 0,
+      tempoDoacao: textoElemento('tempo_atual_doacao'),
+      previdenciaAporte: Number(inputsTrib.previdencia) || 0,
+      previdenciaCustoTotal: textoElemento('previdencia_custo_total'),
+      seguroCapital: textoElemento('seguro_resultado_capital'),
+      seguroParcela: textoElemento('seguro_resultado_parcela'),
+      seguroEconomia: textoElemento('seguro_resultado_economia'),
+
+      evolucaoAnos: Array.isArray(evolucao.anos) ? evolucao.anos : [],
+      evolucaoResultados: resultados,
+      evolucaoTempo: evolucao.tempo || ''
     };
   }
 
-  function parseValor(v) {
-    if (!v) return 0;
-    if (typeof v === 'number') return v;
-    let s = v.toString().replace('R$', '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
-    return parseFloat(s) || 0;
+  // =============================================================================
+  // SLIDES
+  // =============================================================================
+
+  function cabecalho(tag, titulo, subtitulo) {
+    return `
+      <div class="pitch-slide-header">
+        <span class="pitch-slide-tag">${tag}</span>
+        <h2 class="pitch-slide-title">${titulo}</h2>
+        ${subtitulo ? `<p class="pitch-slide-subtitle">${subtitulo}</p>` : ''}
+      </div>
+    `;
   }
 
-  // =============================================================================
-  // CONSTRUTORES DE SLIDES EM HTML
-  // =============================================================================
-
-  function gerarHTMLSlide(idBloco, d) {
+  function gerarSlide(idBloco, d) {
     switch (idBloco) {
-      case 1:
-        return {
-          id: 1,
-          tipo: 'capa',
-          html: `
-            <div class="pitch-capa-hero">
-              <div class="pitch-capa-monogram">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              </div>
-              <h1 class="pitch-capa-title">Planejamento Patrimonial &amp; Sucessório</h1>
-              <div class="pitch-capa-client">Apresentado para: <strong>${d.cliente}</strong></div>
-              <div class="pitch-capa-meta-row">
-                <div>Assessor: <strong>${d.assessor}</strong></div>
-                <div>•</div>
-                <div>Data: <strong>${d.data}</strong></div>
-                <div>•</div>
-                <div>Status: <strong style="color: #34d399;">Diagnóstico Estratégico</strong></div>
-              </div>
-            </div>
-          `
-        };
-
-      case 2:
-        return {
-          id: 2,
-          tipo: 'patrimonio',
-          html: `
-            <div class="pitch-slide-header">
-              <span class="pitch-slide-tag">Raio-X do Patrimônio</span>
-              <h2 class="pitch-slide-title">Mapeamento de Ativos e Liquidez</h2>
-              <p class="pitch-slide-subtitle">Distribuição por classes de ativos, liquidez imediata e bens imobilizados.</p>
-            </div>
-
-            <div class="pitch-metrics-grid">
-              <div class="pitch-card-dark">
-                <div class="pitch-number-label">Patrimônio Consolidado</div>
-                <div class="pitch-big-number">${d.totalPatrimonioFormatado}</div>
-              </div>
-              <div class="pitch-card-dark">
-                <div class="pitch-number-label">Aplicações Financeiras</div>
-                <div class="pitch-big-number">${d.totalFinanceiroFormatado}</div>
-              </div>
-              <div class="pitch-card-dark">
-                <div class="pitch-number-label">Imóveis &amp; Terrenos</div>
-                <div class="pitch-big-number">${d.totalImoveisFormatado}</div>
-              </div>
-              <div class="pitch-card-dark">
-                <div class="pitch-number-label">Participação Societária</div>
-                <div class="pitch-big-number">${d.totalEmpresasFormatado}</div>
-              </div>
-            </div>
-
-            <div class="pitch-two-cols">
-              <div class="pitch-card-dark" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 260px;">
-                <div class="pitch-number-label" style="align-self: flex-start; margin-bottom: 12px;">Composição por Classe</div>
-                <div style="width: 100%; max-width: 320px; height: 210px; position: relative;">
-                  <canvas id="pitch_chart_patrimonio"></canvas>
-                </div>
-              </div>
-
-              <div class="pitch-card-dark" style="display: flex; flex-direction: column; justify-content: space-around;">
-                <div>
-                  <div class="pitch-number-label">Liquidez vs. Ativos Ilíquidos</div>
-                  <p style="font-size: 13.5px; color: #a1a1aa; line-height: 1.6; margin-top: 6px;">
-                    Ativos financeiros e previdência oferecem agilidade para suportar despesas emergenciais, enquanto ativos imobiliários e participações exigem planejamento específico para evitar alienação forçada com deságio em caso de inventário.
-                  </p>
-                </div>
-                <div style="display: flex; gap: 12px; margin-top: 10px;">
-                  <div style="flex: 1; padding: 12px 14px; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 10px;">
-                    <span style="font-size: 11px; text-transform: uppercase; color: #38bdf8; font-weight: 700;">Previdência Privada</span>
-                    <div style="font-size: 16px; font-weight: 700; color: #ffffff; margin-top: 2px;">R$ ${Math.round(d.previdencia).toLocaleString('pt-BR')}</div>
-                  </div>
-                  <div style="flex: 1; padding: 12px 14px; background: rgba(129, 140, 248, 0.08); border: 1px solid rgba(129, 140, 248, 0.2); border-radius: 10px;">
-                    <span style="font-size: 11px; text-transform: uppercase; color: #818cf8; font-weight: 700;">Ativos Offshore</span>
-                    <div style="font-size: 16px; font-weight: 700; color: #ffffff; margin-top: 2px;">R$ ${Math.round(d.offshore).toLocaleString('pt-BR')}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          `
-        };
-
-      case 3:
-        const fam = d.familia || {};
-        const regime = fam.regime || 'Comunhão Parcial de Bens';
-        const estadoCivil = (fam.estadoCivil || 'solteiro').toLowerCase();
-        const temFilhos = fam.temFilhos === 'sim';
-        const qtdFilhos = parseInt(fam.qtdFilhos) || (Array.isArray(fam.idadesFilhos) ? fam.idadesFilhos.length : 0);
-
-        return {
-          id: 3,
-          tipo: 'familia',
-          html: `
-            <div class="pitch-slide-header">
-              <span class="pitch-slide-tag">Governança Familiar</span>
-              <h2 class="pitch-slide-title">Regime de Bens &amp; Ordem de Sucessão</h2>
-              <p class="pitch-slide-subtitle">Impacto da legislação civil na preservação do patrimônio familiar.</p>
-            </div>
-
-            <div class="pitch-two-cols">
-              <div class="pitch-card-dark">
-                <div class="pitch-number-label">Regime Matrimonial e Meação</div>
-                <h3 style="font-size: 22px; font-weight: 700; color: #ffffff; margin: 8px 0;">${regime}</h3>
-                <p style="font-size: 13.5px; color: #a1a1aa; line-height: 1.6; margin-top: 8px;">
-                  ${estadoCivil === 'casado'
-                    ? `O cônjuge possui direitos de meação e/ou concorrência sucessória conforme os artigos 1.658 e 1.829 do Código Civil. A correta identificação dos bens comuns versus particulares previne conflitos de inventário.`
-                    : `Titular em estado civil ${estadoCivil}. A totalidade do acervo patrimonial integra a base de herança dos descendentes necessários ou ascendentes.`}
-                </p>
-
-                <div style="margin-top: 20px; padding: 14px 16px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
-                  <div>
-                    <div style="font-size: 11px; text-transform: uppercase; color: #71717a; font-weight: 700;">Herdeiros Necessários</div>
-                    <div style="font-size: 15px; font-weight: 700; color: #ffffff; margin-top: 2px;">
-                      ${temFilhos ? `${qtdFilhos} Filho(s) descendente(s)` : 'Sem descendentes diretos'}
-                    </div>
-                  </div>
-                  <span style="font-size: 12px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 4px 10px; border-radius: 6px; font-weight: 700;">Legítima 50%</span>
-                </div>
-              </div>
-
-              <div class="pitch-card-dark" style="display: flex; flex-direction: column; justify-content: space-between;">
-                <div>
-                  <div class="pitch-number-label">Pilares de Governança Sucessória</div>
-                  <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 14px;">
-                    <div style="padding: 12px 14px; background: rgba(255, 255, 255, 0.02); border-left: 3px solid #38bdf8; border-radius: 8px; font-size: 13px; color: #d4d4d8;">
-                      <strong>Proteção da Legítima:</strong> 50% do patrimônio é reservado obrigatoriamente aos herdeiros necessários por lei (Código Civil).
-                    </div>
-                    <div style="padding: 12px 14px; background: rgba(255, 255, 255, 0.02); border-left: 3px solid #818cf8; border-radius: 8px; font-size: 13px; color: #d4d4d8;">
-                      <strong>Parcela Disponível:</strong> Os outros 50% podem ser direcionados livremente via testamento, doação com reserva ou previdência.
-                    </div>
-                    <div style="padding: 12px 14px; background: rgba(255, 255, 255, 0.02); border-left: 3px solid #34d399; border-radius: 8px; font-size: 13px; color: #d4d4d8;">
-                      <strong>Prevenção de Litígios:</strong> O planejamento antecipado elimina a necessidade de disputas judiciais desgastantes entre herdeiros.
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          `
-        };
-
-      case 4:
-        return {
-          id: 4,
-          tipo: 'custos',
-          html: `
-            <div class="pitch-slide-header">
-              <span class="pitch-slide-tag" style="color: #f87171;">Diagnóstico de Risco</span>
-              <h2 class="pitch-slide-title">O Custo Oculto da Ausência de Planejamento</h2>
-              <p class="pitch-slide-subtitle">Prejuízo tributário e processual estimado em caso de inventário tradicional.</p>
-            </div>
-
-            <div class="pitch-two-cols">
-              <div class="pitch-card-dark" style="border-color: rgba(248, 113, 113, 0.3); background: linear-gradient(180deg, rgba(239, 68, 68, 0.08) 0%, rgba(24, 24, 27, 0.8) 100%);">
-                <div class="pitch-number-label" style="color: #f87171;">Prejuízo Tributário Consolidado</div>
-                <div class="pitch-big-number alerta" style="margin: 10px 0 16px 0;">${d.totalCustosFormatado}</div>
-                <p style="font-size: 13.5px; color: #a1a1aa; line-height: 1.6;">
-                  Representa a perda de capital que a família deverá desembolsar à vista para transferir os bens deixados pelo titular, exigindo liquidez imediata em até 60 dias para evitar multas de mora da Fazenda Estadual.
-                </p>
-
-                <div style="margin-top: 18px; padding: 12px 16px; background: rgba(0, 0, 0, 0.3); border-radius: 10px; font-size: 12px; color: #fca5a5;">
-                  ⚠️ Sem planejamento, o inventário pode forçar a liquidação de imóveis ou ações com deságio de até 30%.
-                </div>
-              </div>
-
-              <div class="pitch-card-dark">
-                <div class="pitch-number-label">Composição dos Custos de Transmissão</div>
-                <div class="pitch-custos-breakdown" style="margin-top: 14px;">
-                  <div class="pitch-custo-row">
-                    <span class="pitch-custo-name">
-                      <span style="width: 8px; height: 8px; border-radius: 50%; background: #f87171;"></span>
-                      ITCMD Estadual (${d.itcmdTaxa}%)
-                    </span>
-                    <span class="pitch-custo-val danger">${d.itcmdFormatado}</span>
-                  </div>
-                  <div class="pitch-custo-row">
-                    <span class="pitch-custo-name">
-                      <span style="width: 8px; height: 8px; border-radius: 50%; background: #fb923c;"></span>
-                      Custas Judiciais e Cartorárias
-                    </span>
-                    <span class="pitch-custo-val">${d.custasFormatadas}</span>
-                  </div>
-                  <div class="pitch-custo-row">
-                    <span class="pitch-custo-name">
-                      <span style="width: 8px; height: 8px; border-radius: 50%; background: #facc15;"></span>
-                      Honorários Advocatícios
-                    </span>
-                    <span class="pitch-custo-val">${d.honorariosFormatados}</span>
-                  </div>
-                </div>
-
-                <div style="margin-top: 20px; padding: 14px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px;">
-                  <div style="font-size: 11px; text-transform: uppercase; color: #71717a; font-weight: 700;">Cenário Projetado Futuro</div>
-                  <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px;">
-                    <span style="font-size: 13px; color: #a1a1aa;">Patrimônio: ${d.totalProjetadoFormatado}</span>
-                    <span style="font-size: 15px; font-weight: 700; color: #f87171;">Prejuízo: ${d.prejuizoProjetadoFormatado}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          `
-        };
-
-      case 5:
-        return {
-          id: 5,
-          tipo: 'estrategias',
-          html: `
-            <div class="pitch-slide-header">
-              <span class="pitch-slide-tag" style="color: #34d399;">Soluções Estratégicas</span>
-              <h2 class="pitch-slide-title">Estratégias de Preservação &amp; Liquidez</h2>
-              <p class="pitch-slide-subtitle">Soluções para mitigar o impacto tributário e blindar a transferência geracional.</p>
-            </div>
-
-            <div class="pitch-strategies-grid">
-              <div class="pitch-strat-card destaque">
-                <div>
-                  <div class="pitch-strat-title">
-                    <span>1. Doação com Usufruto</span>
-                  </div>
-                  <div class="pitch-strat-body" style="margin-top: 8px;">
-                    Antecipação da herança com reserva vitalícia de usufruto ao titular, aproveitando faixas de isenção e congelando a base de cálculo tributária.
-                  </div>
-                </div>
-                <div>
-                  <div class="pitch-number-label" style="color: #34d399;">Economia Estimada</div>
-                  <div class="pitch-strat-val">${d.doacaoEconomia}</div>
-                </div>
-              </div>
-
-              <div class="pitch-strat-card">
-                <div>
-                  <div class="pitch-strat-title">
-                    <span>2. Previdência Privada</span>
-                  </div>
-                  <div class="pitch-strat-body" style="margin-top: 8px;">
-                    Transmissão rápida de recursos sem passar pelo inventário cível, com isenção de IOF até R$ 600.000/ano e livre indicação de beneficiários.
-                  </div>
-                </div>
-                <div>
-                  <div class="pitch-number-label">Liquidez Familiar</div>
-                  <div style="font-size: 16px; font-weight: 700; color: #ffffff;">Disponibilidade Rápida</div>
-                </div>
-              </div>
-
-              <div class="pitch-strat-card">
-                <div>
-                  <div class="pitch-strat-title">
-                    <span>3. Seguro Sucessório</span>
-                  </div>
-                  <div class="pitch-strat-body" style="margin-top: 8px;">
-                    Garante 100% da liquidez necessária para pagar o inventário através de uma fração de desembolso mensal em 120 parcelas, 100% isento de impostos.
-                  </div>
-                </div>
-                <div>
-                  <div class="pitch-number-label">Economia de Liquidez</div>
-                  <div class="pitch-strat-val">${d.seguroEconomia !== '—' ? d.seguroEconomia : 'Alavancagem Imediata'}</div>
-                </div>
-              </div>
-            </div>
-
-            <div style="margin-top: 20px; padding: 14px 20px; background: rgba(52, 211, 153, 0.06); border: 1px solid rgba(52, 211, 153, 0.2); border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
-              <span style="font-size: 13.5px; color: #d1fae5;">
-                A combinação integrada dessas ferramentas permite reduzir até <strong>70% dos custos totais</strong> de inventário e blindar a família contra bloqueios de contas.
-              </span>
-            </div>
-          `
-        };
-
-      case 6:
-        return {
-          id: 6,
-          tipo: 'evolucao',
-          html: `
-            <div class="pitch-slide-header">
-              <span class="pitch-slide-tag">Visão de Futuro</span>
-              <h2 class="pitch-slide-title">Projeção Patrimonial &amp; Próximos Passos</h2>
-              <p class="pitch-slide-subtitle">Construção de valor sustentável e roteiro de implementação com o assessor.</p>
-            </div>
-
-            <div class="pitch-two-cols">
-              <div class="pitch-card-dark" style="display: flex; flex-direction: column; justify-content: center;">
-                <div class="pitch-number-label" style="margin-bottom: 12px;">Curva de Evolução Composta</div>
-                <div style="width: 100%; height: 240px; position: relative;">
-                  <canvas id="pitch_chart_evolucao"></canvas>
-                </div>
-              </div>
-
-              <div class="pitch-card-dark" style="display: flex; flex-direction: column; justify-content: space-between;">
-                <div>
-                  <div class="pitch-number-label">Roteiro de Implementação Recomendado</div>
-                  <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 14px;">
-                    <div style="display: flex; align-items: center; gap: 12px; font-size: 13px; color: #e4e4e7;">
-                      <span style="width: 22px; height: 22px; border-radius: 50%; background: #38bdf8; color: #09090b; font-weight: 800; font-size: 11px; display: flex; align-items: center; justify-content: center;">1</span>
-                      <span>Alocação de liquidez sucessória e proteção imediata</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 12px; font-size: 13px; color: #e4e4e7;">
-                      <span style="width: 22px; height: 22px; border-radius: 50%; background: #38bdf8; color: #09090b; font-weight: 800; font-size: 11px; display: flex; align-items: center; justify-content: center;">2</span>
-                      <span>Elaboração da estrutura de holding ou doação em vida</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 12px; font-size: 13px; color: #e4e4e7;">
-                      <span style="width: 22px; height: 22px; border-radius: 50%; background: #38bdf8; color: #09090b; font-weight: 800; font-size: 11px; display: flex; align-items: center; justify-content: center;">3</span>
-                      <span>Revisão periódica anual das alíquotas estaduais (ITCMD)</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="pitch-cta-box" style="margin-top: 16px;">
-                  <div class="pitch-cta-text">
-                    <h4>Documentação Executiva</h4>
-                    <p>O relatório formal de 5 páginas está disponível para consulta e assinatura.</p>
-                  </div>
-                  <button type="button" class="btn-pitch-view-pdf" onclick="fecharApresentacaoPitch(); if (window.abrirPreview) window.abrirPreview();">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                    <span>Ver Relatório PDF</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          `
-        };
-
-      default:
-        return { id: 0, html: '<div>Slide não encontrado</div>' };
+      case 1: return { tipo: 'capa', html: slideCapa(d) };
+      case 2: return { tipo: 'patrimonio', html: slidePatrimonio(d) };
+      case 3: return { tipo: 'familia', html: slideFamilia(d) };
+      case 4: return { tipo: 'custos', html: slideCustos(d) };
+      case 5: return { tipo: 'estrategias', html: slideEstrategias(d) };
+      case 6: return { tipo: 'evolucao', html: slideEvolucao(d) };
+      default: return { tipo: '', html: '' };
     }
   }
 
+  function slideCapa(d) {
+    return `
+      <div class="pitch-capa">
+        <div class="pitch-capa-brand">Ritmo Wealth Pro</div>
+        <h1 class="pitch-capa-title">Planejamento Patrimonial e Sucessório</h1>
+        <div class="pitch-capa-divider"></div>
+        <div class="pitch-capa-label">Preparado para</div>
+        <div class="pitch-capa-client">${escapeHtml(d.cliente)}</div>
+        <div class="pitch-capa-meta">
+          ${d.assessor ? `<div>Assessor: <strong>${escapeHtml(d.assessor)}</strong></div>` : ''}
+          <div>Data: <strong>${escapeHtml(d.data)}</strong></div>
+        </div>
+      </div>
+    `;
+  }
+
+  function slidePatrimonio(d) {
+    const pctLiquidez = d.totalAtual > 0 ? Math.round((d.liquidez / d.totalAtual) * 100) : 0;
+    return `
+      ${cabecalho('Raio-X Patrimonial', 'Composição do patrimônio', 'Distribuição dos bens por classe de ativo.')}
+
+      <div class="pitch-metrics-grid">
+        <div class="pitch-card">
+          <div class="pitch-card-label">Patrimônio total</div>
+          <div class="pitch-big-number">${brl(d.totalAtual)}</div>
+        </div>
+        <div class="pitch-card">
+          <div class="pitch-card-label">Aplicações financeiras</div>
+          <div class="pitch-big-number">${brl(d.totalFinanceiro)}</div>
+        </div>
+        <div class="pitch-card">
+          <div class="pitch-card-label">Imóveis</div>
+          <div class="pitch-big-number">${brl(d.totalImoveis)}</div>
+        </div>
+        <div class="pitch-card">
+          <div class="pitch-card-label">Participações societárias</div>
+          <div class="pitch-big-number">${brl(d.totalEmpresas)}</div>
+        </div>
+      </div>
+
+      <div class="pitch-two-cols">
+        <div class="pitch-card">
+          <div class="pitch-card-label">Composição por classe</div>
+          <div class="pitch-chart-box"><canvas id="pitch_chart_patrimonio"></canvas></div>
+        </div>
+        <div class="pitch-card">
+          <div class="pitch-card-label">Liquidez disponível</div>
+          <div class="pitch-big-number">${brl(d.liquidez)}</div>
+          <p class="pitch-paragraph">
+            Renda fixa, previdência, fundos internacionais e offshore representam
+            <strong>${pctLiquidez}%</strong> do patrimônio. Imóveis e participações exigem
+            planejamento para não precisarem ser vendidos às pressas em um inventário.
+          </p>
+          <div class="pitch-rows" style="margin-top: 14px;">
+            <div class="pitch-row">
+              <span class="pitch-row-label">Previdência privada</span>
+              <span class="pitch-row-value">${brl(d.previdencia)}</span>
+            </div>
+            <div class="pitch-row">
+              <span class="pitch-row-label">Offshore</span>
+              <span class="pitch-row-value">${brl(d.offshore)}</span>
+            </div>
+            <div class="pitch-row">
+              <span class="pitch-row-label">Outros bens</span>
+              <span class="pitch-row-value">${brl(d.outrosBens)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function slideFamilia(d) {
+    const casado = d.estadoCivil === 'casado';
+    let herdeiros;
+    if (d.temFilhos && d.qtdFilhos > 0) {
+      herdeiros = `${d.qtdFilhos} filho${d.qtdFilhos > 1 ? 's' : ''}${casado ? ' e cônjuge, conforme o regime' : ''}`;
+    } else if (d.possuiPais) {
+      herdeiros = `Ascendentes${casado ? ' e cônjuge' : ''}`;
+    } else if (casado) {
+      herdeiros = 'Cônjuge';
+    } else {
+      herdeiros = 'Não informado';
+    }
+
+    const meacaoTexto = d.multiplicadorRegime === 0.5
+      ? 'Neste regime, metade do patrimônio comum pertence ao cônjuge (meação) e não entra na base do inventário.'
+      : 'Neste cenário, a base do inventário considera a totalidade do patrimônio (descontada a previdência).';
+
+    return `
+      ${cabecalho('Estrutura Familiar', 'Regime de bens e herdeiros', 'Como a família e o regime de casamento afetam a sucessão.')}
+
+      <div class="pitch-two-cols">
+        <div class="pitch-card">
+          <div class="pitch-rows">
+            <div class="pitch-row">
+              <span class="pitch-row-label">Titular</span>
+              <span class="pitch-row-value">${escapeHtml(d.cliente)}</span>
+            </div>
+            ${casado ? `
+            <div class="pitch-row">
+              <span class="pitch-row-label">Cônjuge</span>
+              <span class="pitch-row-value">${escapeHtml(d.nomeConjuge || 'Informado')}</span>
+            </div>` : ''}
+            <div class="pitch-row">
+              <span class="pitch-row-label">Regime de bens</span>
+              <span class="pitch-row-value">${escapeHtml(casado ? d.regime : 'Não se aplica')}</span>
+            </div>
+            <div class="pitch-row">
+              <span class="pitch-row-label">Herdeiros</span>
+              <span class="pitch-row-value">${escapeHtml(herdeiros)}</span>
+            </div>
+            <div class="pitch-row">
+              <span class="pitch-row-label">Base do inventário</span>
+              <span class="pitch-row-value">${brl(d.baseAtual)}</span>
+            </div>
+          </div>
+          <div class="pitch-note">${meacaoTexto}</div>
+        </div>
+
+        <div class="pitch-card">
+          <div class="pitch-card-label">Pontos de atenção</div>
+          <ul class="pitch-list">
+            <li><span class="pitch-list-num">1</span><span><strong>Legítima:</strong> metade do patrimônio é reservada por lei aos herdeiros necessários.</span></li>
+            <li><span class="pitch-list-num">2</span><span><strong>Parte disponível:</strong> a outra metade pode ser direcionada por testamento ou doação.</span></li>
+            <li><span class="pitch-list-num">3</span><span><strong>Previdência:</strong> não entra no inventário e é paga diretamente aos beneficiários indicados.</span></li>
+          </ul>
+        </div>
+      </div>
+    `;
+  }
+
+  function slideCustos(d) {
+    const faltaLiquidez = d.prejuizoAtual > d.liquidez && d.totalAtual > 0;
+    return `
+      ${cabecalho('Custo do Inventário', 'Quanto custa transferir o patrimônio hoje', 'Estimativa sem planejamento, com as taxas configuradas nesta simulação.')}
+
+      <div class="pitch-two-cols">
+        <div class="pitch-card">
+          <div class="pitch-card-label">Custo total estimado (cenário atual)</div>
+          <div class="pitch-big-number lg pitch-text-prejuizo">${brl(d.prejuizoAtual)}</div>
+          <p class="pitch-paragraph">
+            ${d.totalAtual > 0 ? `${((d.prejuizoAtual / d.totalAtual) * 100).toFixed(1)}% do patrimônio total.` : ''}
+            Valor que a família precisaria desembolsar para concluir a transferência dos bens.
+          </p>
+          <div class="pitch-note">
+            ${faltaLiquidez
+              ? `A liquidez disponível (<strong>${brl(d.liquidez)}</strong>) não cobre esse custo. Sem planejamento, a família pode precisar vender imóveis ou participações com deságio.`
+              : `A liquidez disponível (<strong>${brl(d.liquidez)}</strong>) cobre esse custo, mas o pagamento reduz diretamente a herança recebida.`}
+          </div>
+        </div>
+
+        <div class="pitch-card">
+          <div class="pitch-card-label">Composição do custo</div>
+          <div class="pitch-rows">
+            <div class="pitch-row">
+              <span class="pitch-row-label">ITCMD (${d.taxaItcmd}%)</span>
+              <span class="pitch-row-value">${brl(d.custoItcmd)}</span>
+            </div>
+            <div class="pitch-row">
+              <span class="pitch-row-label">Honorários advocatícios (${d.taxaHonorarios}%)</span>
+              <span class="pitch-row-value">${brl(d.custoHonorarios)}</span>
+            </div>
+            <div class="pitch-row">
+              <span class="pitch-row-label">Custas e cartório (${d.taxaCustas}%)</span>
+              <span class="pitch-row-value">${brl(d.custoCustas)}</span>
+            </div>
+            <div class="pitch-row total">
+              <span class="pitch-row-label">Total</span>
+              <span class="pitch-row-value pitch-text-prejuizo">${brl(d.prejuizoAtual)}</span>
+            </div>
+          </div>
+          <div class="pitch-note">
+            No cenário projetado (patrimônio de <strong>${brl(d.totalProjetado)}</strong>), o custo estimado sobe para
+            <strong class="pitch-text-prejuizo">${brl(d.prejuizoProjetado)}</strong>.
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function slideEstrategias(d) {
+    const naoSimulado = '<div class="pitch-strat-value muted">Não simulado</div>';
+
+    const doacaoValor = d.doacaoAnual > 0
+      ? `<div class="pitch-card-label">Doação anual simulada</div><div class="pitch-strat-value">${brl(d.doacaoAnual)}</div>`
+      : naoSimulado;
+
+    const prevValor = d.previdenciaAporte > 0
+      ? `<div class="pitch-card-label">Aporte simulado</div><div class="pitch-strat-value">${brl(d.previdenciaAporte)}</div>`
+      : naoSimulado;
+
+    const seguroValor = d.seguroCapital
+      ? `<div class="pitch-card-label">Capital segurado</div><div class="pitch-strat-value">${escapeHtml(d.seguroCapital)}</div>
+         ${d.seguroParcela ? `<div class="pitch-paragraph" style="margin-top:4px;">Parcela mensal: <strong>${escapeHtml(d.seguroParcela)}</strong></div>` : ''}
+         ${d.seguroEconomia ? `<div class="pitch-paragraph" style="margin-top:2px;">Economia estimada: <strong class="pitch-text-economia">${escapeHtml(d.seguroEconomia)}</strong></div>` : ''}`
+      : naoSimulado;
+
+    return `
+      ${cabecalho('Estratégias de Preservação', 'Como reduzir o custo e garantir liquidez', 'Alternativas analisadas nesta simulação.')}
+
+      <div class="pitch-strategies-grid">
+        <div class="pitch-card pitch-strat-card">
+          <div>
+            <h3 class="pitch-strat-title">Doação em vida</h3>
+            <p class="pitch-paragraph">Transferência gradual de bens aos herdeiros enquanto o titular está vivo, reduzindo o patrimônio sujeito ao inventário.</p>
+          </div>
+          <div>${doacaoValor}</div>
+        </div>
+
+        <div class="pitch-card pitch-strat-card">
+          <div>
+            <h3 class="pitch-strat-title">Previdência privada</h3>
+            <p class="pitch-paragraph">Os recursos não entram no inventário e são pagos diretamente aos beneficiários indicados pelo titular.</p>
+          </div>
+          <div>${prevValor}</div>
+        </div>
+
+        <div class="pitch-card pitch-strat-card">
+          <div>
+            <h3 class="pitch-strat-title">Seguro sucessão</h3>
+            <p class="pitch-paragraph">Garante liquidez imediata para a família pagar as despesas do inventário sem vender patrimônio.</p>
+          </div>
+          <div>${seguroValor}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function slideEvolucao(d) {
+    const temEvolucao = d.evolucaoResultados.length > 1;
+    return `
+      ${cabecalho('Projeção e Próximos Passos', 'Evolução do patrimônio', temEvolucao && d.evolucaoTempo ? `Projeção para ${escapeHtml(d.evolucaoTempo)} anos, conforme premissas da etapa de evolução.` : '')}
+
+      <div class="pitch-two-cols">
+        <div class="pitch-card">
+          <div class="pitch-card-label">Patrimônio projetado</div>
+          ${temEvolucao
+            ? `<div class="pitch-chart-box"><canvas id="pitch_chart_evolucao"></canvas></div>`
+            : `<div class="pitch-empty-state">Preencha a etapa de Evolução Patrimonial para exibir a projeção.</div>`}
+        </div>
+
+        <div class="pitch-card">
+          <div class="pitch-card-label">Próximos passos</div>
+          <ul class="pitch-list">
+            <li><span class="pitch-list-num">1</span><span>Definir a estratégia de liquidez para o custo do inventário.</span></li>
+            <li><span class="pitch-list-num">2</span><span>Estruturar doações ou holding com apoio jurídico e contábil.</span></li>
+            <li><span class="pitch-list-num">3</span><span>Revisar o planejamento periodicamente.</span></li>
+          </ul>
+
+          <div class="pitch-cta">
+            <div>
+              <h4>Relatório completo</h4>
+              <p>Todos os detalhes desta análise em PDF.</p>
+            </div>
+            <button type="button" class="btn-pitch-view-pdf" onclick="pitchAbrirRelatorio()">Ver relatório PDF</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   // =============================================================================
-  // RENDERIZAÇÃO DE GRÁFICOS DINÂMICOS NOS SLIDES
+  // GRÁFICOS (tons de zinc, como o restante do sistema)
   // =============================================================================
 
   function destruirGraficosPitch() {
-    graficosPitch.forEach(g => {
-      try { g.destroy(); } catch (e) {}
-    });
+    graficosPitch.forEach(g => { try { g.destroy(); } catch (e) { } });
     graficosPitch = [];
   }
 
-  function renderizarGraficosSlide(slideIdx, d) {
-    if (!slidesMontados[slideIdx]) return;
-    const tipo = slidesMontados[slideIdx].tipo;
+  function renderizarGraficosSlide(slideIdx) {
+    const slide = slidesMontados[slideIdx];
+    if (!slide || !dadosApresentacao || typeof Chart === 'undefined') return;
+    const d = dadosApresentacao;
 
-    if (tipo === 'patrimonio') {
+    if (slide.tipo === 'patrimonio') {
       const canvas = document.getElementById('pitch_chart_patrimonio');
-      if (canvas && typeof Chart !== 'undefined') {
-        const existente = Chart.getChart(canvas);
-        if (existente) existente.destroy();
+      if (!canvas || Chart.getChart(canvas)) return;
 
-        const ctx = canvas.getContext('2d');
-        const chart = new Chart(ctx, {
-          type: 'doughnut',
-          data: {
-            labels: ['Financeiro', 'Imóveis', 'Empresas', 'Outros'],
-            datasets: [{
-              data: [d.totalFinanceiro, d.totalImoveis, d.totalEmpresas, d.outrosBens],
-              backgroundColor: ['#38bdf8', '#818cf8', '#34d399', '#f59e0b'],
-              borderColor: '#09090b',
-              borderWidth: 2
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: 'right',
-                labels: { color: '#a1a1aa', font: { size: 11, family: 'Plus Jakarta Sans' } }
-              },
-              datalabels: { display: false }
-            },
-            cutout: '65%'
+      graficosPitch.push(new Chart(canvas.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Financeiro', 'Imóveis', 'Empresas', 'Outros bens'],
+          datasets: [{
+            data: [d.totalFinanceiro, d.totalImoveis, d.totalEmpresas, d.outrosBens],
+            backgroundColor: ['#09090b', '#52525b', '#a1a1aa', '#e4e4e7'],
+            borderColor: '#ffffff',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '62%',
+          plugins: {
+            legend: { position: 'right', labels: { color: '#52525b', font: { size: 12 } } },
+            datalabels: { display: false },
+            tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${brl(ctx.raw)}` } }
           }
-        });
-        graficosPitch.push(chart);
-      }
-    } else if (tipo === 'evolucao') {
+        }
+      }));
+    } else if (slide.tipo === 'evolucao') {
       const canvas = document.getElementById('pitch_chart_evolucao');
-      if (canvas && typeof Chart !== 'undefined') {
-        const existente = Chart.getChart(canvas);
-        if (existente) existente.destroy();
+      if (!canvas || Chart.getChart(canvas)) return;
 
-        const ctx = canvas.getContext('2d');
-        const chart = new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: ['Hoje', 'Ano 3', 'Ano 5', 'Ano 10', 'Ano 15', 'Ano 20'],
-            datasets: [{
-              label: 'Patrimônio Projetado',
-              data: [
-                d.totalPatrimonio,
-                d.totalPatrimonio * 1.25,
-                d.totalPatrimonio * 1.48,
-                d.totalPatrimonio * 2.2,
-                d.totalPatrimonio * 3.4,
-                d.totalPatrimonio * 5.1
-              ],
-              borderColor: '#38bdf8',
-              backgroundColor: 'rgba(56, 189, 248, 0.1)',
-              fill: true,
-              tension: 0.35,
-              borderWidth: 2.5,
-              pointBackgroundColor: '#38bdf8',
-              pointRadius: 4
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              x: {
-                grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                ticks: { color: '#71717a', font: { size: 10 } }
-              },
-              y: {
-                grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                ticks: {
-                  color: '#71717a',
-                  font: { size: 10 },
-                  callback: function (val) {
-                    return 'R$ ' + (val / 1000000).toFixed(1) + 'M';
-                  }
-                }
+      const labels = d.evolucaoAnos.map(a => {
+        const raw = String(a).replace(/anos?/gi, '').trim();
+        return raw !== '' ? `Ano ${raw}` : String(a);
+      });
+
+      graficosPitch.push(new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Patrimônio projetado',
+            data: d.evolucaoResultados,
+            borderColor: '#09090b',
+            backgroundColor: 'rgba(9, 9, 11, 0.06)',
+            fill: true,
+            tension: 0.3,
+            borderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#71717a', maxTicksLimit: 8 } },
+            y: {
+              grid: { color: 'rgba(0, 0, 0, 0.05)' },
+              ticks: {
+                color: '#71717a',
+                callback: (val) => val >= 1000000 ? 'R$ ' + (val / 1000000).toFixed(1) + 'M' : 'R$ ' + Math.round(val / 1000) + 'k'
               }
-            },
-            plugins: {
-              legend: { display: false },
-              datalabels: { display: false }
             }
+          },
+          plugins: {
+            legend: { display: false },
+            datalabels: { display: false },
+            tooltip: { callbacks: { label: (ctx) => brl(ctx.raw) } }
           }
-        });
-        graficosPitch.push(chart);
-      }
-    }
-  }
-
-  if (typeof window !== 'undefined') {
-    const initLucide = () => {
-      if (window.lucide && typeof window.lucide.createIcons === 'function') {
-        window.lucide.createIcons();
-      }
-    };
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initLucide);
-    } else {
-      setTimeout(initLucide, 50);
+        }
+      }));
     }
   }
 
