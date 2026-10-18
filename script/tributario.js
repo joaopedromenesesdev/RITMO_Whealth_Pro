@@ -58,7 +58,7 @@ window.onload = function () {
 };
 
 // =========================
-// ESTRUTURA FAMILIAR
+// ESTRUTURA FAMILIAR (VISUAL ORGANOGRAMA NO PDF)
 // =========================
 function renderizarEstruturaFamiliar() {
   const familiaStr = sessionStorage.getItem("familia");
@@ -76,59 +76,144 @@ function renderizarEstruturaFamiliar() {
   const container = document.getElementById("estrutura_familiar_container");
   if (!container) return;
 
-  let html = `<h3>Estrutura Familiar</h3><ul>`;
+  const nomeCliente = (familia.nome || "").trim() || "Cliente (Titular)";
+  const estadoCivil = (familia.estadoCivil || "solteiro").toLowerCase();
+  const ehCasado = estadoCivil === "casado";
+  const nomeConjuge = (familia.conjuge || "").trim() || "Cônjuge";
+  const regime = familia.regime || "Regime a definir";
 
-  // Dados principais
-  if (familia.estadoCivil) {
-    html += `<li><strong>Estado Civil:</strong> <span style="text-transform: capitalize;">${escapeHTML(familia.estadoCivil)}</span></li>`;
-  }
-  if (familia.estadoCivil === "casado" && familia.conjuge) {
-    html += `<li><strong>Cônjuge:</strong> ${escapeHTML(familia.conjuge)}</li>`;
-    if (familia.regime) {
-      html += `<li><strong>Regime de Casamento:</strong> ${escapeHTML(familia.regime)}</li>`;
+  const temFilhos = familia.temFilhos === "sim";
+  const qtdFilhosInput = parseInt(familia.qtdFilhos) || 0;
+  const idadesFilhos = Array.isArray(familia.idadesFilhos) ? familia.idadesFilhos : [];
+  const qtdFilhos = temFilhos ? Math.max(qtdFilhosInput, idadesFilhos.length) : 0;
+
+  const possuiPais = familia.possuiPais === "sim";
+  const qtdPais = parseInt(familia.qtdPais) || 0;
+
+  const possuiColaterais = familia.possuiColaterais === "sim";
+  const tipoColaterais = (familia.tipoColaterais || "").trim() || "Parentes Colaterais";
+
+  // Total do patrimônio consolidado
+  const totalPatrimonioRaw = parseFloat(sessionStorage.getItem("total_patrimonio")) || 0;
+  const totalFormatado = totalPatrimonioRaw > 0 
+    ? "R$ " + Math.round(totalPatrimonioRaw).toLocaleString("pt-BR") 
+    : "Patrimônio Integrado";
+
+  // Meação
+  let temMeacao = false;
+  let meacaoDesc = "Sem Meação";
+  const regimeLower = regime.toLowerCase();
+
+  if (ehCasado) {
+    if (regimeLower.includes("comunhão parcial") || regimeLower.includes("comunhao parcial")) {
+      temMeacao = true;
+      meacaoDesc = "Meação: 50% dos aquestos";
+    } else if (regimeLower.includes("comunhão universal") || regimeLower.includes("comunhao universal")) {
+      temMeacao = true;
+      meacaoDesc = "Meação: 50% de todo patrimônio";
+    } else if (regimeLower.includes("separação") || regimeLower.includes("separacao")) {
+      temMeacao = false;
+      meacaoDesc = "Sem Meação (Herdeiro concorrente)";
+    } else if (regimeLower.includes("aquestos")) {
+      temMeacao = true;
+      meacaoDesc = "Meação sobre aquestos onerosos";
     }
   }
 
-  // Filhos
-  if (familia.temFilhos === "sim" && familia.qtdFilhos) {
-    html += `<li><strong>Filhos:</strong> ${escapeHTML(familia.qtdFilhos)}</li>`;
-    if (Array.isArray(familia.idadesFilhos) && familia.idadesFilhos.length > 0) {
-      const idades = familia.idadesFilhos.filter(i => i !== "").join(", ");
-      if (idades) {
-        html += `<li><strong>Idades dos filhos:</strong> ${escapeHTML(idades)} anos</li>`;
-      }
-    }
+  // Montagem do HTML Visual Otimizado para PDF
+  let html = `
+    <div class="pdf-organograma-box">
+      <div class="pdf-organograma-header">
+        <h4 style="margin:0; font-size:14px; font-weight:700; color:#09090b; letter-spacing:-0.2px;">
+          Mapeamento da Estrutura Familiar & Sucessória
+        </h4>
+        <div class="pdf-organograma-pills">
+          <span class="pdf-pill pdf-pill-legitima">Legítima: 50%</span>
+          <span class="pdf-pill pdf-pill-disponivel">Parcela Disponível: 50%</span>
+          ${ehCasado && temMeacao ? `<span class="pdf-pill pdf-pill-meacao">Meação: 50%</span>` : ''}
+        </div>
+      </div>
+
+      <div class="pdf-tree-body">
+        <!-- Casal / Titular -->
+        <div class="pdf-tree-row pdf-couple-row">
+          <div class="pdf-node-card pdf-node-titular">
+            <div class="pdf-node-role">Titular do Patrimônio</div>
+            <div class="pdf-node-name" title="${escapeHTML(nomeCliente)}">${escapeHTML(nomeCliente)}</div>
+            <div class="pdf-node-sub">${escapeHTML(totalFormatado)}</div>
+          </div>
+  `;
+
+  if (ehCasado) {
+    html += `
+          <div class="pdf-marriage-bridge">
+            <span class="pdf-regime-badge">💍 ${escapeHTML(regime)}</span>
+            <div class="pdf-marriage-line"></div>
+          </div>
+
+          <div class="pdf-node-card pdf-node-conjuge">
+            <div class="pdf-node-role">${temMeacao ? "Cônjuge Meeiro(a)" : "Cônjuge Herdeiro(a)"}</div>
+            <div class="pdf-node-name" title="${escapeHTML(nomeConjuge)}">${escapeHTML(nomeConjuge)}</div>
+            <div class="pdf-node-sub">${escapeHTML(meacaoDesc)}</div>
+          </div>
+    `;
   }
 
-  // Pais
-  if (familia.possuiPais === "sim" && familia.qtdPais) {
-    html += `<li><strong>Pais vivos (Ascendentes):</strong> ${escapeHTML(familia.qtdPais)}</li>`;
+  html += `</div>`; // fecha couple-row
+
+  // Filhos ou Ascendentes ou Colaterais
+  if (qtdFilhos > 0) {
+    const fatiaPorFilho = (100 / qtdFilhos).toFixed(1);
+    html += `
+      <div class="pdf-tree-connector-down"></div>
+      <div class="pdf-tree-row pdf-children-row">
+    `;
+
+    for (let i = 0; i < qtdFilhos; i++) {
+      const idade = idadesFilhos[i];
+      const idadeStr = idade !== null && idade !== undefined && idade !== "" ? `${idade} anos` : "";
+      const ehMenor = idade !== null && idade !== undefined && idade < 18;
+
+      html += `
+        <div class="pdf-node-card pdf-node-filho ${ehMenor ? 'pdf-menor' : ''}">
+          <div class="pdf-node-role">Filho(a) ${i + 1}</div>
+          <div class="pdf-node-name">Herdeiro Necessário</div>
+          <div class="pdf-node-sub">${idadeStr ? idadeStr + ' · ' : ''}${fatiaPorFilho}% da legítima</div>
+        </div>
+      `;
+    }
+
+    html += `</div>`; // fecha children-row
+
+  } else if (possuiPais) {
+    html += `
+      <div class="pdf-tree-connector-down"></div>
+      <div class="pdf-tree-row">
+        <div class="pdf-node-card pdf-node-filho">
+          <div class="pdf-node-role">Ascendentes (${qtdPais || 1} vivo(s))</div>
+          <div class="pdf-node-name">Herdeiros Necessários (Pais)</div>
+          <div class="pdf-node-sub">Concorrem na ausência de descendentes</div>
+        </div>
+      </div>
+    `;
+  } else if (!ehCasado && possuiColaterais) {
+    html += `
+      <div class="pdf-tree-connector-down"></div>
+      <div class="pdf-tree-row">
+        <div class="pdf-node-card pdf-node-filho">
+          <div class="pdf-node-role">Parentes Colaterais (${escapeHTML(tipoColaterais)})</div>
+          <div class="pdf-node-name">Herdeiros Facultativos</div>
+          <div class="pdf-node-sub">Art. 1.839 do Código Civil</div>
+        </div>
+      </div>
+    `;
   }
 
-  // Colaterais
-  if (familia.possuiColaterais === "sim" && familia.qtdColaterais) {
-    html += `<li><strong>Parentes Colaterais:</strong> ${escapeHTML(familia.qtdColaterais)}`;
-    if (familia.tipoColaterais) {
-      html += ` (${escapeHTML(familia.tipoColaterais)})`;
-    }
-    html += `</li>`;
-  }
+  html += `
+      </div>
+    </div>
+  `;
 
-  // --- Dados Cônjuge Extra ---
-  if (familia.estadoCivil === "casado") {
-    if (familia.conjugePossuiPais === "sim" && familia.conjugeQtdPais) {
-      html += `<li><strong>Pais vivos do Cônjuge:</strong> ${escapeHTML(familia.conjugeQtdPais)}</li>`;
-    }
-    if (familia.conjugePossuiColaterais === "sim" && familia.conjugeQtdColaterais) {
-      html += `<li><strong>Colaterais do Cônjuge:</strong> ${escapeHTML(familia.conjugeQtdColaterais)}`;
-      if (familia.conjugeTipoColaterais) {
-        html += ` (${escapeHTML(familia.conjugeTipoColaterais)})`;
-      }
-      html += `</li>`;
-    }
-  }
-
-  html += `</ul>`;
   container.innerHTML = html;
 }
 
