@@ -490,3 +490,83 @@
   transform: translateY(0);
 }
 
+/* ===== AÇÕES E BOTÃO TOGGLE DOS GRÁFICOS ===== */
+.patrimonio-acoes {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 40px auto 20px auto;
+  flex-wrap: wrap;
+}
+
+.btn-toggle-graficos {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #ffffff;
+  color: #18181b;
+  border: 1.5px solid #e4e4e7;
+  padding: 15px 32px;
+  border-radius: 100px;
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+  user-select: none;
+}
+
+.btn-toggle-graficos:hover {
+  transform: translateY(-2px);
+  background: #f4f4f5;
+  border-color: #a1a1aa;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.btn-toggle-graficos:active {
+  transform: translateY(0);
+}
+
+.btn-toggle-graficos.ativo {
+  background: #f8fafc;
+  border-color: #09090b;
+  color: #09090b;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.btn-toggle-graficos .btn-toggle-icon {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-toggle-graficos.ativo .btn-toggle-icon {
+  transform: rotate(180deg);
+}
+
+.btn-toggle-graficos i,
+.btn-toggle-graficos svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Container animado da seção de gráficos */
+.secao-graficos-patrimonio {
+  animation: fadeInDown 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-top: 10px;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
