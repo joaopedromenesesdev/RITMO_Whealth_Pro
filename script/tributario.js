@@ -47,6 +47,7 @@ window.onload = function () {
   renderizarEstruturaFamiliar();
   initPrejuizo();
   renderizarNotasRelatorio(document);
+  preencherDadosAssessorRelatorio(document);
 
   // Verifica se deve abrir o preview do PDF automaticamente
   const urlParams = new URLSearchParams(window.location.search);
@@ -1822,6 +1823,44 @@ function gerarNarrativaIA(total, prejuizo, regime) {
 }
 
 
+// ==========================================
+// IDENTIFICAÇÃO E ASSINATURA DO ASSESSOR NO RELATÓRIO
+// ==========================================
+function obterNomeAssessorAtual() {
+  let nome = sessionStorage.getItem("nome_assessor");
+  if (!nome || nome.trim() === "" || nome === "Assessor") {
+    try {
+      const cached = JSON.parse(localStorage.getItem("pace_user_cache"));
+      if (cached && cached.full_name && cached.full_name !== "Assessor" && cached.full_name.trim() !== "") {
+        nome = cached.full_name;
+      }
+    } catch (e) {}
+  }
+  return (nome && nome.trim() !== "") ? nome.trim() : "Assessor Responsável";
+}
+
+function preencherDadosAssessorRelatorio(scope = document) {
+  const nomeAssessor = obterNomeAssessorAtual();
+  const dataAtual = sessionStorage.getItem("data_reuniao") || new Date().toLocaleDateString("pt-BR");
+
+  // 1. Capa
+  const elCapa = scope.querySelector ? scope.querySelector("#nome_assessor_capa") : null;
+  if (elCapa) elCapa.innerText = nomeAssessor;
+
+  // 2. Bloco Final (Página 6)
+  const elFinal = scope.querySelector ? scope.querySelector("#relatorio_nome_assessor") : null;
+  if (elFinal) elFinal.innerText = nomeAssessor;
+
+  const elDataFinal = scope.querySelector ? scope.querySelector("#relatorio_data_emissao") : null;
+  if (elDataFinal) elDataFinal.innerText = dataAtual;
+
+  // 3. Rodapés de todas as páginas
+  const footers = scope.querySelectorAll ? scope.querySelectorAll(".relatorio_assessor_footer") : [];
+  footers.forEach(el => {
+    el.innerText = nomeAssessor;
+  });
+}
+
 // =========================
 // PREVIEW E GERAR PDF
 // =========================
@@ -1881,6 +1920,7 @@ async function abrirPreview() {
 
   // Renderiza as caixas de observações no clone do preview
   renderizarNotasRelatorio(clone);
+  preencherDadosAssessorRelatorio(clone);
 }
 
 // ==========================================
