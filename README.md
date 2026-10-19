@@ -81,7 +81,6 @@ Whealth-Planner-Pro/
 │   ├── global_ui.js         # Componentes transversais de UI (toasts, modais, temas)
 │   ├── nova_simulacao.js    # Inicialização de formulário e dados do cliente
 │   ├── patrimonio.js        # Formatação, cálculos de inventário e acordions
-│   ├── pitch_mode.js        # Modo Apresentação Executivo (Pitch Mode fullscreen com slides)
 │   ├── state.js             # Gestão de estado da sessão de simulação
 │   ├── supabase_config.js   # Credenciais de conexão Supabase
 │   ├── theme.js             # Gerenciamento de tema
@@ -95,7 +94,6 @@ Whealth-Planner-Pro/
 │   ├── login.css
 │   ├── nova_simulacao.css
 │   ├── patrimonio.css
-│   ├── pitch_mode.css       # Estilos do Modo Apresentação Executivo Dark (#09090b)
 │   ├── style.css            # Design system global, variáveis e componentes base
 │   ├── termos_privacidade.css
 │   └── tributario.css       # Estilos da página tributária e impressão PDF
