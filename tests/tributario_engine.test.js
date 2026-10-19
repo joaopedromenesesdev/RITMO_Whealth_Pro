@@ -319,6 +319,19 @@
     const tokenExemplo = "pace_inv_4a9b2c3d5e6f7a8b9c0d1e2f";
     assert(tokenRegex.test(tokenExemplo) === true, "Formato do token compatível com saída de alta entropia CSPRNG (24+ chars hexadecimais)");
 
+    // 14.9 Verificação da lista de assessores do Piloto Pace Capital
+    const emailsPiloto = [
+      "lguilherme.valim@pacecapital.com.br",
+      "solange.bastos@pacecapital.com.br",
+      "dayane.cugliari@pacecapital.com.br",
+      "fernanda.campos@pacecapital.com.br",
+      "matheus.bonetto@pacecapital.com.br"
+    ];
+    assert(emailsPiloto.length === 5, "Exatamente 5 assessores configurados para o piloto inicial");
+    emailsPiloto.forEach(email => {
+      assert(email.endsWith("@pacecapital.com.br"), `E-mail corporativo válido da Pace Capital: ${email}`);
+    });
+
     // ==========================================
     // 15. TESTES DO MÓDULO DE SUPORTE CORPORATIVO & AUSÊNCIA DE EMOJIS
     // ==========================================
