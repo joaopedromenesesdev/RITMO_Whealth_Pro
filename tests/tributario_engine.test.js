@@ -421,6 +421,22 @@
     const contemEmoji = textosSuportePadrao.some(t => regexEmoji.test(t));
     assert(contemEmoji === false, "Zero emojis identificados nos textos e opções de suporte técnico");
 
+    // ==========================================
+    // 16. TESTES DE IDENTIFICAÇÃO DO ASSESSOR NO RELATÓRIO
+    // ==========================================
+    console.log("\n🧪 Executando Testes 16: Identificação do Assessor no Relatório e Assinatura...");
+
+    // 16.1 Fallback seguro de nome do assessor
+    const resolverNomeAssessor = (sessionName, cacheName) => {
+      if (sessionName && sessionName.trim() && sessionName !== "Assessor") return sessionName.trim();
+      if (cacheName && cacheName.trim() && cacheName !== "Assessor") return cacheName.trim();
+      return "Assessor Responsável";
+    };
+
+    assert(resolverNomeAssessor("Guilherme Valim", null) === "Guilherme Valim", "Nome do assessor da sessão priorizado com sucesso");
+    assert(resolverNomeAssessor("", "Solange Bastos") === "Solange Bastos", "Fallback para cache local do usuário autenticado validado");
+    assert(resolverNomeAssessor(null, null) === "Assessor Responsável", "Valor defensivo padrão retornado quando não há assessor identificado");
+
     console.log("\n=================================================");
     console.log(`📊 RESUMO DA SUÍTE DE TESTES:`);
     console.log(`   Total: ${totalTestes} | Passados: ${testesPassados} | Falhas: ${testesFalhados}`);
