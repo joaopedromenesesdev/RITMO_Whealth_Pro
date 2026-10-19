@@ -376,7 +376,7 @@ window.alternarVisualizacaoOrganograma = function () {
 };
 
 // ==========================================
-// 🌳 RENDERIZADOR DO ORGANOGRAMA FAMILIAR
+// RENDERIZADOR DO ORGANOGRAMA FAMILIAR
 // ==========================================
 function renderizarOrganogramaFamiliar() {
   const treeContainer = document.getElementById("tree_canvas");
@@ -528,7 +528,7 @@ function renderizarOrganogramaFamiliar() {
       const ehMenor = idade !== null && idade !== undefined && idade < 18;
       const idadeStr = idade !== null && idade !== undefined && idade !== "" ? `${idade} anos` : "Idade não informada";
       const tagMenor = ehMenor 
-        ? `<div class="tree-node-badge badge-menor">⚠️ Menor de Idade (${idadeStr})</div>`
+        ? `<div class="tree-node-badge badge-menor">Menor de Idade (${idadeStr})</div>`
         : (idade ? `<div class="tree-node-badge badge-legitima">${idadeStr}</div>` : "");
 
       htmlTree += `
@@ -575,7 +575,7 @@ function renderizarOrganogramaFamiliar() {
   } else if (!ehCasado) {
     htmlTree += `
       <p style="font-size:13px; color:var(--text-muted); text-align:center; margin-top:20px;">
-        💡 Conforme preencher os dados de casamento, filhos ou ascendentes acima, a árvore sucessória e cotas serão calculadas em tempo real.
+        Conforme preencher os dados de casamento, filhos ou ascendentes acima, a árvore sucessória e cotas serão calculadas em tempo real.
       </p>
     `;
   }

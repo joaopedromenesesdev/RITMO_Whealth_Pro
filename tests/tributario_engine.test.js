@@ -39,32 +39,32 @@
     totalTestes++;
     if (condicao) {
       testesPassados++;
-      console.log(`  ✅ [PASS] ${descricao}`);
+      console.log(`  [PASS] ${descricao}`);
     } else {
       testesFalhados++;
-      console.error(`  ❌ [FAIL] ${descricao}`);
+      console.error(`  [FAIL] ${descricao}`);
     }
   }
 
   async function rodarSuiteDeTestes() {
     console.log("=================================================");
-    console.log("🧪 INICIANDO SUÍTE DE TESTES EXPANDIDA — TributarioEngine & Segurança");
+    console.log("INICIANDO SUÍTE DE TESTES EXPANDIDA — TributarioEngine & Segurança");
     console.log("=================================================");
 
     if (!engine) {
-      console.error("❌ Erro Crítico: TributarioEngine não foi encontrado.");
+      console.error("Erro Crítico: TributarioEngine não foi encontrado.");
       return;
     }
 
     // TESTE 1: Alíquotas de ITCMD por Estado
-    console.log("\n📋 Teste 1: Alíquotas de ITCMD por Estado");
+    console.log("\nTeste 1: Alíquotas de ITCMD por Estado");
     assert(engine.obterAliquotaITCMD("SP") === 4.0, "Alíquota SP deve ser 4.0%");
     assert(engine.obterAliquotaITCMD("RJ") === 8.0, "Alíquota RJ deve ser 8.0%");
     assert(engine.obterAliquotaITCMD("MG") === 5.0, "Alíquota MG deve ser 5.0%");
     assert(engine.obterAliquotaITCMD("XX") === 4.0, "Estado inválido deve retornar default 4.0%");
 
     // TESTE 2: Cálculo de Custos de Inventário
-    console.log("\n📋 Teste 2: Cálculo de Custos de Inventário");
+    console.log("\nTeste 2: Cálculo de Custos de Inventário");
     const resInventario = engine.calcularCustosInventario(10000000, 4.0, 5.0, 1.5); // R$ 10M, ITCMD 4%, Hon 5%, Custas 1.5% (Total 10.5%)
     assert(resInventario.valorITCMD === 400000, "ITCMD de R$ 10M a 4% deve ser R$ 400.000");
     assert(resInventario.valorHonorarios === 500000, "Honorários de R$ 10M a 5% deve ser R$ 500.000");
@@ -73,7 +73,7 @@
     assert(resInventario.pctPrejuizoTotal === 10.5, "Percentual total deve ser 10.5%");
 
     // TESTE 3: Partilha de Regime de Casamento
-    console.log("\n📋 Teste 3: Partilha por Regime de Casamento");
+    console.log("\nTeste 3: Partilha por Regime de Casamento");
     
     // Comunhão Universal (50% meação, 50% herança)
     if (typeof sessionStorage !== 'undefined') sessionStorage.setItem("total_patrimonio", "10000000");
@@ -89,7 +89,7 @@
     assert(partilhaSolteiro.meacaoConjuge === 0, "Solteiro: Meação deve ser R$ 0");
 
     // TESTE 4: Estratégias Sucessórias
-    console.log("\n📋 Teste 4: Estratégias de Preservação e Liquidez");
+    console.log("\nTeste 4: Estratégias de Preservação e Liquidez");
     const estrat = engine.calcularEstrategias(10000000, 1050000, {
       doacao: 20,
       doacao_avista: 10,
@@ -106,7 +106,7 @@
     assert(estrat.seguro.capitalSeguro === 1050000, "Capital do Seguro deve ser igual ao prejuízo de R$ 1.050.000");
 
     // TESTE 5: Sanitização de Dados (db.js / Data Integrity)
-    console.log("\n📋 Teste 5: Sanitização e Integridade de Dados (db.js)");
+    console.log("\nTeste 5: Sanitização e Integridade de Dados (db.js)");
     if (typeof sanitizarNumero === 'function' && typeof sanitizarEValidarSimulacao === 'function') {
       assert(sanitizarNumero("R$ 1.500.000,50") === 1500000.50, "Sanitização de moeda R$ 1.500.000,50 -> 1500000.50");
       assert(sanitizarNumero("inválido", 100) === 100, "Sanitização de texto inválido -> valor padrão 100");
@@ -121,11 +121,11 @@
       assert(resValida.relatorioSanitizado.totalPatrimonio === 5000000, "Total de patrimônio convertido para número puro");
       assert(resValida.relatorioSanitizado.prejuizoTributario === 0, "Prejuízo tributário negativo ajustado para 0");
     } else {
-      console.log("  ℹ️ [SKIP] Funções de sanitização do db.js não estão no escopo do runner.");
+      console.log("  [SKIP] Funções de sanitização do db.js não estão no escopo do runner.");
     }
 
     // TESTE 6: Simulation Store (state.js)
-    console.log("\n📋 Teste 6: Simulation Store (exportSnapshot & importSnapshot)");
+    console.log("\nTeste 6: Simulation Store (exportSnapshot & importSnapshot)");
     if (typeof window !== 'undefined' && window.AppState && typeof window.AppState.exportSnapshot === 'function') {
       const snapOriginal = window.AppState.exportSnapshot();
       assert(typeof snapOriginal === 'object' && snapOriginal.meta && snapOriginal.patrimonio, "Snapshot exportado com sucesso contendo metadados e patrimônio");
@@ -137,11 +137,11 @@
       assert(resImport === true, "Importação de snapshot retornou sucesso (true)");
       assert(window.AppState.getTotalPatrimonio() === 2000000, "Importação de snapshot atualizou o total do patrimônio para R$ 2.000.000");
     } else {
-      console.log("  ℹ️ [SKIP] AppState não carregado no escopo global do runner.");
+      console.log("  [SKIP] AppState não carregado no escopo global do runner.");
     }
 
     // TESTE 7: Trava e Validação do Limite Anual Isento de ITCMD (R$ 96.050,00)
-    console.log("\n📋 Teste 7: Trava e Validação do Limite Anual Isento de ITCMD");
+    console.log("\nTeste 7: Trava e Validação do Limite Anual Isento de ITCMD");
     assert(engine.LIMITE_ISENCAO_ANUAL === 96050, "Limite isento anual padrão deve ser R$ 96.050,00 (2.500 UFESPs)");
     const tDentroLimite = engine.validarLimiteDoacaoIsenta(50000);
     assert(tDentroLimite.valorValido === 50000 && !tDentroLimite.excedeuLimite, "Valor R$ 50.000 deve ser aceito sem exceder o limite");
@@ -151,7 +151,7 @@
     assert(tAcimaLimite.valorValido === 96050 && tAcimaLimite.excedeuLimite, "Valor R$ 100.000 deve ser travado no teto de R$ 96.050 e sinalizar excedeuLimite = true");
     
     // TESTE 8: Validação de Segurança e Integridade das Regras
-    console.log("\n📋 Teste 8: Validações de Segurança e Não Regressão");
+    console.log("\nTeste 8: Validações de Segurança e Não Regressão");
     assert(typeof engine.obterAliquotaITCMD === "function", "obterAliquotaITCMD disponível");
     assert(engine.obterAliquotaITCMD("SP") === 4.0, "Alíquota SP deve ser 4.0%");
     assert(engine.obterAliquotaITCMD("RJ") === 8.0, "Alíquota RJ deve ser 8.0%");
@@ -162,7 +162,7 @@
     assert(custosNegativos.totalPrejuizo === 0, "Patrimônio negativo deve ser sanitizado para zero");
 
     // TESTE 9: Criptografia AES-GCM (Web Crypto) e Retrocompatibilidade (v1 e v2 com pepper)
-    console.log("\n📋 Teste 9: Criptografia AES-GCM e Integridade de Dados");
+    console.log("\nTeste 9: Criptografia AES-GCM e Integridade de Dados");
     if (typeof window !== 'undefined' && window.__PACE_SECURITY_TEST__) {
       const sec = window.__PACE_SECURITY_TEST__;
       const payloadOriginal = { cliente: "João Silva", saldo: 500000, sensivel: true };
@@ -178,11 +178,11 @@
       const keyV1 = await sec._gerarChaveCriptografia("user-teste-uuid", 1);
       assert(typeof keyV1 === 'object', "Chave legado v1 gerada com sucesso para retrocompatibilidade");
     } else {
-      console.log("  ℹ️ [SKIP] __PACE_SECURITY_TEST__ não disponível no escopo.");
+      console.log("  [SKIP] __PACE_SECURITY_TEST__ não disponível no escopo.");
     }
 
     // TESTE 10: Sanitização Contra Injeções e Proteção de Entradas
-    console.log("\n📋 Teste 10: Sanitização Contra Injeções e Extremos");
+    console.log("\nTeste 10: Sanitização Contra Injeções e Extremos");
     if (typeof window !== 'undefined' && window.__PACE_SECURITY_TEST__) {
       const sec = window.__PACE_SECURITY_TEST__;
       const numLimpo = sec.sanitizarNumero("R$ 1.250.500,75");
@@ -199,11 +199,11 @@
       assert(validacaoSim.relatorioSanitizado.nomeCliente.length === 150, "Nome de cliente truncado para limite máximo de 150 caracteres");
       assert(validacaoSim.relatorioSanitizado.totalPatrimonio === 0, "Total de patrimônio negativo corrigido para zero");
     } else {
-      console.log("  ℹ️ [SKIP] __PACE_SECURITY_TEST__ não disponível no escopo.");
+      console.log("  [SKIP] __PACE_SECURITY_TEST__ não disponível no escopo.");
     }
 
     // TESTE 11: Resiliência de Rede e Retry Automático com Backoff
-    console.log("\n📋 Teste 11: Resiliência de Rede e Retry Automático");
+    console.log("\nTeste 11: Resiliência de Rede e Retry Automático");
     if (typeof window !== 'undefined' && window.__PACE_SECURITY_TEST__) {
       const sec = window.__PACE_SECURITY_TEST__;
       let tentativas = 0;
@@ -216,11 +216,11 @@
       assert(resRetry === "sucesso_conectado", "Retry automático superou falhas temporárias e retornou sucesso");
       assert(tentativas === 3, "Executou exatamente 3 tentativas com backoff até obter sucesso");
     } else {
-      console.log("  ℹ️ [SKIP] __PACE_SECURITY_TEST__ não disponível no escopo.");
+      console.log("  [SKIP] __PACE_SECURITY_TEST__ não disponível no escopo.");
     }
 
     // TESTE 12: Regimes de Bens e Direito Sucessório (Partilha Legal)
-    console.log("\n📋 Teste 12: Partilhas Legais por Regime de Casamento");
+    console.log("\nTeste 12: Partilhas Legais por Regime de Casamento");
     const familiaUniversal = { estadoCivil: "casado", regime: "comunhao_universal" };
     const pUniversal = engine.calcularPartilhaRegime({}, familiaUniversal);
     assert(pUniversal.regime === "comunhao_universal", "Regime comunhão universal identificado");
@@ -234,7 +234,7 @@
     assert(pSolteiro.meacaoConjuge === 0, "Solteiro/Divorciado gera 0 de meação para cônjuge");
 
     // TESTE 13: Estratégias Sucessórias (Previdência e Seguro de Vida Resgatável)
-    console.log("\n📋 Teste 13: Estratégias de Preservação e Previdência");
+    console.log("\nTeste 13: Estratégias de Preservação e Previdência");
     const est = engine.calcularEstrategias(10000000, 1000000, {
       doacao: 0,
       doacao_avista: 0,
@@ -248,7 +248,7 @@
     assert(est.previdencia.economiaInventario === 65000, "Economia de inventário em previdência calculada corretamente (6.5% = R$ 65.000)");
     assert(est.seguro.capitalSeguro === 1000000, "Capital segurado definido em R$ 1.000.000");
     // TESTE 14: Diretrizes de Segurança (Hardening OWASP)
-    console.log("\n📋 Teste 14: Verificações de Hardening e Segurança da Informação");
+    console.log("\nTeste 14: Verificações de Hardening e Segurança da Informação");
 
     // 14.1 Validação de requisito mínimo de 8 caracteres na senha
     const validarRequisitoSenha = (pass) => {
@@ -335,7 +335,7 @@
     // ==========================================
     // 15. TESTES DO MÓDULO DE SUPORTE CORPORATIVO & AUSÊNCIA DE EMOJIS
     // ==========================================
-    console.log("\n🧪 Executando Testes 15: Suporte Técnico Corporativo & Zero Emojis...");
+    console.log("\nExecutando Testes 15: Suporte Técnico Corporativo & Zero Emojis...");
 
     // 15.1 Validação de obrigatoriedade de assunto e mensagem no chamado
     if (typeof window !== 'undefined' && typeof window.dbRegistrarChamadoSuporte === 'function') {
@@ -424,7 +424,7 @@
     // ==========================================
     // 16. TESTES DE IDENTIFICAÇÃO DO ASSESSOR NO RELATÓRIO
     // ==========================================
-    console.log("\n🧪 Executando Testes 16: Identificação do Assessor no Relatório e Assinatura...");
+    console.log("\nExecutando Testes 16: Identificação do Assessor no Relatório e Assinatura...");
 
     // 16.1 Fallback seguro de nome do assessor
     const resolverNomeAssessor = (sessionName, cacheName) => {
@@ -438,7 +438,7 @@
     assert(resolverNomeAssessor(null, null) === "Assessor Responsável", "Valor defensivo padrão retornado quando não há assessor identificado");
 
     console.log("\n=================================================");
-    console.log(`📊 RESUMO DA SUÍTE DE TESTES:`);
+    console.log(`RESUMO DA SUÍTE DE TESTES:`);
     console.log(`   Total: ${totalTestes} | Passados: ${testesPassados} | Falhas: ${testesFalhados}`);
     console.log("=================================================");
 

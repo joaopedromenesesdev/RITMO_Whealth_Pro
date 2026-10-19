@@ -687,10 +687,10 @@ function calcular() {
 
   let totalGeral = totalA + totalI + bens + totalEmpresas;
 
-  // 🔥 SALVA TOTAL
+  // SALVA TOTAL
   sessionStorage.setItem("total_patrimonio", totalGeral);
 
-  // 🔥 SALVA DADOS DOS GRÁFICOS (IMPORTANTE PRO PDF)
+  // SALVA DADOS DOS GRÁFICOS (IMPORTANTE PRO PDF)
   sessionStorage.setItem("dados_graficos", JSON.stringify({
     aplicacoes: totalA,
     imoveis: totalI,
@@ -912,7 +912,7 @@ window.onload = function () {
   console.log("[patrimonio.js] patrimonio_dados (parsed):", dados);
 
   if (!dados) {
-    console.warn("[patrimonio.js] ⚠️ patrimonio_dados não encontrado no sessionStorage — campos ficarão em branco.");
+    console.warn("[patrimonio.js] patrimonio_dados não encontrado no sessionStorage — campos ficarão em branco.");
     return;
   }
 

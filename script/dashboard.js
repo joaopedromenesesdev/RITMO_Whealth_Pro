@@ -303,7 +303,7 @@ function normalizarSessao(dadosSessao, totalPatrimonioFallback) {
   const isFormatoA = dadosSessao.patrimonio && typeof dadosSessao.patrimonio === "object" && dadosSessao.patrimonio.dados;
 
   if (isFormatoA) {
-    console.log("[normalizarSessao] ✅ Detectado Formato A (AppState snapshot). Traduzindo chaves...");
+    console.log("[normalizarSessao] Detectado Formato A (AppState snapshot). Traduzindo chaves...");
 
     // Patrimônio
     const dadosPatrimonio = dadosSessao.patrimonio.dados;
@@ -346,7 +346,7 @@ function normalizarSessao(dadosSessao, totalPatrimonioFallback) {
 
   } else {
     // ── FORMATO B: Chaves soltas na raiz (legado) ──
-    console.log("[normalizarSessao] ✅ Detectado Formato B (flat keys). Gravando diretamente...");
+    console.log("[normalizarSessao] Detectado Formato B (flat keys). Gravando diretamente...");
     console.log("[normalizarSessao] Chaves encontradas:", Object.keys(dadosSessao));
 
     Object.keys(dadosSessao).forEach(key => {

@@ -148,7 +148,7 @@ function renderizarEstruturaFamiliar() {
   if (ehCasado) {
     html += `
           <div class="pdf-marriage-bridge">
-            <span class="pdf-regime-badge">💍 ${escapeHTML(regime)}</span>
+            <span class="pdf-regime-badge">${escapeHTML(regime)}</span>
             <div class="pdf-marriage-line"></div>
           </div>
 
@@ -2073,7 +2073,7 @@ function renderizarNotasRelatorio(scope = document) {
       card.innerHTML = `
         <textarea class="nota-conteudo-textarea" placeholder="Digite sua observação aqui..." oninput="atualizarNotaTexto('${nota.id}', 'conteudo', this.value); autoAjustarTextarea(this);">${conteudoEscaped}</textarea>
         <div class="nota-card-actions no-print">
-          <button type="button" class="btn-delete-nota" onclick="removerObservacaoPagina('${nota.id}')" title="Excluir observação">✕ Apagar</button>
+          <button type="button" class="btn-delete-nota" onclick="removerObservacaoPagina('${nota.id}')" title="Excluir observação">Apagar</button>
         </div>
       `;
 
@@ -2378,10 +2378,10 @@ function copiarPitchWhatsApp() {
   const textoPitch =
     `*Planejamento de Liquidez Sucessória — ${nomeCliente}*\n\n` +
     `Olá, ${nomeCliente}! Conforme nossa análise de planejamento patrimonial:\n\n` +
-    `🔴 *Sem Seguro (Inventário Tradicional)*:\n` +
+    `*Sem Seguro (Inventário Tradicional)*:\n` +
     `• Perda estimada em impostos (ITCMD), custas e deságio: *${perdaEst}*\n` +
     `• Investimentos e contas familiares bloqueados judicialmente.\n\n` +
-    `🟢 *Com Seguro Resgatável (Proteção de Liquidez)*:\n` +
+    `*Com Seguro Resgatável (Proteção de Liquidez)*:\n` +
     `• Apólice de Liquidez Recomendada: *${capRec}*\n` +
     `• Aporte estimado: *${parcEst}*\n` +
     `• Benefício 100% livre de inventário e isento de ITCMD (Art. 794 CC).\n\n` +
