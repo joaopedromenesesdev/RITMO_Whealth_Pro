@@ -293,7 +293,7 @@ window.notificarAutoSave = function(status = "salvo") {
         toast.classList.add("visible");
         setTimeout(() => toast.classList.remove("visible"), 2500);
     } else if (status === "offline") {
-        toast.innerHTML = `<span class="toast-warn">⚠️</span> <span>Modo Offline (Salvo localmente)</span>`;
+        toast.innerHTML = `<span class="toast-warn" style="font-weight:700; font-size:14px; margin-right:2px;">!</span> <span>Modo Offline (Salvo localmente)</span>`;
         toast.classList.add("visible");
         setTimeout(() => toast.classList.remove("visible"), 3500);
     }
