@@ -517,8 +517,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Verifica se há hash de recuperação de senha ou convite de usuário na URL
   const hashStr = window.location.hash || "";
+  const searchStr = window.location.search || "";
+  const fullUrlParams = hashStr + "&" + searchStr;
   const isInviteUrl = hashStr.includes("type=invite");
-  if (hashStr.includes("type=recovery") || hashStr.includes("access_token") || isInviteUrl) {
+
+  if (fullUrlParams.includes("error=") || fullUrlParams.includes("error_code=")) {
+    if (alertDiv) {
+      alertDiv.className = "auth-alert error";
+      alertDiv.textContent = "O link de ativação/redefinição de senha expirou ou já foi utilizado. Por favor, clique em 'Esqueceu sua senha?' abaixo para receber um novo link por e-mail ou contate o administrador.";
+      alertDiv.classList.remove("hidden");
+    }
+  } else if (hashStr.includes("type=recovery") || hashStr.includes("access_token") || isInviteUrl) {
     setModeReset(isInviteUrl);
   }
 
