@@ -1407,6 +1407,139 @@ function calcularHolding(custoInventario) {
   if (elEco) elEco.innerText = "R$ " + economia.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
 }
 
+// =========================
+// VIEW PURA: RENDERIZAÇÃO DA PARTILHA
+// =========================
+function renderizarViewPartilha(resultadoPartilha, total, containerId = "lista_partilha", canvasId = "grafico_partilha") {
+  if (!resultadoPartilha || !Array.isArray(resultadoPartilha.fatias)) return;
+
+  const { labels = [], fatias = [] } = resultadoPartilha;
+  const coresBase = ["#2563EB", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4", "#F97316", "#6366F1"];
+  const cores = [];
+
+  // Atribui cores consistentes: Cônjuge sempre Azul (0), Filhos em diante
+  labels.forEach((label, i) => {
+    if (label.includes("Cônjuge")) {
+      cores.push(coresBase[0]);
+    } else {
+      cores.push(coresBase[(i % (coresBase.length - 1)) + 1] || coresBase[1]);
+    }
+  });
+
+  // SALVA DADOS PARA O PDF
+  sessionStorage.setItem("partilha_dados", JSON.stringify({ labels, fatias, cores }));
+
+  // Renderizar lista textual no DOM
+  const lista = document.getElementById(containerId);
+  if (lista) {
+    let html = '<ul style="list-style: none; padding: 0;">';
+    labels.forEach((label, i) => {
+      const valor = fatias[i] || 0;
+      const pct = total > 0 ? (valor / total) * 100 : 0;
+      const corItem = cores[i % cores.length];
+      html += `<li style="margin-bottom: 10px; padding-left: 15px; border-left: 3px solid ${corItem}">
+        <strong>${label}:</strong> R$ ${valor.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} 
+        <span style="opacity: 0.6; font-size: 12px;">(${pct.toFixed(1)}%)</span>
+      </li>`;
+    });
+    html += "</ul>";
+    lista.innerHTML = html;
+  }
+
+  // Preenchimento da Previdência Sucessória (removido do relatório)
+  const divPrev = document.getElementById("container_previdencia_sucessao");
+  if (divPrev) {
+    divPrev.style.display = "none";
+    divPrev.innerHTML = "";
+  }
+
+  // Renderizar Gráfico via Chart.js
+  const ctx = document.getElementById(canvasId);
+  if (ctx && typeof Chart !== "undefined") {
+    const existingChart = Chart.getChart(ctx);
+    if (existingChart) existingChart.destroy();
+
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: fatias,
+          backgroundColor: cores,
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          datalabels: {
+            color: '#fff',
+            formatter: (v) => {
+              const p = total > 0 ? (v / total) * 100 : 0;
+              return p > 5 ? p.toFixed(0) + '%' : '';
+            }
+          }
+        }
+      }
+    });
+  }
+
+  return { labels, fatias, cores };
+}
+
+// =========================
+// CONTROLLER: MEDIAÇÃO MVC (Chama TributarioEngine -> Despacha para View)
+// =========================
+function calcularPartilha(total, regime) {
+  // 1. Extração de Entradas do Estado / Storage
+  const familia = JSON.parse(sessionStorage.getItem("familia")) || {};
+  const dadosPatrimonio = JSON.parse(sessionStorage.getItem("patrimonio_dados")) || {};
+  const prev = parseValor(dadosPatrimonio.prev);
+  const bensParticulares = parseValor(dadosPatrimonio.bens_particulares);
+
+  // 2. Chamada ao Model Puro (TributarioEngine)
+  let resultado;
+  if (window.TributarioEngine && typeof window.TributarioEngine.calcularPartilhaSucessoria === "function") {
+    resultado = window.TributarioEngine.calcularPartilhaSucessoria({
+      totalPatrimonio: total,
+      valorPrevidencia: prev,
+      bensParticulares: bensParticulares,
+      familia: Object.assign({}, familia, { regime: regime || familia.regime })
+    });
+  } else {
+    // Fallback de contingência
+    resultado = {
+      totalCalculo: Math.max(0, total - prev),
+      meacao: 0,
+      heranca: Math.max(0, total - prev),
+      fatiaConjugeTotal: 0,
+      labels: ["Patrimônio"],
+      fatias: [Math.max(0, total - prev)]
+    };
+  }
+
+  // 3. Despacho do Resultado para a View
+  renderizarViewPartilha(resultado, total);
+
+  // 4. Continuidade do Fluxo para Segunda Morte
+  calcularSegundaMorte(
+    total,
+    resultado.heranca,
+    resultado.meacao,
+    resultado.fatiaConjugeTotal,
+    resultado.labels,
+    resultado.fatias
+  );
+}
+
+/*
+// =========================================================================
+// // DEPRECATED: Implementação original legada de calcularPartilha (Monolito)
+// Substituída pela arquitetura MVC desacoplada (Model: TributarioEngine + View: renderizarViewPartilha)
+// Mantido temporariamente comentado por segurança nesta etapa de transição brownfield.
+// =========================================================================
 function calcularPartilha(total, regime) {
   const familia = JSON.parse(sessionStorage.getItem("familia")) || {};
   const casado = familia.estadoCivil === "casado";
@@ -1673,6 +1806,7 @@ function calcularPartilha(total, regime) {
 
   calcularSegundaMorte(total, heranca, meacao, fatiaConjugeTotal, labels, fatias);
 }
+*/
 
 function calcularSegundaMorte(totalOriginal, herancaPrimeira, meacaoPrimeira, valorConjuge, labelsPrimeira, fatiasPrimeira) {
   const familia = JSON.parse(sessionStorage.getItem("familia")) || {};

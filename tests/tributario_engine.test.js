@@ -4,30 +4,27 @@
 (function () {
   'use strict';
 
-  // Importa o TributarioEngine se em Node.js
+  // Importa o TributarioEngine (Universal: Node.js e Navegador)
   let engine = typeof window !== 'undefined' ? window.TributarioEngine : null;
   if (!engine && typeof require !== 'undefined') {
-    // Para execução em ambiente de teste Node.js
     try {
-      const path = require('path');
-      const scriptPath = fs.existsSync(path.join(__dirname, '../script/tributario_engine.js'))
-        ? path.join(__dirname, '../script/tributario_engine.js')
-        : path.join(__dirname, 'tributario_engine.js');
-      const code = fs.readFileSync(scriptPath, 'utf8');
-      const mockStorage = {
-        store: {},
-        getItem: function (k) { return this.store[k] || null; },
-        setItem: function (k, v) { this.store[k] = String(v); },
-        removeItem: function (k) { delete this.store[k]; },
-        clear: function () { this.store = {}; }
-      };
-      const sandbox = { window: {}, sessionStorage: mockStorage, global: {} };
-      sandbox.window.sessionStorage = mockStorage;
-      vm.createContext(sandbox);
-      vm.runInContext(code, sandbox);
-      engine = sandbox.window.TributarioEngine;
+      engine = require('../script/tributario_engine.js');
     } catch (e) {
-      console.error("[TestRunner] Erro ao carregar tributario_engine.js:", e);
+      try {
+        const path = require('path');
+        const fs = require('fs');
+        const vm = require('vm');
+        const scriptPath = fs.existsSync(path.join(__dirname, '../script/tributario_engine.js'))
+          ? path.join(__dirname, '../script/tributario_engine.js')
+          : path.join(__dirname, 'tributario_engine.js');
+        const code = fs.readFileSync(scriptPath, 'utf8');
+        const sandbox = { window: {}, global: {} };
+        vm.createContext(sandbox);
+        vm.runInContext(code, sandbox);
+        engine = sandbox.window.TributarioEngine || sandbox.TributarioEngine;
+      } catch (err) {
+        console.error("[TestRunner] Erro ao carregar tributario_engine.js:", err);
+      }
     }
   }
 
@@ -75,18 +72,34 @@
     // TESTE 3: Partilha de Regime de Casamento
     console.log("\nTeste 3: Partilha por Regime de Casamento");
     
-    // Comunhão Universal (50% meação, 50% herança)
-    if (typeof sessionStorage !== 'undefined') sessionStorage.setItem("total_patrimonio", "10000000");
-    
-    const partilhaUniversal = engine.calcularPartilhaRegime({}, { estadoCivil: "casado", regime: "comunhao_universal" });
-    if (partilhaUniversal.totalPatrimonio > 0) {
-      assert(partilhaUniversal.meacaoConjuge === partilhaUniversal.totalPatrimonio * 0.5, "Comunhão Universal: Meação deve ser 50%");
-      assert(partilhaUniversal.herancaTransmitida === partilhaUniversal.totalPatrimonio * 0.5, "Comunhão Universal: Herança deve ser 50%");
-    }
+    // Comunhão Universal (50% meação, 50% herança) com totalPatrimonio puro
+    const partilhaUniversal = engine.calcularPartilhaRegime({}, { estadoCivil: "casado", regime: "comunhao_universal" }, 10000000);
+    assert(partilhaUniversal.totalPatrimonio === 10000000, "Injeção pura de totalPatrimonio (R$ 10.000.000)");
+    assert(partilhaUniversal.meacaoConjuge === 5000000, "Comunhão Universal: Meação deve ser 50% (R$ 5.000.000)");
+    assert(partilhaUniversal.herancaTransmitida === 5000000, "Comunhão Universal: Herança deve ser 50% (R$ 5.000.000)");
 
     // Solteiro (0% meação, 100% herança)
-    const partilhaSolteiro = engine.calcularPartilhaRegime({}, { estadoCivil: "solteiro" });
+    const partilhaSolteiro = engine.calcularPartilhaRegime({}, { estadoCivil: "solteiro" }, 10000000);
     assert(partilhaSolteiro.meacaoConjuge === 0, "Solteiro: Meação deve ser R$ 0");
+    assert(partilhaSolteiro.herancaTransmitida === 10000000, "Solteiro: 100% vira herança (R$ 10.000.000)");
+
+    // Validação do novo método puro calcularPartilhaSucessoria (Arts. 1.829 a 1.839 CC)
+    const partilhaSucessoriaCompleta = engine.calcularPartilhaSucessoria({
+      totalPatrimonio: 10000000,
+      valorPrevidencia: 1000000,
+      bensParticulares: 0,
+      familia: {
+        estadoCivil: "casado",
+        regime: "comunhao_parcial",
+        temFilhos: "sim",
+        qtdFilhos: 2
+      }
+    });
+    assert(partilhaSucessoriaCompleta.totalCalculo === 9000000, "Previdência (R$ 1M) excluída da base da partilha (R$ 9M)");
+    assert(partilhaSucessoriaCompleta.meacao === 4500000, "Meação cônjuge (50% aquestos) = R$ 4.500.000");
+    assert(partilhaSucessoriaCompleta.heranca === 4500000, "Herança transmitida aos herdeiros = R$ 4.500.000");
+    assert(partilhaSucessoriaCompleta.fatias.length === 3, "Partilha gerou 3 fatias (Cônjuge meeiro + 2 filhos)");
+    assert(partilhaSucessoriaCompleta.fatias[1] === 2250000, "Cada filho herda metade da herança (R$ 2.250.000)");
 
     // TESTE 4: Estratégias Sucessórias
     console.log("\nTeste 4: Estratégias de Preservação e Liquidez");
