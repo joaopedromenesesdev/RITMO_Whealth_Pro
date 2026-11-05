@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Event listeners para filtros
   document.getElementById("filtro_busca")?.addEventListener("input", filtrarERenderizar);
+  document.getElementById("filtro_assessor")?.addEventListener("change", filtrarERenderizar);
   document.getElementById("filtro_patrimonio")?.addEventListener("change", filtrarERenderizar);
   document.getElementById("filtro_ordenacao")?.addEventListener("change", filtrarERenderizar);
 
@@ -78,9 +79,60 @@ async function carregarDashboard() {
   }
 
   relatoriosCached = await dbObterRelatorios();
+
+  // Verifica se o usuário atual é Master para liberar o filtro por Assessor no Dashboard
+  let isMaster = false;
+  try {
+    const cachedUser = JSON.parse(localStorage.getItem("pace_user_cache") || "{}");
+    if (cachedUser && cachedUser.role === "master") isMaster = true;
+    if (!isMaster && typeof authObterUsuario === "function") {
+      const u = await authObterUsuario();
+      if (u && typeof authIsMaster === "function" && authIsMaster(u)) isMaster = true;
+    }
+  } catch (e) { }
+
+  const grupoAssessor = document.getElementById("grupo_filtro_assessor_master");
+  const selectAssessor = document.getElementById("filtro_assessor");
+  if (grupoAssessor && selectAssessor) {
+    if (isMaster) {
+      grupoAssessor.style.display = "flex";
+      const assessoresSet = new Set();
+      relatoriosCached.forEach(rep => {
+        const nome = (rep.nomeAssessor || "").trim();
+        if (nome) assessoresSet.add(nome);
+      });
+      const valorAtual = selectAssessor.value || "todos";
+      let optionsHtml = `<option value="todos">Todos os Assessores (${relatoriosCached.length})</option>`;
+      Array.from(assessoresSet).sort((a, b) => a.localeCompare(b, "pt-BR")).forEach(nome => {
+        const qtd = relatoriosCached.filter(r => (r.nomeAssessor || "").trim() === nome).length;
+        optionsHtml += `<option value="${escapeHTML(nome)}">${escapeHTML(nome)} (${qtd})</option>`;
+      });
+      selectAssessor.innerHTML = optionsHtml;
+      if (Array.from(assessoresSet).includes(valorAtual)) {
+        selectAssessor.value = valorAtual;
+      }
+    } else {
+      grupoAssessor.style.display = "none";
+    }
+  }
+
   calcularEExibirMetricas(relatoriosCached);
-  renderizarRelatorios(relatoriosCached);
+  filtrarERenderizar();
 }
+
+// Função pública para filtrar diretamente por um assessor no Dashboard (acionada pelo Painel Master)
+window.filtrarDashboardPorAssessor = function (nomeAssessor, userId = "") {
+  const selectAssessor = document.getElementById("filtro_assessor");
+  const inputBusca = document.getElementById("filtro_busca");
+  if (selectAssessor && Array.from(selectAssessor.options).some(o => o.value === nomeAssessor)) {
+    selectAssessor.value = nomeAssessor;
+    if (inputBusca) inputBusca.value = "";
+  } else if (inputBusca) {
+    if (selectAssessor) selectAssessor.value = "todos";
+    inputBusca.value = nomeAssessor || "";
+  }
+  filtrarERenderizar();
+};
 
 // Calcular as métricas acumuladas (KPIs)
 function calcularEExibirMetricas(relatorios) {
@@ -109,6 +161,7 @@ function calcularEExibirMetricas(relatorios) {
 function filtrarERenderizar() {
   const relatorios = obterRelatorios();
   const busca = document.getElementById("filtro_busca")?.value.toLowerCase().trim() || "";
+  const filtroAssessor = document.getElementById("filtro_assessor")?.value || "todos";
   const faixaPatrimonio = document.getElementById("filtro_patrimonio")?.value || "todos";
   const ordenacao = document.getElementById("filtro_ordenacao")?.value || "recentes";
 
@@ -117,6 +170,13 @@ function filtrarERenderizar() {
     const nomeCliente = (rep.nomeCliente || "").toLowerCase();
     const nomeAssessor = (rep.nomeAssessor || "").toLowerCase();
     const matchBusca = nomeCliente.includes(busca) || nomeAssessor.includes(busca);
+
+    // Filtro específico por assessor (Exclusivo Master)
+    let matchAssessor = true;
+    if (filtroAssessor && filtroAssessor !== "todos") {
+      matchAssessor = (rep.nomeAssessor || "").trim().toLowerCase() === filtroAssessor.trim().toLowerCase() ||
+        String(rep.userId || "") === String(filtroAssessor);
+    }
 
     // Filtro por faixa de patrimônio
     let matchFaixa = true;
@@ -129,7 +189,7 @@ function filtrarERenderizar() {
       matchFaixa = pat > 20000000;
     }
 
-    return matchBusca && matchFaixa;
+    return matchBusca && matchAssessor && matchFaixa;
   });
 
   // Ordenação
@@ -146,6 +206,7 @@ function filtrarERenderizar() {
     return 0;
   });
 
+  calcularEExibirMetricas(filtrados);
   renderizarRelatorios(filtrados);
 }
 
@@ -409,10 +470,18 @@ function restaurarSessao(id) {
 
   // Sempre define o ID correto e marca como simulação ativa por último
   sessionStorage.setItem("current_report_id", id);
+  if (rep.userId) {
+    sessionStorage.setItem("current_report_owner_id", rep.userId);
+  }
+  if (rep.nomeAssessor && !sessionStorage.getItem("nome_assessor")) {
+    sessionStorage.setItem("nome_assessor", rep.nomeAssessor);
+  }
   sessionStorage.setItem("simulacao_ativa", "true");
 
   return true;
 }
+
+window.normalizarSessao = normalizarSessao;
 
 // Ação de Visualizar PDF
 function visualizarPDF(id) {

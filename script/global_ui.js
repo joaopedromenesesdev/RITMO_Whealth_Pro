@@ -748,7 +748,7 @@ window.enviarChamadoSuporte = async function(event) {
 
         if (alertMsg) {
             alertMsg.className = 'support-status-alert success';
-            alertMsg.textContent = 'Chamado registrado e encaminhado para suporte@pacecapital.com.br com sucesso.';
+            alertMsg.textContent = 'Chamado registrado e encaminhado para o Suporte Técnico Corporativo com sucesso.';
             alertMsg.style.display = 'flex';
         }
 
@@ -774,4 +774,520 @@ window.enviarChamadoSuporte = async function(event) {
         }
     }
 };
+
+// =========================================================================
+// PAINEL DE USABILIDADE DO SISTEMA & GESTÃO DE RELATÓRIOS (EXCLUSIVO MASTER)
+// =========================================================================
+window.__masterUsabilidadeCache = {
+    usuarios: [],
+    relatorios: [],
+    abaAtiva: 'usuarios',
+    filtroAssessorRelatorios: 'todos'
+};
+
+function _formatarDataHoraAcessoMaster(isoStr) {
+    if (!isoStr) return { dataHora: "Sem acesso registrado", relativo: "Pendente", ativo: false };
+    const data = new Date(isoStr);
+    if (isNaN(data.getTime())) return { dataHora: "Sem acesso registrado", relativo: "Pendente", ativo: false };
+
+    const dataFormatada = data.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    const horaFormatada = data.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+    const diffMs = Date.now() - data.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffHoras = Math.floor(diffMin / 60);
+    const diffDias = Math.floor(diffHoras / 24);
+
+    let relativo = "Agora mesmo";
+    if (diffDias > 0) {
+        relativo = diffDias === 1 ? "Há 1 dia" : `Há ${diffDias} dias`;
+    } else if (diffHoras > 0) {
+        relativo = diffHoras === 1 ? "Há 1 hora" : `Há ${diffHoras} horas`;
+    } else if (diffMin > 1) {
+        relativo = `Há ${diffMin} min`;
+    }
+
+    return {
+        dataHora: `${dataFormatada} às ${horaFormatada}`,
+        relativo,
+        ativo: true
+    };
+}
+
+function _criarModalUsabilidadeMasterDOM() {
+    let overlay = document.getElementById("modal_usabilidade_master_overlay");
+    if (overlay) return overlay;
+
+    overlay = document.createElement("div");
+    overlay.id = "modal_usabilidade_master_overlay";
+    overlay.className = "master-usability-overlay hidden";
+    overlay.style.display = "none";
+
+    overlay.innerHTML = `
+      <div class="master-usability-modal" role="dialog" aria-modal="true" aria-labelledby="master_usability_title">
+        <div class="master-usability-header">
+          <div class="master-usability-title-wrap">
+            <div class="master-usability-badge-row">
+              <span class="master-pill-badge">CONTROLE MASTER</span>
+              <span class="master-subtitle-tag">Monitoramento & Auditoria de Equipe</span>
+            </div>
+            <h2 id="master_usability_title">Usabilidade do Sistema & Relatórios</h2>
+            <p>Acompanhe quando cada usuário acessou a plataforma, quantos relatórios gerou e acesse qualquer planejamento.</p>
+          </div>
+          <div class="master-usability-header-actions">
+            <button type="button" class="master-btn-refresh" onclick="window.recarregarDadosUsabilidadeMaster()" title="Atualizar dados">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+              <span>Atualizar</span>
+            </button>
+            <button type="button" class="master-btn-close" onclick="window.fecharPainelUsabilidadeMaster()" aria-label="Fechar painel">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- KPIs de Usabilidade -->
+        <div class="master-kpi-grid">
+          <div class="master-kpi-card">
+            <span class="master-kpi-label">Total de Usuários</span>
+            <strong class="master-kpi-value" id="master_kpi_total_usuarios">0</strong>
+          </div>
+          <div class="master-kpi-card">
+            <span class="master-kpi-label">Usuários com Acesso</span>
+            <strong class="master-kpi-value" id="master_kpi_usuarios_ativos">0</strong>
+          </div>
+          <div class="master-kpi-card">
+            <span class="master-kpi-label">Relatórios Gerados</span>
+            <strong class="master-kpi-value" id="master_kpi_total_relatorios">0</strong>
+          </div>
+          <div class="master-kpi-card">
+            <span class="master-kpi-label">Volume Patrimonial Mapeado</span>
+            <strong class="master-kpi-value" id="master_kpi_patrimonio_total">R$ 0</strong>
+          </div>
+        </div>
+
+        <!-- Abas de Navegação -->
+        <div class="master-tabs-bar">
+          <button type="button" class="master-tab-btn active" id="tab_btn_master_usuarios" onclick="window.alternarAbaPainelMaster('usuarios')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span>Acessos & Produtividade por Usuário</span>
+          </button>
+          <button type="button" class="master-tab-btn" id="tab_btn_master_relatorios" onclick="window.alternarAbaPainelMaster('relatorios')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <span>Todos os Relatórios dos Assessores</span>
+          </button>
+        </div>
+
+        <!-- ABA 1: USUÁRIOS E ACESSOS -->
+        <div class="master-tab-content" id="master_section_usuarios">
+          <div class="master-filters-row">
+            <input type="text" id="master_input_busca_usuario" class="master-filter-input" placeholder="Buscar usuário por nome ou e-mail..." oninput="window.renderizarTabelaUsuariosMaster()">
+            <select id="master_select_role_usuario" class="master-filter-select" onchange="window.renderizarTabelaUsuariosMaster()">
+              <option value="todos">Todos os Perfis</option>
+              <option value="assessor">Apenas Assessores</option>
+              <option value="master">Apenas Masters</option>
+            </select>
+          </div>
+          <div class="master-table-container">
+            <table class="master-table">
+              <thead>
+                <tr>
+                  <th>Usuário / Assessor</th>
+                  <th>Perfil</th>
+                  <th>Último Acesso</th>
+                  <th style="text-align: center;">Relatórios Gerados</th>
+                  <th>Patrimônio Mapeado</th>
+                  <th style="text-align: right;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="master_tbody_usuarios">
+                <tr><td colspan="6" class="master-empty-cell">Carregando informações de usabilidade...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ABA 2: TODOS OS RELATÓRIOS DOS ASSESSORES -->
+        <div class="master-tab-content" id="master_section_relatorios" style="display: none;">
+          <div class="master-filters-row">
+            <input type="text" id="master_input_busca_relatorio" class="master-filter-input" placeholder="Buscar por nome do cliente ou assessor..." oninput="window.renderizarTabelaRelatoriosMaster()">
+            <select id="master_select_assessor_relatorio" class="master-filter-select" onchange="window.renderizarTabelaRelatoriosMaster()">
+              <option value="todos">Todos os Assessores</option>
+            </select>
+          </div>
+          <div class="master-table-container">
+            <table class="master-table">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Assessor Responsável</th>
+                  <th>Data</th>
+                  <th>Patrimônio Total</th>
+                  <th>Prejuízo Sucessório</th>
+                  <th style="text-align: right;">Acesso Completo</th>
+                </tr>
+              </thead>
+              <tbody id="master_tbody_relatorios">
+                <tr><td colspan="6" class="master-empty-cell">Carregando relatórios...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+
+    overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) {
+            window.fecharPainelUsabilidadeMaster();
+        }
+    });
+
+    document.body.appendChild(overlay);
+    return overlay;
+}
+
+window.alternarAbaPainelMaster = function(aba) {
+    window.__masterUsabilidadeCache.abaAtiva = aba;
+    const btnUsuarios = document.getElementById("tab_btn_master_usuarios");
+    const btnRelatorios = document.getElementById("tab_btn_master_relatorios");
+    const secUsuarios = document.getElementById("master_section_usuarios");
+    const secRelatorios = document.getElementById("master_section_relatorios");
+
+    if (aba === "relatorios") {
+        btnUsuarios?.classList.remove("active");
+        btnRelatorios?.classList.add("active");
+        if (secUsuarios) secUsuarios.style.display = "none";
+        if (secRelatorios) secRelatorios.style.display = "block";
+        window.renderizarTabelaRelatoriosMaster();
+    } else {
+        btnRelatorios?.classList.remove("active");
+        btnUsuarios?.classList.add("active");
+        if (secRelatorios) secRelatorios.style.display = "none";
+        if (secUsuarios) secUsuarios.style.display = "block";
+        window.renderizarTabelaUsuariosMaster();
+    }
+};
+
+window.filtrarRelatoriosDoUsuarioNoPainelMaster = function(nomeAssessor, userId) {
+    const select = document.getElementById("master_select_assessor_relatorio");
+    const buscaInput = document.getElementById("master_input_busca_relatorio");
+    if (select) {
+        const matchOption = Array.from(select.options).find(opt =>
+            opt.value === userId || opt.value.toLowerCase() === (nomeAssessor || "").toLowerCase()
+        );
+        if (matchOption) {
+            select.value = matchOption.value;
+            if (buscaInput) buscaInput.value = "";
+        } else {
+            select.value = "todos";
+            if (buscaInput) buscaInput.value = nomeAssessor || "";
+        }
+    }
+    window.alternarAbaPainelMaster("relatorios");
+};
+
+window.renderizarTabelaUsuariosMaster = function() {
+    const tbody = document.getElementById("master_tbody_usuarios");
+    if (!tbody) return;
+
+    const usuarios = window.__masterUsabilidadeCache.usuarios || [];
+    const busca = (document.getElementById("master_input_busca_usuario")?.value || "").toLowerCase().trim();
+    const roleFiltro = document.getElementById("master_select_role_usuario")?.value || "todos";
+
+    const filtrados = usuarios.filter(u => {
+        const nome = (u.full_name || "").toLowerCase();
+        const email = (u.email || "").toLowerCase();
+        const matchBusca = !busca || nome.includes(busca) || email.includes(busca);
+        const matchRole = roleFiltro === "todos" || (u.role || "assessor") === roleFiltro;
+        return matchBusca && matchRole;
+    });
+
+    if (filtrados.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="master-empty-cell">Nenhum usuário encontrado para os filtros selecionados.</td></tr>`;
+        return;
+    }
+
+    const esc = window.escapeHTML;
+    let html = "";
+
+    filtrados.forEach(u => {
+        const nome = u.full_name || "Assessor";
+        const email = u.email || "—";
+        const isMasterUser = u.role === "master";
+        const partes = nome.trim().split(" ");
+        const iniciais = partes.length >= 2
+            ? (partes[0][0] + partes[partes.length - 1][0]).toUpperCase()
+            : nome.substring(0, 2).toUpperCase();
+
+        const infoAcesso = _formatarDataHoraAcessoMaster(u.ultimo_acesso);
+        const qtdRelatorios = Number(u.total_relatorios) || 0;
+        const patTotal = "R$ " + (Number(u.total_patrimonio) || 0).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+        const safeNomeJs = esc(nome).replace(/'/g, "\\'");
+        const safeIdJs = esc(u.id || "").replace(/'/g, "\\'");
+
+        html += `
+          <tr>
+            <td>
+              <div class="master-user-cell">
+                <div class="master-user-avatar">${esc(iniciais)}</div>
+                <div class="master-user-meta">
+                  <strong>${esc(nome)}</strong>
+                  <span>${esc(email)}</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="master-role-badge ${isMasterUser ? 'role-master' : 'role-assessor'}">
+                ${isMasterUser ? 'MASTER' : 'Assessor'}
+              </span>
+            </td>
+            <td>
+              <div class="master-access-cell">
+                <span class="master-access-date">${esc(infoAcesso.dataHora)}</span>
+                <span class="master-access-status ${infoAcesso.ativo ? 'status-online' : 'status-pending'}">${esc(infoAcesso.relativo)}</span>
+              </div>
+            </td>
+            <td style="text-align: center;">
+              <span class="master-report-count-badge ${qtdRelatorios > 0 ? 'has-reports' : ''}">${qtdRelatorios}</span>
+            </td>
+            <td style="font-weight: 600; color: #09090b;">${patTotal}</td>
+            <td style="text-align: right;">
+              <button type="button" class="master-btn-table-action" onclick="window.filtrarRelatoriosDoUsuarioNoPainelMaster('${safeNomeJs}', '${safeIdJs}')">
+                Ver Relatórios (${qtdRelatorios})
+              </button>
+            </td>
+          </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+};
+
+window.renderizarTabelaRelatoriosMaster = function() {
+    const tbody = document.getElementById("master_tbody_relatorios");
+    if (!tbody) return;
+
+    const relatorios = window.__masterUsabilidadeCache.relatorios || [];
+    const busca = (document.getElementById("master_input_busca_relatorio")?.value || "").toLowerCase().trim();
+    const filtroAssessor = document.getElementById("master_select_assessor_relatorio")?.value || "todos";
+
+    const filtrados = relatorios.filter(rep => {
+        const cliente = (rep.nomeCliente || "").toLowerCase();
+        const assessor = (rep.nomeAssessor || "").toLowerCase();
+        const matchBusca = !busca || cliente.includes(busca) || assessor.includes(busca);
+        let matchAssessor = true;
+        if (filtroAssessor !== "todos") {
+            matchAssessor = String(rep.userId || "") === filtroAssessor ||
+                assessor.trim() === filtroAssessor.toLowerCase().trim();
+        }
+        return matchBusca && matchAssessor;
+    });
+
+    if (filtrados.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="master-empty-cell">Nenhum relatório encontrado para os critérios selecionados.</td></tr>`;
+        return;
+    }
+
+    const esc = window.escapeHTML;
+    let html = "";
+
+    filtrados.forEach(rep => {
+        const safeId = String(rep.id || "").replace(/[^a-zA-Z0-9_-]/g, "");
+        const nomeCliente = rep.nomeCliente || "Cliente";
+        const nomeAssessor = rep.nomeAssessor || "Assessor";
+        const pat = "R$ " + (Number(rep.totalPatrimonio) || 0).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+        const prej = "R$ " + (Number(rep.prejuizoTributario) || 0).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+
+        let dataStr = rep.dataReuniao || "";
+        if (rep.dataCriacao) {
+            const d = new Date(rep.dataCriacao);
+            if (!isNaN(d.getTime())) {
+                dataStr = d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+            }
+        }
+
+        html += `
+          <tr>
+            <td><strong style="color: #09090b;">${esc(nomeCliente)}</strong></td>
+            <td><span class="master-advisor-pill">${esc(nomeAssessor)}</span></td>
+            <td style="color: #64748b; font-size: 12.5px;">${esc(dataStr || "—")}</td>
+            <td style="font-weight: 600; color: #09090b;">${pat}</td>
+            <td style="font-weight: 600; color: #dc2626;">${prej}</td>
+            <td style="text-align: right;">
+              <div class="master-report-actions">
+                <button type="button" class="master-btn-table-action" onclick="window.abrirRelatorioPeloPainelMaster('${safeId}', 'editar')">
+                  Abrir Simulação
+                </button>
+                <button type="button" class="master-btn-table-action primary" onclick="window.abrirRelatorioPeloPainelMaster('${safeId}', 'pdf')">
+                  Ver PDF
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+};
+
+window.abrirRelatorioPeloPainelMaster = function(repId, modo = "editar") {
+    const relatorios = window.__masterUsabilidadeCache.relatorios || [];
+    const rep = relatorios.find(r => String(r.id) === String(repId));
+    if (!rep) return;
+
+    sessionStorage.clear();
+
+    if (typeof window.normalizarSessao === "function" && rep.dadosSessao) {
+        window.normalizarSessao(rep.dadosSessao, rep.totalPatrimonio);
+    } else if (rep.dadosSessao && typeof rep.dadosSessao === "object") {
+        let ds = rep.dadosSessao;
+        if (ds.patrimonio && ds.patrimonio.dados) {
+            sessionStorage.setItem("patrimonio_dados", JSON.stringify(ds.patrimonio.dados));
+            sessionStorage.setItem("total_patrimonio", ds.patrimonio.total ?? rep.totalPatrimonio ?? 0);
+            if (ds.familia) sessionStorage.setItem("familia", JSON.stringify(ds.familia));
+            if (ds.evolucao?.inputs) sessionStorage.setItem("evolucao_inputs", JSON.stringify(ds.evolucao.inputs));
+            if (ds.evolucao?.dados) sessionStorage.setItem("evolucao_dados", JSON.stringify(ds.evolucao.dados));
+            if (ds.tributario?.inputs) sessionStorage.setItem("tributario_inputs", JSON.stringify(ds.tributario.inputs));
+            if (ds.tributario?.prejuizoFinal) sessionStorage.setItem("prejuizo_final", JSON.stringify(ds.tributario.prejuizoFinal));
+            if (ds.meta?.nomeAssessor) sessionStorage.setItem("nome_assessor", ds.meta.nomeAssessor);
+            if (ds.meta?.dataReuniao) sessionStorage.setItem("data_reuniao", ds.meta.dataReuniao);
+        } else {
+            Object.keys(ds).forEach(k => {
+                if (k === "current_report_id") return;
+                const v = ds[k];
+                if (v !== null && v !== undefined) {
+                    sessionStorage.setItem(k, typeof v === "object" ? JSON.stringify(v) : v);
+                }
+            });
+            if (!ds.total_patrimonio && rep.totalPatrimonio) {
+                sessionStorage.setItem("total_patrimonio", rep.totalPatrimonio);
+            }
+        }
+    } else {
+        sessionStorage.setItem("total_patrimonio", rep.totalPatrimonio || 0);
+        if (rep.nomeCliente) sessionStorage.setItem("familia", JSON.stringify({ nome: rep.nomeCliente }));
+    }
+
+    if (rep.nomeAssessor && !sessionStorage.getItem("nome_assessor")) {
+        sessionStorage.setItem("nome_assessor", rep.nomeAssessor);
+    }
+    if (rep.userId) {
+        sessionStorage.setItem("current_report_owner_id", rep.userId);
+    }
+    sessionStorage.setItem("current_report_id", rep.id);
+    sessionStorage.setItem("simulacao_ativa", "true");
+
+    window.fecharPainelUsabilidadeMaster();
+
+    if (modo === "pdf") {
+        window.location.href = "tributario.html?preview=true";
+    } else {
+        window.location.href = "patrimonio.html";
+    }
+};
+
+window.recarregarDadosUsabilidadeMaster = async function() {
+    const tbodyU = document.getElementById("master_tbody_usuarios");
+    if (tbodyU) {
+        tbodyU.innerHTML = `<tr><td colspan="6" class="master-empty-cell">Sincronizando dados de usabilidade e relatórios...</td></tr>`;
+    }
+
+    try {
+        const res = typeof window.dbObterUsabilidadeUsuarios === "function"
+            ? await window.dbObterUsabilidadeUsuarios()
+            : { usuarios: [], relatorios: [] };
+
+        const usuarios = res.usuarios || [];
+        const relatorios = res.relatorios || [];
+
+        window.__masterUsabilidadeCache.usuarios = usuarios;
+        window.__masterUsabilidadeCache.relatorios = relatorios;
+
+        // Atualiza KPIs
+        const totalUsuarios = usuarios.length;
+        const usuariosAtivos = usuarios.filter(u => !!u.ultimo_acesso).length;
+        const totalRelatorios = relatorios.length;
+        const patrimonioTotal = relatorios.reduce((acc, r) => acc + (Number(r.totalPatrimonio) || 0), 0);
+
+        const elTotalU = document.getElementById("master_kpi_total_usuarios");
+        const elAtivosU = document.getElementById("master_kpi_usuarios_ativos");
+        const elTotalR = document.getElementById("master_kpi_total_relatorios");
+        const elPatTotal = document.getElementById("master_kpi_patrimonio_total");
+
+        if (elTotalU) elTotalU.textContent = String(totalUsuarios);
+        if (elAtivosU) elAtivosU.textContent = String(usuariosAtivos);
+        if (elTotalR) elTotalR.textContent = String(totalRelatorios);
+        if (elPatTotal) elPatTotal.textContent = "R$ " + patrimonioTotal.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+
+        // Popula select de assessores na aba de relatórios
+        const selectAssessor = document.getElementById("master_select_assessor_relatorio");
+        if (selectAssessor) {
+            const valorAnterior = selectAssessor.value || "todos";
+            const assessoresMap = new Map();
+            usuarios.forEach(u => {
+                if (u.full_name) assessoresMap.set(u.full_name, u.full_name);
+            });
+            relatorios.forEach(r => {
+                if (r.nomeAssessor) assessoresMap.set(r.nomeAssessor, r.nomeAssessor);
+            });
+
+            let opts = `<option value="todos">Todos os Assessores (${relatorios.length})</option>`;
+            Array.from(assessoresMap.keys()).sort((a, b) => a.localeCompare(b, "pt-BR")).forEach(nome => {
+                opts += `<option value="${window.escapeHTML(nome)}">${window.escapeHTML(nome)}</option>`;
+            });
+            selectAssessor.innerHTML = opts;
+            if (Array.from(assessoresMap.keys()).includes(valorAnterior)) {
+                selectAssessor.value = valorAnterior;
+            }
+        }
+
+        window.renderizarTabelaUsuariosMaster();
+        window.renderizarTabelaRelatoriosMaster();
+    } catch (e) {
+        console.error("[recarregarDadosUsabilidadeMaster] Erro:", e);
+        if (tbodyU) {
+            tbodyU.innerHTML = `<tr><td colspan="6" class="master-empty-cell">Não foi possível carregar os dados no momento.</td></tr>`;
+        }
+    }
+};
+
+window.abrirPainelUsabilidadeMaster = async function() {
+    // Valida se o usuário atual possui permissão Master
+    let isMaster = false;
+    try {
+        const cached = JSON.parse(localStorage.getItem("pace_user_cache") || "{}");
+        if (cached && cached.role === "master") isMaster = true;
+        if (!isMaster && typeof window.authObterUsuario === "function") {
+            const u = await window.authObterUsuario();
+            if (u && typeof window.authIsMaster === "function" && window.authIsMaster(u)) {
+                isMaster = true;
+            }
+        }
+    } catch (e) {}
+
+    if (!isMaster) {
+        if (typeof window.confirmarAcaoCustom === "function") {
+            window.confirmarAcaoCustom({
+                titulo: "Acesso Restrito",
+                mensagem: "Apenas usuários com perfil Master possuem acesso ao painel de usabilidade do sistema.",
+                textoConfirmar: "Entendi",
+                somenteAviso: true
+            });
+        }
+        return;
+    }
+
+    const overlay = _criarModalUsabilidadeMasterDOM();
+    overlay.classList.remove("hidden");
+    overlay.style.display = "flex";
+    await window.recarregarDadosUsabilidadeMaster();
+};
+
+window.fecharPainelUsabilidadeMaster = function() {
+    const overlay = document.getElementById("modal_usabilidade_master_overlay");
+    if (overlay) {
+        overlay.classList.add("hidden");
+        overlay.style.display = "none";
+    }
+};
+
 

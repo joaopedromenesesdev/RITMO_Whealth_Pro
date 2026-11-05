@@ -25,12 +25,37 @@ window.onload = async function () {
     return parseFloat(limpo) || 0;
   };
 
+  // Extrai o valor de offshore em BRL
+  let offshoreBrl = 0;
+  if (dadosPatrimonio.offshore_brl !== undefined && dadosPatrimonio.offshore_brl !== null) {
+    offshoreBrl = Number(dadosPatrimonio.offshore_brl) || 0;
+  } else if (dadosPatrimonio.offshore) {
+    const rawOff = parseV(dadosPatrimonio.offshore);
+    if (dadosPatrimonio.offshore_modo === "usd") {
+      let cotacaoCache = {};
+      try {
+        cotacaoCache = JSON.parse(sessionStorage.getItem("ptax_cotacao_cache") || "{}");
+      } catch (e) { }
+      const ptax = Number(dadosPatrimonio.offshore_ptax) || Number(cotacaoCache.cotacao) || 1;
+      offshoreBrl = rawOff * ptax;
+    } else {
+      offshoreBrl = rawOff;
+    }
+  }
+
+  const totalNacionalSalvo = sessionStorage.getItem("total_patrimonio_nacional");
+  const totalNacional = totalNacionalSalvo !== null
+    ? Number(totalNacionalSalvo)
+    : Math.max(0, totalGeral - offshoreBrl);
+
   // Modificado: O patrimônio base da projeção agora é o patrimônio total bruto (incluindo bens móveis)
   const totalRentavel = totalGeral;
 
-  // Variável global para o cálculo
+  // Variáveis globais para o cálculo
   window.patrimonioInicialEvolucao = totalRentavel;
+  window.patrimonioNacionalInicialEvolucao = totalNacional;
   window.prevInicialEvolucao = dadosPatrimonio.prev ? parseV(dadosPatrimonio.prev) : 0;
+  window.offshoreInicialEvolucao = offshoreBrl;
 
   const aviso = document.getElementById("aviso_sem_patrimonio");
   // Só mostra o aviso se realmente não houver NADA no sistema
@@ -209,7 +234,11 @@ function parseValue(id) {
 function calcular() {
   // Usa o valor pré-calculado (sem bens móveis)
   const valorInicial = window.patrimonioInicialEvolucao || 0;
+  const nacionalInicial = window.patrimonioNacionalInicialEvolucao !== undefined
+    ? window.patrimonioNacionalInicialEvolucao
+    : Math.max(0, valorInicial - (window.offshoreInicialEvolucao || 0));
   const prevInicial = window.prevInicialEvolucao || 0;
+  const offshoreInicial = window.offshoreInicialEvolucao || 0;
   const taxaAnual = parseValue("taxa") / 100;
   const aporteMensal = parseValue("aporte_mensal");
   const anosProjecao = Number(document.getElementById("anos").value);
@@ -218,14 +247,18 @@ function calcular() {
 
   const anosArr = [];
   const valoresArr = [];
+  const nacionalResultados = [];
   const cdiArr = [];
   const ipcaArr = [];
   const prevResultados = [];
+  const offshoreResultados = [];
 
   let valorAcumulado = valorInicial;
+  let nacionalAcumulado = nacionalInicial;
   let cdiAcumulado = valorInicial;
   let ipcaAcumulado = valorInicial;
   let prevAcumulado = prevInicial;
+  let offshoreAcumulado = offshoreInicial;
 
   const anoBase = new Date().getFullYear();
 
@@ -242,13 +275,17 @@ function calcular() {
 
     anosArr.push("Ano " + i);
     valoresArr.push(Math.round(valorAcumulado));
+    nacionalResultados.push(Math.round(nacionalAcumulado));
     cdiArr.push(Math.round(cdiAcumulado));
     ipcaArr.push(Math.round(ipcaAcumulado));
     prevResultados.push(Math.round(prevAcumulado));
+    offshoreResultados.push(Math.round(offshoreAcumulado));
 
     // Evolução com juros compostos ano a ano
     valorAcumulado = valorAcumulado * (1 + taxaAnual) + aporteAnual;
+    nacionalAcumulado = nacionalAcumulado * (1 + taxaAnual) + aporteAnual;
     prevAcumulado = prevAcumulado * (1 + taxaAnual);
+    offshoreAcumulado = offshoreAcumulado * (1 + taxaAnual);
     cdiAcumulado = cdiAcumulado * (1 + taxaCDIAnual) + aporteAnual;
     ipcaAcumulado = ipcaAcumulado * (1 + taxaIPCAAnual) + aporteAnual;
   }
@@ -279,7 +316,9 @@ function calcular() {
   sessionStorage.setItem("evolucao_dados", JSON.stringify({
     anos: anosArr,
     resultados: valoresArr,
+    resultadosNacional: nacionalResultados,
     resultadosPrev: prevResultados,
+    resultadosOffshore: offshoreResultados,
     cdi: cdiArr,
     ipca: ipcaArr,
     taxa: document.getElementById("taxa").value,

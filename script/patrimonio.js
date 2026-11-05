@@ -614,6 +614,9 @@ function atualizarBadgeOffshore() {
   } else {
     convertidoEl.textContent = "";
   }
+  if (typeof window.atualizarDiagnosticoEstateTaxUI === "function") {
+    window.atualizarDiagnosticoEstateTaxUI();
+  }
 }
 
 // =========================
@@ -669,11 +672,17 @@ function calcular() {
 
   // Se estiver no modo USD, converte usando a cotação PTAX antes de somar
   let offshoreRaw = pegar("offshore");
-  let offshore = offshoreEmUSD && ptaxCotacao
-    ? offshoreRaw * ptaxCotacao
+  let cotacaoCache = {};
+  try {
+    cotacaoCache = JSON.parse(sessionStorage.getItem("ptax_cotacao_cache") || "{}");
+  } catch (e) { }
+  let taxaPtax = ptaxCotacao || Number(cotacaoCache.cotacao) || 1;
+  let offshore = offshoreEmUSD
+    ? offshoreRaw * taxaPtax
     : offshoreRaw;
 
-  let totalA = rf + rv + inter + prev + offshore;
+  let totalANacional = rf + rv + inter + prev;
+  let totalA = totalANacional + offshore;
 
   let apt = pegar("apt");
   let casa = pegar("casa");
@@ -685,10 +694,12 @@ function calcular() {
 
   let bens = pegar("bens");
 
+  let totalNacional = totalANacional + totalI + bens + totalEmpresas;
   let totalGeral = totalA + totalI + bens + totalEmpresas;
 
-  // SALVA TOTAL
+  // SALVA TOTAL E TOTAL NACIONAL (SEM OFFSHORE)
   sessionStorage.setItem("total_patrimonio", totalGeral);
+  sessionStorage.setItem("total_patrimonio_nacional", totalNacional);
 
   // SALVA DADOS DOS GRÁFICOS (IMPORTANTE PRO PDF)
   sessionStorage.setItem("dados_graficos", JSON.stringify({
@@ -847,6 +858,22 @@ function salvarPatrimonio() {
     });
   });
 
+  let cotacaoCache = {};
+  try {
+    cotacaoCache = JSON.parse(sessionStorage.getItem("ptax_cotacao_cache") || "{}");
+  } catch (e) { }
+  const taxaPtax = ptaxCotacao || Number(cotacaoCache.cotacao) || 1;
+  const offshoreRaw = pegar("offshore");
+  const offshoreBrl = offshoreEmUSD ? offshoreRaw * taxaPtax : offshoreRaw;
+
+  const ativosSemEstateTax = [];
+  document.querySelectorAll(".ativo-isento-select").forEach(sel => {
+    if (sel.value) ativosSemEstateTax.push(sel.value);
+  });
+  const qtdAtivosSemEstateTax = document.getElementById("qtd_ativos_sem_estate_tax")
+    ? parseInt(document.getElementById("qtd_ativos_sem_estate_tax").value, 10) || 0
+    : 0;
+
   const dados = {
     rf: document.getElementById("rf").value,
     rv: document.getElementById("rv").value,
@@ -854,6 +881,11 @@ function salvarPatrimonio() {
     prev: document.getElementById("prev").value,
     offshore: document.getElementById("offshore").value,
     offshore_modo: offshoreEmUSD ? "usd" : "brl",
+    offshore_brl: offshoreBrl,
+    offshore_ptax: taxaPtax,
+    tipo_conta_exterior: document.getElementById("tipo_conta_exterior") ? document.getElementById("tipo_conta_exterior").value : "individual",
+    qtd_ativos_sem_estate_tax: qtdAtivosSemEstateTax,
+    ativos_sem_estate_tax: ativosSemEstateTax,
 
     apt: document.getElementById("apt").value,
     casa: document.getElementById("casa").value,
@@ -920,8 +952,9 @@ window.onload = function () {
   const camposMonetarios = ["rf", "rv", "inter", "prev", "offshore", "apt", "casa", "terr", "galp", "bens_particulares", "bens"];
 
   Object.keys(dados).forEach(id => {
-    if (id === "offshore_modo") return; // tratado separadamente abaixo
+    if (id === "offshore_modo" || id === "offshore_brl" || id === "offshore_ptax") return; // tratado separadamente abaixo
     if (id === "temEmpresas" || id === "qtdEmpresas" || id === "empresas") return; // tratado abaixo
+    if (id === "qtd_ativos_sem_estate_tax" || id === "ativos_sem_estate_tax") return; // tratado abaixo
     const el = document.getElementById(id);
     if (el) {
       if (camposMonetarios.includes(id)) {
@@ -941,6 +974,7 @@ window.onload = function () {
       if (offshoreInput && dados.offshore) {
         offshoreInput.value = formatarValorRestaurado(dados.offshore);
         atualizarBadgeOffshore();
+        salvarPatrimonio();
       }
     });
   }
@@ -968,12 +1002,477 @@ window.onload = function () {
 
   window.atualizarResumoEmpresasBadge();
   calcular();
+  atualizarRegrasContaExterior();
+
+  if (dados.qtd_ativos_sem_estate_tax !== undefined && dados.qtd_ativos_sem_estate_tax !== null) {
+    const elQtdAtivos = document.getElementById("qtd_ativos_sem_estate_tax");
+    if (elQtdAtivos) elQtdAtivos.value = dados.qtd_ativos_sem_estate_tax;
+    renderizarInputsAtivosSemEstateTax(dados.ativos_sem_estate_tax || []);
+  } else {
+    renderizarInputsAtivosSemEstateTax([]);
+  }
 
   // ATIVA AUTO-SAVE: Sempre que mudar um campo, salva automaticamente
   document.querySelectorAll("input, select").forEach(el => {
     el.addEventListener("input", salvarPatrimonio);
   });
 }
+
+// =========================
+// SUCESSÃO INTERNACIONAL: REGRAS DE CONTA EXTERIOR (BTG PACTUAL PÁG. 5)
+// =========================
+function atualizarRegrasContaExterior() {
+  const elSelect = document.getElementById("tipo_conta_exterior");
+  if (!elSelect) return;
+  const tipo = elSelect.value || "individual";
+
+  let regra;
+  if (window.TributarioEngine && typeof window.TributarioEngine.obterRegrasContaExterior === "function") {
+    regra = window.TributarioEngine.obterRegrasContaExterior(tipo);
+  } else {
+    regra = {
+      nome: tipo,
+      congelamentoInventario: "Sujeita a inventário ou regras de transmissão local",
+      estateTax: "Sujeita a regras tributárias de ativos no exterior",
+      formsNecessarios: "Forms do IRS (quando aplicável)"
+    };
+  }
+
+  const elTitulo = document.getElementById("regra_conta_titulo");
+  const elDetalhes = document.getElementById("regra_conta_detalhes");
+  if (elTitulo) elTitulo.innerText = regra.nome || "Conta Internacional";
+  if (elDetalhes) {
+    elDetalhes.innerHTML = `
+      • <strong>Inventário:</strong> ${regra.congelamentoInventario}<br>
+      • <strong>Estate Tax:</strong> ${regra.estateTax}<br>
+      • <strong>Forms IRS:</strong> ${regra.formsNecessarios}
+    `;
+  }
+}
+window.atualizarRegrasContaExterior = atualizarRegrasContaExterior;
+
+// =========================
+// ATIVOS ISENTOS DE ESTATE TAX (BTG PACTUAL PÁG. 4)
+// =========================
+const LISTA_ATIVOS_SEM_ESTATE_TAX = [
+  { id: "tbills", nome: "T-Bills (Treasury Bills)" },
+  { id: "bonds_federais", nome: "Bonds federais (US Treasuries)" },
+  { id: "bonds_corpo_us", nome: "Bonds emitidos por companhias americanas" },
+  { id: "bonds_corpo_non_us", nome: "Bonds emitidos por companhias fora dos Estados Unidos" },
+  { id: "fundos_non_us", nome: "Fundos de investimentos registrados fora dos Estados Unidos (ex: ETFs UCITS)" },
+  { id: "acoes_non_us", nome: "Ações emitidas fora dos Estados Unidos" },
+  { id: "conta_banco_us", nome: "Conta em banco americano (depósito bancário)" },
+  { id: "seguro_vida", nome: "Life insurance death benefit (Seguro de Vida)" },
+  { id: "imovel_non_us", nome: "Imóvel localizado fora dos Estados Unidos" }
+];
+
+function abrirModalAtivosIsentos() {
+  const modal = document.getElementById("modal_ativos_sem_estate_tax");
+  const inputQtd = document.getElementById("qtd_ativos_sem_estate_tax");
+  let qtd = parseInt(inputQtd ? inputQtd.value : "0", 10) || 0;
+
+  if (qtd <= 0) {
+    qtd = 1;
+    if (inputQtd) inputQtd.value = 1;
+    renderizarInputsAtivosSemEstateTax(null, false);
+  }
+
+  if (modal) {
+    modal.style.display = "flex";
+  }
+}
+window.abrirModalAtivosIsentos = abrirModalAtivosIsentos;
+
+function fecharModalAtivosIsentos() {
+  const modal = document.getElementById("modal_ativos_sem_estate_tax");
+  if (modal) {
+    modal.style.display = "none";
+  }
+}
+window.fecharModalAtivosIsentos = fecharModalAtivosIsentos;
+
+function confirmarAtivosIsentosModal() {
+  salvarPatrimonio();
+  atualizarResumoPillAtivos();
+  window.atualizarDiagnosticoEstateTaxUI();
+  fecharModalAtivosIsentos();
+}
+window.confirmarAtivosIsentosModal = confirmarAtivosIsentosModal;
+
+function atualizarResumoPillAtivos() {
+  const blocoResumo = document.getElementById("bloco_resumo_ativos_isentos");
+  const badgeQtd = document.getElementById("badge_qtd_ativos_isentos");
+  const textoResumo = document.getElementById("texto_resumo_ativos_isentos");
+  const inputQtd = document.getElementById("qtd_ativos_sem_estate_tax");
+  const qtd = parseInt(inputQtd ? inputQtd.value : "0", 10) || 0;
+
+  if (!blocoResumo) return;
+
+  if (qtd <= 0) {
+    blocoResumo.style.display = "none";
+    return;
+  }
+
+  blocoResumo.style.display = "flex";
+  if (badgeQtd) {
+    badgeQtd.innerText = `${qtd} ${qtd === 1 ? "ativo" : "ativos"}`;
+  }
+
+  const opcoes = (window.TributarioEngine && Array.isArray(window.TributarioEngine.ATIVOS_ISENTOS_ESTATE_TAX))
+    ? window.TributarioEngine.ATIVOS_ISENTOS_ESTATE_TAX
+    : LISTA_ATIVOS_SEM_ESTATE_TAX;
+
+  const container = document.getElementById("modal_lista_ativos_sem_estate_tax") || document.getElementById("lista_ativos_sem_estate_tax");
+  const nomesSelecionados = [];
+
+  if (container) {
+    container.querySelectorAll(".ativo-isento-select").forEach(sel => {
+      const achou = opcoes.find(o => o.id === sel.value);
+      if (achou) nomesSelecionados.push(achou.nome);
+    });
+  }
+
+  if (textoResumo) {
+    if (nomesSelecionados.length > 0) {
+      const resumoCurto = nomesSelecionados.slice(0, 3).join(", ") + (nomesSelecionados.length > 3 ? ` (+${nomesSelecionados.length - 3})` : "");
+      textoResumo.innerText = resumoCurto;
+    } else {
+      textoResumo.innerText = "Clique para selecionar a classificação dos ativos.";
+    }
+  }
+}
+window.atualizarResumoPillAtivos = atualizarResumoPillAtivos;
+
+function renderizarInputsAtivosSemEstateTax(valoresSalvos = null, abrirModalSeMaiorZero = false) {
+  const inputQtd = document.getElementById("qtd_ativos_sem_estate_tax");
+  const container = document.getElementById("modal_lista_ativos_sem_estate_tax") || document.getElementById("lista_ativos_sem_estate_tax");
+  const cardDiagnostico = document.getElementById("card_diagnostico_estate_tax");
+  const modalQtdInfo = document.getElementById("modal_qtd_info");
+  if (!inputQtd || !container) return;
+
+  let qtd = parseInt(inputQtd.value, 10);
+  if (isNaN(qtd) || qtd < 0) qtd = 0;
+  if (qtd > 9) qtd = 9;
+  inputQtd.value = qtd;
+
+  if (modalQtdInfo) {
+    modalQtdInfo.innerText = `${qtd} ativo(s)`;
+  }
+
+  let selecoes = [];
+  if (Array.isArray(valoresSalvos)) {
+    selecoes = [...valoresSalvos];
+  } else {
+    container.querySelectorAll(".ativo-isento-select").forEach(sel => {
+      selecoes.push(sel.value);
+    });
+  }
+
+  container.innerHTML = "";
+
+  if (qtd === 0) {
+    atualizarResumoPillAtivos();
+    window.atualizarDiagnosticoEstateTaxUI();
+    fecharModalAtivosIsentos();
+    return;
+  }
+
+  const opcoes = (window.TributarioEngine && Array.isArray(window.TributarioEngine.ATIVOS_ISENTOS_ESTATE_TAX))
+    ? window.TributarioEngine.ATIVOS_ISENTOS_ESTATE_TAX
+    : LISTA_ATIVOS_SEM_ESTATE_TAX;
+
+  const esc = window.escapeHTML || (s => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"));
+
+  for (let i = 0; i < qtd; i++) {
+    const card = document.createElement("div");
+    card.className = "ativo-isento-card";
+
+    const labelAtivo = `Ativo ${i + 1} (Isento de Estate Tax)`;
+    const valorPreSelecionado = selecoes[i] || opcoes[i % opcoes.length].id;
+
+    let optionsHtml = "";
+    opcoes.forEach(op => {
+      const selected = op.id === valorPreSelecionado ? "selected" : "";
+      optionsHtml += `<option value="${esc(op.id)}" ${selected}>${esc(op.nome)}</option>`;
+    });
+
+    card.innerHTML = `
+      <div class="ativo-isento-header">
+        <span class="ativo-isento-label">${esc(labelAtivo)}</span>
+      </div>
+      <select class="ativo-isento-select" onchange="salvarPatrimonio(); window.atualizarResumoPillAtivos(); window.atualizarDiagnosticoEstateTaxUI();">
+        ${optionsHtml}
+      </select>
+    `;
+
+    container.appendChild(card);
+  }
+
+  atualizarResumoPillAtivos();
+  window.atualizarDiagnosticoEstateTaxUI();
+
+  if (abrirModalSeMaiorZero && qtd > 0) {
+    abrirModalAtivosIsentos();
+  }
+}
+window.renderizarInputsAtivosSemEstateTax = renderizarInputsAtivosSemEstateTax;
+
+// Listeners globais para fechar modal com Escape ou clique fora
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    fecharModalAtivosIsentos();
+  }
+});
+
+document.addEventListener("click", (e) => {
+  const modal = document.getElementById("modal_ativos_sem_estate_tax");
+  if (modal && e.target === modal) {
+    fecharModalAtivosIsentos();
+  }
+});
+
+function toggleTabelaEstateTax(btn) {
+  const wrapper = document.getElementById("wrapper_tabela_estate_tax");
+  if (!wrapper) return;
+  const visivel = wrapper.style.display !== "none";
+  wrapper.style.display = visivel ? "none" : "block";
+  if (btn) {
+    const textoSpan = btn.querySelector("span");
+    if (textoSpan) {
+      textoSpan.innerText = visivel
+        ? "Ver detalhamento das faixas progressivas aplicadas"
+        : "Ocultar detalhamento das faixas";
+    }
+  }
+}
+window.toggleTabelaEstateTax = toggleTabelaEstateTax;
+
+function atualizarDiagnosticoEstateTaxUI() {
+  const card = document.getElementById("card_diagnostico_estate_tax");
+  if (!card) return;
+
+  const inputQtd = document.getElementById("qtd_ativos_sem_estate_tax");
+  const qtd = parseInt(inputQtd ? inputQtd.value : "0", 10) || 0;
+
+  const cotacao = ptaxCotacao && ptaxCotacao > 0
+    ? ptaxCotacao
+    : (typeof cotacaoCache !== "undefined" && cotacaoCache && cotacaoCache.cotacao ? Number(cotacaoCache.cotacao) : 5.5);
+
+  let valorOffshoreUSD = 0;
+  const inputOff = document.getElementById("offshore");
+  const valorOffshoreRaw = inputOff ? parseFloat((inputOff.value || "0").replace(/\./g, "").replace(",", ".")) || 0 : 0;
+  if (offshoreEmUSD) {
+    valorOffshoreUSD = valorOffshoreRaw;
+  } else if (cotacao > 0) {
+    valorOffshoreUSD = valorOffshoreRaw / cotacao;
+  } else {
+    valorOffshoreUSD = valorOffshoreRaw / 5.5;
+  }
+
+  const ativosSelecionados = [];
+  document.querySelectorAll(".ativo-isento-select").forEach(sel => {
+    if (sel.value) ativosSelecionados.push(sel.value);
+  });
+
+  if (qtd === 0 && valorOffshoreUSD === 0) {
+    card.style.display = "none";
+    return;
+  }
+
+  let diag;
+  if (window.TributarioEngine && typeof window.TributarioEngine.analisarExposicaoEstateTax === "function") {
+    diag = window.TributarioEngine.analisarExposicaoEstateTax({
+      valorOffshoreUSD,
+      ativosIsentos: ativosSelecionados
+    });
+  } else {
+    diag = {
+      classeBadge: qtd > 0 ? "protegido" : (valorOffshoreUSD > 60000 ? "alerta" : "info"),
+      mensagem: qtd > 0
+        ? `${qtd} ativo(s) isento(s) de Estate Tax selecionado(s).`
+        : "Nenhum ativo isento de Estate Tax selecionado.",
+      calculoProgressivo: {
+        totalUSD: valorOffshoreUSD,
+        isencaoUSD: 60000,
+        excedenteUSD: Math.max(0, valorOffshoreUSD - 60000),
+        impostoTotalUSD: 0,
+        aliquotaEfetivaExcedente: 0,
+        aliquotaMarginal: 0,
+        detalhamento: []
+      }
+    };
+  }
+
+  const calc = diag.calculoProgressivo || {
+    totalUSD: valorOffshoreUSD,
+    isencaoUSD: 60000,
+    excedenteUSD: Math.max(0, valorOffshoreUSD - 60000),
+    impostoTotalUSD: 0,
+    aliquotaEfetivaExcedente: 0,
+    aliquotaMarginal: 0,
+    detalhamento: []
+  };
+
+  card.style.display = "block";
+  card.className = diag.classeBadge === "protegido"
+    ? "card-diagnostico-protegido"
+    : (diag.classeBadge === "alerta" ? "card-diagnostico-alerta" : "card-diagnostico-info");
+
+  const fmtUSD = (v) => "USD " + Number(v || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtBRL = (v) => "R$ " + Number(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  if (diag.classeBadge === "alerta") {
+    const impostoBRL = calc.impostoTotalUSD * cotacao;
+    let linhasTabelaHtml = "";
+    if (Array.isArray(calc.detalhamento) && calc.detalhamento.length > 0) {
+      linhasTabelaHtml = calc.detalhamento.map(d => `
+        <tr>
+          <td>Faixa ${d.faixaNumero}</td>
+          <td>${fmtUSD(d.de)} ${d.ate ? "a " + fmtUSD(d.ate) : "em diante"}</td>
+          <td>${fmtUSD(d.baseTributada)}</td>
+          <td>${d.aliquota}%</td>
+          <td style="font-weight: 600; color: #dc2626;">${fmtUSD(d.impostoFaixa)}</td>
+        </tr>
+      `).join("");
+    }
+
+    card.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; color: #991b1b; margin-bottom: 6px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>Diagnóstico Sucessório Internacional — US Estate Tax (Tabela Progressiva)</span>
+      </div>
+      <div style="font-size: 12px; color: #7f1d1d; line-height: 1.45; margin-bottom: 8px;">
+        ${diag.mensagem}
+      </div>
+
+      <div class="estate-tax-grid">
+        <div class="estate-tax-metric-card">
+          <span class="estate-tax-metric-label">Total Offshore</span>
+          <span class="estate-tax-metric-val">${fmtUSD(calc.totalUSD)}</span>
+        </div>
+        <div class="estate-tax-metric-card">
+          <span class="estate-tax-metric-label">Isenção Geral IRS</span>
+          <span class="estate-tax-metric-val" style="color: #16a34a;">USD 60.000,00</span>
+        </div>
+        <div class="estate-tax-metric-card">
+          <span class="estate-tax-metric-label">Base Tributável (Excedente)</span>
+          <span class="estate-tax-metric-val" style="color: #dc2626;">${fmtUSD(calc.excedenteUSD)}</span>
+        </div>
+        <div class="estate-tax-metric-card">
+          <span class="estate-tax-metric-label">Estate Tax Estimado</span>
+          <span class="estate-tax-metric-val" style="color: #b91c1c;">${fmtUSD(calc.impostoTotalUSD)}</span>
+          <span style="font-size: 10.5px; color: #64748b; font-weight: 600; margin-top: 1px;">~ ${fmtBRL(impostoBRL)}</span>
+        </div>
+        <div class="estate-tax-metric-card">
+          <span class="estate-tax-metric-label">Alíquota Efetiva</span>
+          <span class="estate-tax-metric-val">${calc.aliquotaEfetivaExcedente}%</span>
+          <span style="font-size: 10px; color: #64748b;">Marginal: ${calc.aliquotaMarginal}%</span>
+        </div>
+      </div>
+
+      <div class="aviso-excedente-estate-tax">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <div>
+          <strong>Regra Obrigatória do IRS:</strong> O imposto é cobrado exclusivamente sobre o valor excedente aos 60 mil dólares e não sobre o valor total.
+        </div>
+      </div>
+
+      ${linhasTabelaHtml ? `
+        <div style="margin-top: 8px;">
+          <button type="button" class="btn-toggle-tabela-estate" onclick="window.toggleTabelaEstateTax(this)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            <span>Ver detalhamento das faixas progressivas aplicadas</span>
+          </button>
+          <div id="wrapper_tabela_estate_tax" class="estate-tax-tabela-wrapper" style="display: none;">
+            <table class="estate-tax-tabela">
+              <thead>
+                <tr>
+                  <th>Faixa</th>
+                  <th>Intervalo no Excedente</th>
+                  <th>Base Tributada</th>
+                  <th>Alíquota</th>
+                  <th>Imposto</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${linhasTabelaHtml}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ` : ""}
+    `;
+  } else if (diag.classeBadge === "protegido") {
+    card.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; color: #065f46; margin-bottom: 6px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+        <span>Diagnóstico Sucessório Internacional — Carteira Isenta de US Estate Tax</span>
+      </div>
+      <div style="font-size: 12px; color: #065f46; line-height: 1.45; margin-bottom: 8px;">
+        ${diag.mensagem}
+      </div>
+
+      <div class="estate-tax-grid">
+        <div class="estate-tax-metric-card">
+          <span class="estate-tax-metric-label">Total Offshore</span>
+          <span class="estate-tax-metric-val">${fmtUSD(calc.totalUSD)}</span>
+        </div>
+        <div class="estate-tax-metric-card">
+          <span class="estate-tax-metric-label">Status Sucessório</span>
+          <span class="estate-tax-metric-val" style="color: #16a34a; font-size: 12px;">Isento de Estate Tax</span>
+        </div>
+        <div class="estate-tax-metric-card">
+          <span class="estate-tax-metric-label">Estate Tax Estimado</span>
+          <span class="estate-tax-metric-val" style="color: #16a34a;">USD 0,00</span>
+        </div>
+      </div>
+
+      <div class="aviso-excedente-estate-tax aviso-sucesso">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <div>
+          <strong>Isenção por Classe de Ativo:</strong> Seus ativos offshore selecionados não estão sujeitos ao Estate Tax americano. Lembramos que, para ativos tributáveis nos EUA, o imposto incidiria exclusivamente sobre o valor excedente aos 60 mil dólares e não sobre o valor total.
+        </div>
+      </div>
+    `;
+  } else {
+    card.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; color: #1e40af; margin-bottom: 6px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <span>Diagnóstico Sucessório Internacional — Isenção Geral Aplicada</span>
+      </div>
+      <div style="font-size: 12px; color: #1e40af; line-height: 1.45; margin-bottom: 8px;">
+        ${diag.mensagem}
+      </div>
+
+      <div class="estate-tax-grid">
+        <div class="estate-tax-metric-card">
+          <span class="estate-tax-metric-label">Total Offshore</span>
+          <span class="estate-tax-metric-val">${fmtUSD(calc.totalUSD)}</span>
+        </div>
+        <div class="estate-tax-metric-card">
+          <span class="estate-tax-metric-label">Isenção Geral IRS</span>
+          <span class="estate-tax-metric-val" style="color: #16a34a;">USD 60.000,00</span>
+        </div>
+        <div class="estate-tax-metric-card">
+          <span class="estate-tax-metric-label">Base Tributável</span>
+          <span class="estate-tax-metric-val" style="color: #16a34a;">USD 0,00</span>
+        </div>
+        <div class="estate-tax-metric-card">
+          <span class="estate-tax-metric-label">Estate Tax Estimado</span>
+          <span class="estate-tax-metric-val" style="color: #16a34a;">USD 0,00</span>
+        </div>
+      </div>
+
+      <div class="aviso-excedente-estate-tax aviso-info">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <div>
+          <strong>Isenção Geral (NRA):</strong> O imposto é cobrado exclusivamente sobre o valor excedente aos 60 mil dólares e não sobre o valor total. Como a carteira não ultrapassa USD 60.000,00, não há imposto a recolher.
+        </div>
+      </div>
+    `;
+  }
+}
+window.atualizarDiagnosticoEstateTaxUI = atualizarDiagnosticoEstateTaxUI;
 
 // =========================
 // MODAL COLAR DADOS

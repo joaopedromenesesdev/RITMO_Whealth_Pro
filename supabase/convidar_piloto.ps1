@@ -23,13 +23,16 @@ param(
 $SupabaseUrl = "https://dogyopoylekiqsahadlc.supabase.co"
 $Endpoint = "$SupabaseUrl/auth/v1/invite"
 
-$PilotoAssessores = @(
-    @{ email = "assessor.piloto1@pacecapital.com.br"; nome = "Assessor Piloto 1" },
-    @{ email = "assessor.piloto2@pacecapital.com.br";   nome = "Assessor Piloto 2" },
-    @{ email = "assessor.piloto3@pacecapital.com.br";  nome = "Assessor Piloto 3" },
-    @{ email = "assessor.piloto4@pacecapital.com.br";  nome = "Assessor Piloto 4" },
-    @{ email = "assessor.piloto5@pacecapital.com.br";  nome = "Assessor Piloto 5" }
-)
+# Carrega lista de assessores de arquivo local ignorado pelo Git (assessores.local.json) ou usa exemplo sintético
+$LocalConfigPath = Join-Path $PSScriptRoot "assessores.local.json"
+if (Test-Path $LocalConfigPath) {
+    $PilotoAssessores = Get-Content $LocalConfigPath -Raw | ConvertFrom-Json
+} else {
+    $PilotoAssessores = @(
+        @{ email = "assessor.exemplo1@pacecapital.com.br"; nome = "Assessor Exemplo 1" },
+        @{ email = "assessor.exemplo2@pacecapital.com.br"; nome = "Assessor Exemplo 2" }
+    )
+}
 
 Write-Host "========================================================" -ForegroundColor Cyan
 Write-Host " PACE CAPITAL — DISPARO DE CONVITES DO PILOTO (OPÇÃO B)" -ForegroundColor Cyan

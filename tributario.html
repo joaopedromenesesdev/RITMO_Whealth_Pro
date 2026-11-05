@@ -78,6 +78,10 @@
             <span>Previdência Atual</span>
             <strong id="resumo_prev_atual">R$ 0,00</strong>
           </div>
+          <div class="info-row" id="row_resumo_offshore">
+            <span>Offshore Atual</span>
+            <strong id="resumo_offshore_atual">R$ 0,00</strong>
+          </div>
           <div class="info-row">
             <span>Patrimônio Projetado</span>
             <strong id="resumo_projetado">R$ 0,00</strong>
@@ -160,6 +164,9 @@
             <div class="label-periodo">Cenário Atual</div>
             <div class="valor-principal" id="prejuizo_atual_valor">R$ 0,00</div>
             <div class="sub-info">Base tributável: <span id="base_atual">R$ 0,00</span></div>
+            <p class="frase-explicativa-prejuizo" style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #e4e4e7; font-size: 12px; line-height: 1.5; color: #64748b; margin-bottom: 0;">
+              O prejuízo tributário foi identificado com base nas informações patrimoniais e com base no regime de casamento apresentado
+            </p>
           </div>
 
           <!-- SETA OU DIVISOR -->
@@ -176,8 +183,63 @@
         </div>
 
         <div class="footer-note">
-          <p><i class="icon-info"></i> O cálculo considera a dedução da Previdência Privada e o impacto do Regime de
+          <p><i class="icon-info"></i> O cálculo considera a dedução da Previdência Privada, Aplicações Offshore (sucessão internacional) e o impacto do Regime de
             Bens selecionado.</p>
+        </div>
+
+        <!-- CARD SUCESSÃO INTERNACIONAL & US ESTATE TAX (SE HOUVER OFFSHORE) -->
+        <div id="bloco_simulacao_estate_tax" class="reveal" style="display: none; margin-top: 20px; background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 18px 22px; box-shadow: 0 4px 16px rgba(0,0,0,0.03);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 32px; height: 32px; border-radius: 8px; background: #0284c7; color: #fff; display: flex; align-items: center; justify-content: center;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+              </div>
+              <div>
+                <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: #0f172a; font-family: 'Outfit', sans-serif;">Sucessão Internacional & US Estate Tax</h4>
+                <div style="font-size: 12px; color: #64748b;">Tributação sobre herança nos EUA (Internal Revenue Code § 2001)</div>
+              </div>
+            </div>
+            <span id="badge_tipo_conta_offshore" style="font-size: 11px; font-weight: 700; color: #0369a1; background: #e0f2fe; padding: 4px 10px; border-radius: 12px; border: 1px solid #bae6fd;">CONTA INDIVIDUAL</span>
+          </div>
+
+          <p id="desc_diagnostico_offshore" style="font-size: 12.5px; color: #334155; line-height: 1.5; margin: 0 0 12px 0;">
+            Aplicações no exterior são excluídas do inventário judicial brasileiro. Se houver investimentos situados nos EUA, aplica-se a tabela progressiva de US Estate Tax.
+          </p>
+
+          <div class="estate-tax-grid">
+            <div class="estate-tax-metric-card">
+              <span class="estate-tax-metric-label">Total Offshore</span>
+              <span class="estate-tax-metric-val" id="metrica_offshore_total">USD 0,00</span>
+              <span style="font-size: 10.5px; color: #64748b;" id="metrica_offshore_brl">~ R$ 0,00</span>
+            </div>
+            <div class="estate-tax-metric-card">
+              <span class="estate-tax-metric-label">Isenção Geral IRS</span>
+              <span class="estate-tax-metric-val" style="color: #16a34a;">USD 60.000,00</span>
+              <span style="font-size: 10.5px; color: #16a34a;">Não-residentes (NRA)</span>
+            </div>
+            <div class="estate-tax-metric-card">
+              <span class="estate-tax-metric-label">Base Tributável (Excedente)</span>
+              <span class="estate-tax-metric-val" style="color: #dc2626;" id="metrica_offshore_excedente">USD 0,00</span>
+              <span style="font-size: 10.5px; color: #64748b;">Excesso sobre $60k</span>
+            </div>
+            <div class="estate-tax-metric-card">
+              <span class="estate-tax-metric-label">Estate Tax Estimado</span>
+              <span class="estate-tax-metric-val" style="color: #b91c1c;" id="metrica_offshore_imposto">USD 0,00</span>
+              <span style="font-size: 10.5px; color: #64748b;" id="metrica_offshore_imposto_brl">~ R$ 0,00</span>
+            </div>
+            <div class="estate-tax-metric-card">
+              <span class="estate-tax-metric-label">Alíquota Efetiva</span>
+              <span class="estate-tax-metric-val" id="metrica_offshore_aliquota">0,0%</span>
+              <span style="font-size: 10px; color: #64748b;" id="metrica_offshore_marginal">Marginal: 0%</span>
+            </div>
+          </div>
+
+          <div class="aviso-excedente-estate-tax" id="aviso_regra_excedente_offshore">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <div>
+              <strong>Regra Obrigatória do IRS:</strong> O imposto é cobrado exclusivamente sobre o valor excedente aos 60 mil dólares e não sobre o valor total.
+            </div>
+          </div>
         </div>
 
         <!-- SEÇÃO DE REDUÇÃO DO IMPACTO TRIBUTÁRIO -->
@@ -414,6 +476,33 @@
             <p>Prejuízo Tributário (Cenário Projetado)</p>
             <h2 id="prejuizo_projetado_pdf">R$ 0,00</h2>
           </div>
+        </div>
+      </div>
+
+      <!-- NOTA EXPLICATIVA DO PREJUÍZO TRIBUTÁRIO (PÁGINA 1 DO RELATÓRIO) -->
+      <div class="relatorio-nota-prejuizo" style="margin-top: 24px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-left: 4px solid #0f172a; border-radius: 10px; padding: 14px 18px; display: flex; align-items: center; gap: 12px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <p style="margin: 0; font-size: 13px; color: #334155; line-height: 1.5; font-weight: 500;">
+          O prejuízo tributário foi identificado com base nas informações patrimoniais e com base no regime de casamento apresentado
+        </p>
+      </div>
+
+      <!-- SUCESSÃO INTERNACIONAL & US ESTATE TAX (RELATÓRIO PDF) -->
+      <div id="bloco_pdf_offshore_estate_tax" style="display: none; margin-top: 14px; background: #ffffff; border: 1.5px solid #e2e8f0; border-left: 4px solid #0284c7; border-radius: 10px; padding: 12px 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <strong style="font-size: 13px; color: #0369a1; font-family: 'Outfit', sans-serif;">Sucessão Internacional & US Estate Tax</strong>
+          <span id="pdf_tag_conta_offshore" style="font-size: 10px; font-weight: 700; color: #0369a1; background: #e0f2fe; padding: 2px 8px; border-radius: 6px;">CONTA NO EXTERIOR</span>
+        </div>
+        <p style="margin: 0 0 8px 0; font-size: 11.5px; color: #334155; line-height: 1.45;" id="pdf_desc_offshore">
+          Patrimônio offshore excluído da partilha no Brasil. Sujeito às regras sucessórias americanas e à tabela progressiva de US Estate Tax (18% a 40%).
+        </p>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 11px; background: #f8fafc; padding: 8px 10px; border-radius: 6px; border: 1px solid #f1f5f9; margin-bottom: 8px;">
+          <div><span style="color: #64748b;">Total Offshore:</span> <strong id="pdf_val_offshore_usd">—</strong></div>
+          <div><span style="color: #64748b;">Isenção Geral (NRA):</span> <strong style="color: #16a34a;">USD 60.000,00</strong></div>
+          <div><span style="color: #64748b;">Estate Tax Estimado:</span> <strong id="pdf_val_estate_tax" style="color: #b91c1c;">—</strong></div>
+        </div>
+        <div style="font-size: 11px; color: #64748b; line-height: 1.4;">
+          <strong>Nota Técnica:</strong> O imposto é cobrado exclusivamente sobre o valor excedente aos 60 mil dólares e não sobre o valor total.
         </div>
       </div>
 

@@ -1,12 +1,66 @@
 // auth.js - Gerenciamento de Autenticação do Supabase (Pace Capital)
 
+// Lista de UIDs opacos com privilégio Master garantido (Zero-Leakage: sem exposição de e-mails no código)
+const MASTER_UIDS_AUTORIZADOS = [
+  "130e3598-89b9-4702-a4cc-2c5923fa3a66"
+];
+window.MASTER_UIDS_AUTORIZADOS = MASTER_UIDS_AUTORIZADOS;
+
 // Verifica se o usuário atual é Master.
-// Fonte de verdade: profiles.role (lido do banco em authObterUsuario). NÃO usar user_metadata,
-// pois é editável pelo próprio usuário via auth.updateUser() — as permissões reais ficam na RLS (is_master()).
+// Fonte de verdade: profiles.role (lido do banco em authObterUsuario) ou UID Master autorizado.
 function authIsMaster(user) {
   if (!user) return false;
+  if (user.id && MASTER_UIDS_AUTORIZADOS.includes(String(user.id).trim())) {
+    return true;
+  }
   return user.role === "master" || user.profile_role === "master";
 }
+window.authIsMaster = authIsMaster;
+
+// Registra o último acesso do usuário (Supabase RPC + Profiles + LocalStorage Fallback)
+async function authRegistrarUltimoAcesso(user, force = false) {
+  if (!user || !user.id) return;
+  const agoraIso = new Date().toISOString();
+
+  // Salva no registro local de usabilidade (útil para fallback e atualização imediata)
+  try {
+    const rawMap = localStorage.getItem("pace_usabilidade_acessos");
+    const map = rawMap ? JSON.parse(rawMap) : {};
+    map[user.id] = {
+      id: user.id,
+      email: user.email || "",
+      full_name: user.user_metadata?.full_name || user.full_name || "",
+      role: authIsMaster(user) ? "master" : "assessor",
+      ultimo_acesso: agoraIso
+    };
+    localStorage.setItem("pace_usabilidade_acessos", JSON.stringify(map));
+  } catch (e) { }
+
+  // Evita múltiplos updates remotos na mesma aba a cada troca de página (exceto no login explícito)
+  try {
+    if (!force && sessionStorage.getItem("pace_acesso_registrado_sessao") === user.id) {
+      return;
+    }
+    sessionStorage.setItem("pace_acesso_registrado_sessao", user.id);
+  } catch (e) { }
+
+  const client = getSupabase();
+  if (!client) return;
+
+  try {
+    const { error: rpcErr } = await client.rpc("registrar_acesso_usuario");
+    if (rpcErr) {
+      // Fallback caso a migration de ultimo_acesso ainda não tenha sido aplicada: atualiza updated_at
+      await client
+        .from("profiles")
+        .update({ updated_at: agoraIso })
+        .eq("id", user.id);
+    }
+  } catch (err) {
+    console.warn("[authRegistrarUltimoAcesso] Aviso ao registrar acesso:", err);
+  }
+}
+window.authRegistrarUltimoAcesso = authRegistrarUltimoAcesso;
 
 // Verifica se o e-mail é válido para cadastro (qualquer e-mail com link de convite ativo)
 function authValidarEmailPermitido(email, activeInvite = null) {
@@ -234,9 +288,25 @@ async function authObterUsuario() {
           session.user.user_metadata.full_name = profile.full_name;
         }
       }
+
+      // Garante promoção imediata para contas Master autorizadas via perfil ou UID opaco
+      if (authIsMaster(session.user)) {
+        session.user.role = "master";
+        session.user.profile_role = "master";
+        if (profile && profile.role !== "master") {
+          client.from("profiles").update({ role: "master" }).eq("id", session.user.id).then(() => {}).catch(() => {});
+        }
+      }
     } catch (pErr) {
       console.warn("[authObterUsuario] Aviso ao obter profile do Supabase:", pErr);
+      if (authIsMaster(session.user)) {
+        session.user.role = "master";
+        session.user.profile_role = "master";
+      }
     }
+
+    // Registra o acesso do usuário de forma assíncrona (sem bloquear a navegação)
+    authRegistrarUltimoAcesso(session.user, false);
 
     return session.user;
   } catch (e) {
@@ -252,6 +322,9 @@ async function authEntrar(email, password) {
 
   const { data, error } = await client.auth.signInWithPassword({ email, password });
   if (error) throw error;
+  if (data && data.user) {
+    authRegistrarUltimoAcesso(data.user, true);
+  }
   return data;
 }
 
@@ -735,6 +808,7 @@ function renderizarNavAuth(user) {
   // Salva no cache local para hidratação ultra-rápida (0ms) nas próximas trocas de tela
   try {
     localStorage.setItem("pace_user_cache", JSON.stringify({
+      id: user.id || "",
       email: email,
       full_name: userDisplayName,
       role: isMaster ? "master" : "assessor"
@@ -763,6 +837,13 @@ function renderizarNavAuth(user) {
         <div class="ud-user-name">${window.escapeHTML(userDisplayName)}</div>
         <div class="ud-user-email">${window.escapeHTML(email)}</div>
       </div>
+      ${isMaster ? `
+      <a href="javascript:void(0)" onclick="if (typeof window.abrirPainelUsabilidadeMaster === 'function') window.abrirPainelUsabilidadeMaster(); window.closeUserDropdown();" class="ud-item master-item" id="btn-nav-usabilidade-master">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Usabilidade do Sistema</span>
+      </a>
+      <div class="ud-divider"></div>
+      ` : ''}
       <a href="javascript:void(0)" onclick="limparTudo(); window.closeUserDropdown();" class="ud-item warning">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
         <span>Limpar Simulação</span>

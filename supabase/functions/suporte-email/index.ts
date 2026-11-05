@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Servidor Backend Supabase Edge Function — Despacho de E-mails de Suporte Técnico
-// Destinatário padrão: suporte@pacecapital.com.br
+// Destinatário configurado via variável de ambiente DESTINATARIO_EMAIL
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 

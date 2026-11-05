@@ -332,7 +332,7 @@
     const tokenExemplo = "pace_inv_4a9b2c3d5e6f7a8b9c0d1e2f";
     assert(tokenRegex.test(tokenExemplo) === true, "Formato do token compatível com saída de alta entropia CSPRNG (24+ chars hexadecimais)");
 
-    // 14.9 Verificação da lista de assessores do Piloto Pace Capital
+    // 14.9 Verificação de validação de domínio corporativo (fixtures sintéticos)
     const emailsPiloto = [
       "assessor.piloto1@pacecapital.com.br",
       "assessor.piloto2@pacecapital.com.br",
@@ -340,9 +340,9 @@
       "assessor.piloto4@pacecapital.com.br",
       "assessor.piloto5@pacecapital.com.br"
     ];
-    assert(emailsPiloto.length === 5, "Exatamente 5 assessores configurados para o piloto inicial");
+    assert(emailsPiloto.length === 5, "Exatamente 5 fixtures sintéticos de assessores validados");
     emailsPiloto.forEach(email => {
-      assert(email.endsWith("@pacecapital.com.br"), `E-mail corporativo válido da Pace Capital: ${email}`);
+      assert(email.endsWith("@pacecapital.com.br"), `E-mail corporativo sintético válido: ${email}`);
     });
 
     // ==========================================
@@ -370,7 +370,7 @@
 
       // Registro com payload válido sem print (opcionalidade garantida)
       const resValidoSemPrint = await window.dbRegistrarChamadoSuporte({
-        assessor_nome: "Rodrigo Assessor",
+        assessor_nome: "Assessor Exemplo",
         assessor_email: "assessor.exemplo@pacecapital.com.br",
         tipo: "duvida",
         assunto: "Dúvida na alíquota de ITCMD",
@@ -395,7 +395,7 @@
       let resValidoComPrint;
       try {
         resValidoComPrint = await window.dbRegistrarChamadoSuporte({
-          assessor_nome: "João Pedro",
+          assessor_nome: "Assessor Teste",
           assessor_email: "suporte@pacecapital.com.br",
           tipo: "erro",
           assunto: "Inconsistência visual em gráfico",
@@ -429,7 +429,7 @@
       "Dica: Você também pode colar um print diretamente com Ctrl+V.",
       "Capturando tela...",
       "Enviar Chamado",
-      "Chamado registrado e encaminhado para suporte@pacecapital.com.br com sucesso."
+      "Chamado registrado e encaminhado para o Suporte Técnico Corporativo com sucesso."
     ];
     const contemEmoji = textosSuportePadrao.some(t => regexEmoji.test(t));
     assert(contemEmoji === false, "Zero emojis identificados nos textos e opções de suporte técnico");
@@ -446,9 +446,329 @@
       return "Assessor Responsável";
     };
 
-    assert(resolverNomeAssessor("Assessor Piloto 1", null) === "Assessor Piloto 1", "Nome do assessor da sessão priorizado com sucesso");
-    assert(resolverNomeAssessor("", "Assessor Piloto 2") === "Assessor Piloto 2", "Fallback para cache local do usuário autenticado validado");
+    assert(resolverNomeAssessor("Assessor Alpha", null) === "Assessor Alpha", "Nome do assessor da sessão priorizado com sucesso");
+    assert(resolverNomeAssessor("", "Assessor Beta") === "Assessor Beta", "Fallback para cache local do usuário autenticado validado");
     assert(resolverNomeAssessor(null, null) === "Assessor Responsável", "Valor defensivo padrão retornado quando não há assessor identificado");
+
+    // ==========================================
+    // 17. TESTES DE APLICAÇÕES OFFSHORE E TIPOS DE CONTA INTERNACIONAL
+    // ==========================================
+    console.log("\nExecutando Testes 17: Dedução Offshore e Tipos de Contas Internacionais...");
+
+    // 17.1 Dedução de Aplicações Offshore na Base de Cálculo da Partilha Sucessória
+    const partilhaComOffshore = engine.calcularPartilhaSucessoria({
+      totalPatrimonio: 10000000,
+      valorPrevidencia: 1000000,
+      valorOffshore: 2000000,
+      bensParticulares: 0,
+      familia: {
+        estadoCivil: "casado",
+        regime: "comunhao_parcial",
+        temFilhos: "sim",
+        qtdFilhos: 2
+      }
+    });
+    // totalCalculo = 10.000.000 - 1.000.000 (prev) - 2.000.000 (offshore) = 7.000.000
+    assert(partilhaComOffshore.totalCalculo === 7000000, "Base da partilha exclui Previdência e Aplicações Offshore (R$ 10M - R$ 1M - R$ 2M = R$ 7M)");
+    assert(partilhaComOffshore.meacao === 3500000, "Meação cônjuge calculada sobre base líquida sem offshore (50% de R$ 7M = R$ 3.5M)");
+    assert(partilhaComOffshore.heranca === 3500000, "Herança líquida calculada sobre base sem offshore (R$ 3.5M)");
+
+    // 17.2 Dedução de Offshore excedendo patrimônio não gera valor negativo
+    const partilhaOffshoreMaior = engine.calcularPartilhaSucessoria({
+      totalPatrimonio: 1000000,
+      valorPrevidencia: 500000,
+      valorOffshore: 800000,
+      familia: { estadoCivil: "solteiro" }
+    });
+    assert(partilhaOffshoreMaior.totalCalculo === 0, "Base com deduções maiores que patrimônio é truncada defensivamente em 0");
+
+    // 17.3 Obtenção de Regras e Tipos de Conta Exterior (BTG Pactual - Pág 5)
+    assert(engine.TIPOS_CONTA_EXTERIOR && typeof engine.TIPOS_CONTA_EXTERIOR === "object", "Dicionário TIPOS_CONTA_EXTERIOR exportado pelo engine");
+    
+    const regraIndividual = engine.obterRegrasContaExterior("individual");
+    assert(regraIndividual.nome === "Conta Individual", "Tipo de conta individual identificado");
+    assert(regraIndividual.sujeitoInventario === true, "Conta individual está sujeita a inventário");
+
+    const regraTOD = engine.obterRegrasContaExterior("tod");
+    assert(regraTOD.nome.includes("Transfer on Death"), "Tipo Transfer on Death identificado");
+    assert(regraTOD.sujeitoInventario === false, "Conta Transfer on Death NÃO está sujeita a inventário");
+
+    const regraTIC = engine.obterRegrasContaExterior("tic");
+    assert(regraTIC.nome.includes("Joint Tenants in Common"), "Tipo Joint Tenants in Common identificado");
+    assert(regraTIC.sujeitoInventario === true, "Conta TIC está sujeita a inventário na proporção da participação");
+
+    const regraJTWRS = engine.obterRegrasContaExterior("jtwrs");
+    assert(regraJTWRS.nome.includes("JTWRS"), "Tipo JTWRS identificado");
+    assert(regraJTWRS.sujeitoInventario === false, "Conta JTWRS NÃO está sujeita a inventário");
+
+    // Fallback defensivo para tipo desconhecido
+    const regraDesconhecida = engine.obterRegrasContaExterior("tipo_inexistente");
+    assert(regraDesconhecida && regraDesconhecida.id === "individual", "Fallback para Conta Individual em caso de id desconhecido");
+
+    // ==========================================
+    // 18. TESTES DE MEMÓRIA DE CÁLCULO DO PREJUÍZO TRIBUTÁRIO
+    // ==========================================
+    console.log("\nExecutando Testes 18: Memória de Cálculo e Origem dos Valores...");
+
+    assert(typeof engine.calcularMemoriaPrejuizo === "function", "Método calcularMemoriaPrejuizo disponível no engine");
+
+    const memoriaTeste = engine.calcularMemoriaPrejuizo({
+      totalPatrimonio: 8000000,
+      valorPrevidencia: 1000000,
+      valorOffshore: 380000,
+      regime: "comunhao_parcial",
+      itcmd: 4.0,
+      honorarios: 6.0,
+      custas: 1.0
+    });
+
+    assert(memoriaTeste.patrimonioBruto === 8000000, "Patrimônio bruto = R$ 8.000.000");
+    assert(memoriaTeste.subtotalLiquido === 6620000, "Subtotal líquido deduz previdência e offshore (R$ 6.620.000)");
+    assert(memoriaTeste.multiplicadorRegime === 0.5, "Comunhão parcial aplica fator 0.5 (meação do cônjuge)");
+    assert(memoriaTeste.baseTributavel === 3310000, "Base tributável calculada com exatidão = R$ 3.310.000");
+    assert(memoriaTeste.taxaTotal === 11.0, "Taxa total de custos de inventário = 11.0%");
+    assert(memoriaTeste.valorITCMD === 132400, "ITCMD a 4% sobre base = R$ 132.400");
+    assert(memoriaTeste.valorHonorarios === 198600, "Honorários a 6% sobre base = R$ 198.600");
+    assert(memoriaTeste.valorCustas === 33100, "Custas a 1% sobre base = R$ 33.100");
+    assert(memoriaTeste.prejuizoTotal === 364100, "Prejuízo tributário calculado com exatidão = R$ 364.100 (Exatamente o valor do usuário)");
+
+    // ==========================================
+    // 19. TESTE: INVARIÂNCIA TOTAL DA BASE TRIBUTÁVEL COM OU SEM OFFSHORE (BRL E USD)
+    // ==========================================
+    console.log("\nExecutando Testes 19: Invariância Total da Base Tributável (Sem Offshore vs USD 50k vs R$ 10M)...");
+
+    const patrimonioNacionalFixo = 6620000;
+    const previdenciaFixa = 0;
+
+    // Cenário A: Offshore = R$ 0
+    const cenarioSemOffshore = engine.calcularMemoriaPrejuizo({
+      totalPatrimonio: patrimonioNacionalFixo + 0,
+      valorPrevidencia: previdenciaFixa,
+      valorOffshore: 0,
+      regime: "comunhao_parcial",
+      itcmd: 4.0,
+      honorarios: 6.0,
+      custas: 1.0
+    });
+
+    // Cenário B: Offshore = USD 50.000,00 (convertido pela PTAX 5,4856 = R$ 274.280,00)
+    const offshoreUsd50kBrl = 50000 * 5.4856; // 274280
+    const cenarioComOffshoreUSD = engine.calcularMemoriaPrejuizo({
+      totalPatrimonio: patrimonioNacionalFixo + offshoreUsd50kBrl,
+      valorPrevidencia: previdenciaFixa,
+      valorOffshore: offshoreUsd50kBrl,
+      regime: "comunhao_parcial",
+      itcmd: 4.0,
+      honorarios: 6.0,
+      custas: 1.0
+    });
+
+    // Cenário C: Offshore = R$ 10.000.000,00
+    const cenarioComOffshore10M = engine.calcularMemoriaPrejuizo({
+      totalPatrimonio: patrimonioNacionalFixo + 10000000,
+      valorPrevidencia: previdenciaFixa,
+      valorOffshore: 10000000,
+      regime: "comunhao_parcial",
+      itcmd: 4.0,
+      honorarios: 6.0,
+      custas: 1.0
+    });
+
+    assert(cenarioSemOffshore.baseTributavel === 3310000, "Sem offshore: Base tributável = R$ 3.310.000");
+    assert(cenarioComOffshoreUSD.baseTributavel === cenarioSemOffshore.baseTributavel, "Com USD 50.000 (R$ 274.280): Base tributável idêntica (R$ 3.310.000)");
+    assert(cenarioComOffshore10M.baseTributavel === cenarioSemOffshore.baseTributavel, "Com R$ 10M no exterior: Base tributável idêntica (R$ 3.310.000)");
+    assert(cenarioComOffshoreUSD.prejuizoTotal === cenarioSemOffshore.prejuizoTotal, "Prejuízo tributário atual permanece idêntico (R$ 364.100) com ou sem offshore em USD");
+
+    // Projeção Futura: Simula 10 anos a 10% a.a. sem aportes sobre o patrimônio nacional vs total com offshore
+    const taxaProj = 0.10;
+    const anosProj = 10;
+    let nacProj = patrimonioNacionalFixo;
+    let totalComOffProj = patrimonioNacionalFixo + offshoreUsd50kBrl;
+    let offProj = offshoreUsd50kBrl;
+    for (let i = 0; i < anosProj; i++) {
+      nacProj = nacProj * (1 + taxaProj);
+      totalComOffProj = totalComOffProj * (1 + taxaProj);
+      offProj = offProj * (1 + taxaProj);
+    }
+    const baseProjetadaSemOff = Math.round(nacProj) * 0.5;
+    const baseProjetadaIsolada = Math.round(totalComOffProj - offProj) * 0.5;
+    assert(baseProjetadaSemOff === baseProjetadaIsolada, "Base tributável projetada permanece 100% idêntica com ou sem aplicações offshore");
+
+    // ==========================================
+    // 20. TESTE: SISTEMA DE USUÁRIOS MASTER, USABILIDADE E ACESSO COMPLETO A RELATÓRIOS
+    // ==========================================
+    console.log("\nExecutando Testes 20: Sistema de Usuários Master & Usabilidade...");
+
+    const perfisMock = [
+      { id: "u_master_1", email: "gestor@pacecapital.com.br", full_name: "Gestor Master", role: "master", ultimo_acesso: "2026-11-04T15:00:00Z" },
+      { id: "u_assessor_1", email: "assessor.alpha@pacecapital.com.br", full_name: "Assessor Alpha", role: "assessor", ultimo_acesso: "2026-11-04T14:20:00Z" },
+      { id: "u_assessor_2", email: "assessor.beta@pacecapital.com.br", full_name: "Assessor Beta", role: "assessor", ultimo_acesso: null }
+    ];
+
+    const relatoriosMock = [
+      { id: "rep_1", userId: "u_assessor_1", nomeCliente: "Cliente A", nomeAssessor: "Assessor Alpha", totalPatrimonio: 5000000, dataCriacao: "2026-11-04T14:25:00Z" },
+      { id: "rep_2", userId: "u_assessor_1", nomeCliente: "Cliente B", nomeAssessor: "Assessor Alpha", totalPatrimonio: 8000000, dataCriacao: "2026-11-04T14:30:00Z" },
+      { id: "rep_3", userId: "u_assessor_2", nomeCliente: "Cliente C", nomeAssessor: "Assessor Beta", totalPatrimonio: 12000000, dataCriacao: "2026-11-03T10:00:00Z" }
+    ];
+
+    const usabilidadeConsolidada = engine.consolidarUsabilidadeMaster(perfisMock, relatoriosMock);
+    const statAlpha = usabilidadeConsolidada.find(u => u.id === "u_assessor_1");
+    const statBeta = usabilidadeConsolidada.find(u => u.id === "u_assessor_2");
+
+    assert(usabilidadeConsolidada.length === 3, "Consolidação de usabilidade lista todos os 3 usuários");
+    assert(statAlpha.total_relatorios === 2, "Contabiliza exatamente 2 relatórios gerados pelo Assessor Alpha");
+    assert(statAlpha.total_patrimonio === 13000000, "Soma o patrimônio mapeado pelo Assessor Alpha (R$ 13M)");
+    assert(statAlpha.ultimo_acesso === "2026-11-04T14:30:00Z", "Atualiza o último acesso com o evento mais recente do assessor");
+    assert(statBeta.total_relatorios === 1, "Contabiliza 1 relatório gerado pelo Assessor Beta");
+
+    const visaoAssessor = engine.filtrarRelatoriosPorPermissao(relatoriosMock, perfisMock[1]);
+    const visaoMaster = engine.filtrarRelatoriosPorPermissao(relatoriosMock, perfisMock[0]);
+    const visaoUidMaster = engine.filtrarRelatoriosPorPermissao(relatoriosMock, {
+      id: "130e3598-89b9-4702-a4cc-2c5923fa3a66",
+      email: "admin.master@pacecapital.com.br",
+      role: "assessor"
+    });
+
+    assert(visaoAssessor.length === 2, "Assessor comum enxerga apenas seus próprios 2 relatórios");
+    assert(visaoMaster.length === 3, "Usuário Master possui acesso completo a todos os 3 relatórios de todos os assessores");
+    assert(visaoUidMaster.length === 3, "UID Master administrativo reconhecido automaticamente com acesso completo sem exposição de e-mail pessoal");
+
+    // ==========================================
+    // 21. TESTE: BLINDAGEM ZERO-LEAKAGE (NENHUM E-MAIL DE USUÁRIO EXPOSTO NO CÓDIGO-FONTE)
+    // ==========================================
+    console.log("\nExecutando Testes 21: Blindagem Zero-Leakage de E-mails e Identidades...");
+
+    const fs = require('fs');
+    const dbSource = fs.readFileSync('script/db.js', 'utf8');
+    const authSource = fs.readFileSync('script/auth.js', 'utf8');
+    const globalUiSource = fs.readFileSync('script/global_ui.js', 'utf8');
+    const sqlMigrationSource = fs.readFileSync('supabase/migrations/20261104_sistema_usuarios_master_usabilidade.sql', 'utf8');
+
+    // Extrai DIRETORIO_USUARIOS_SISTEMA do db.js e garante que está vazio no bundle público
+    const matchDiretorio = dbSource.match(/const DIRETORIO_USUARIOS_SISTEMA = (\[[\s\S]*?\]);/);
+    assert(matchDiretorio && matchDiretorio[1], "DIRETORIO_USUARIOS_SISTEMA declarado de forma segura no db.js");
+
+    const diretorioCarregado = eval(matchDiretorio[1]);
+    assert(Array.isArray(diretorioCarregado) && diretorioCarregado.length === 0, "DIRETORIO_USUARIOS_SISTEMA vazio (0 e-mails pessoais expostos no frontend)");
+
+    assert(authSource.includes("MASTER_UIDS_AUTORIZADOS"), "Verificação Master utiliza UIDs opacos (MASTER_UIDS_AUTORIZADOS)");
+    assert(!authSource.includes("MASTER_EMAILS_AUTORIZADOS"), "Lista de e-mails Master em texto puro removida do auth.js");
+
+    // Varredura estática contra vazamento de e-mails pessoais (@gmail.com ou e-mails individuais de assessores)
+    const arquivosCriticos = [
+      { nome: "script/db.js", conteudo: dbSource },
+      { nome: "script/auth.js", conteudo: authSource },
+      { nome: "script/global_ui.js", conteudo: globalUiSource },
+      { nome: "supabase/migrations/20261104_sistema_usuarios_master_usabilidade.sql", conteudo: sqlMigrationSource }
+    ];
+
+    const emailsInstitucionaisPermitidos = new Set([
+      "suporte@pacecapital.com.br",
+      "compliance@pacecapital.com.br",
+      "seu@email.com",
+      "nome@empresa.com.br"
+    ]);
+
+    arquivosCriticos.forEach(arq => {
+      const matchesEmail = arq.conteudo.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || [];
+      const emailsNaoInstitucionais = matchesEmail.filter(e => !emailsInstitucionaisPermitidos.has(e.toLowerCase()));
+      assert(emailsNaoInstitucionais.length === 0, `Zero e-mails pessoais expostos em ${arq.nome}`);
+    });
+
+    // ==========================================
+    // 22. TESTE: MAPEAMENTO DE ATIVOS SEM ESTATE TAX (PÁGINA 4 BTG PACTUAL)
+    // ==========================================
+    console.log("\nExecutando Testes 22: Ativos Isentos de Estate Tax e Diagnóstico Internacional...");
+
+    assert(Array.isArray(engine.ATIVOS_ISENTOS_ESTATE_TAX), "ATIVOS_ISENTOS_ESTATE_TAX exportado como Array no engine");
+    assert(engine.ATIVOS_ISENTOS_ESTATE_TAX.length === 9, "Possui exatamente as 9 opções oficiais do BTG Pactual");
+
+    const idsEsperados = [
+      "tbills", "bonds_federais", "bonds_corpo_us", "bonds_corpo_non_us",
+      "fundos_non_us", "acoes_non_us", "conta_banco_us", "seguro_vida", "imovel_non_us"
+    ];
+
+    idsEsperados.forEach(id => {
+      const achou = engine.ATIVOS_ISENTOS_ESTATE_TAX.find(a => a.id === id);
+      assert(achou && achou.nome, `Ativo isento '${id}' presente no catálogo oficial com nome válido`);
+    });
+
+    assert(typeof engine.analisarExposicaoEstateTax === "function", "analisarExposicaoEstateTax disponível no engine");
+
+    const diagSemOff = engine.analisarExposicaoEstateTax({ valorOffshoreUSD: 0, ativosIsentos: [] });
+    assert(diagSemOff.status === "sem_offshore", "Sem offshore reconhecido corretamente");
+
+    const diagComIsentos = engine.analisarExposicaoEstateTax({ valorOffshoreUSD: 500000, ativosIsentos: ["tbills", "fundos_non_us"] });
+    assert(diagComIsentos.status === "ativos_isentos_selecionados", "Ativos isentos selecionados reconhecidos");
+    assert(diagComIsentos.classeBadge === "protegido", "Badge protegido atribuído para ativos isentos");
+    assert(diagComIsentos.exposicao === false, "Sem exposição com ativos isentos selecionados");
+
+    const diagExposto = engine.analisarExposicaoEstateTax({ valorOffshoreUSD: 150000, ativosIsentos: [] });
+    assert(diagExposto.status === "potencial_exposicao", "Potencial exposição detectada acima de USD 60k sem isentos");
+    assert(diagExposto.exposicao === true, "Sinaliza exposição true para carteira US acima de USD 60k sem isentos");
+
+    const diagIsencaoGeral = engine.analisarExposicaoEstateTax({ valorOffshoreUSD: 45000, ativosIsentos: [] });
+    assert(diagIsencaoGeral.status === "dentro_limite_isencao", "Saldo até USD 60k reconhecido dentro da isenção geral");
+
+    // ==========================================
+    // 23. TESTE: TABELA PROGRESSIVA DO US ESTATE TAX (PÁGINA 3 BTG PACTUAL) E REGRA DO EXCEDENTE
+    // ==========================================
+    console.log("\nExecutando Testes 23: Tabela Progressiva US Estate Tax & Regra do Excedente aos USD 60.000...");
+
+    assert(Array.isArray(engine.FAIXAS_ESTATE_TAX), "FAIXAS_ESTATE_TAX exportado como Array no engine");
+    assert(engine.FAIXAS_ESTATE_TAX.length === 12, "Tabela possui exatamente as 12 faixas progressivas da Página 3 do BTG");
+    assert(typeof engine.calcularEstateTaxProgressivo === "function", "calcularEstateTaxProgressivo disponível no engine");
+
+    // Validação da regra mandatória: Imposto cobrado exclusivamente sobre o excedente aos 60 mil dólares
+    const calcAbaixoIsencao = engine.calcularEstateTaxProgressivo(40000);
+    assert(calcAbaixoIsencao.totalUSD === 40000, "Saldo total USD = 40.000");
+    assert(calcAbaixoIsencao.isencaoUSD === 60000, "Isenção geral fixada em USD 60.000");
+    assert(calcAbaixoIsencao.excedenteUSD === 0, "Abaixo de 60k: Excedente tributável é estritamente zero");
+    assert(calcAbaixoIsencao.impostoTotalUSD === 0, "Abaixo de 60k: Imposto devido é estritamente zero");
+    assert(calcAbaixoIsencao.isento === true, "Abaixo de 60k: Marcado como isento");
+    assert(calcAbaixoIsencao.fraseExplicativa.includes("excedente aos 60 mil dólares"), "Frase explicativa cita expressamente o excedente aos 60 mil dólares");
+    assert(calcAbaixoIsencao.fraseExplicativa.includes("não sobre o valor total"), "Frase explicativa esclarece expressamente que não incide sobre o valor total");
+
+    const calcNoLimite = engine.calcularEstateTaxProgressivo(60000);
+    assert(calcNoLimite.excedenteUSD === 0, "Exatamente USD 60.000: Excedente é zero");
+    assert(calcNoLimite.impostoTotalUSD === 0, "Exatamente USD 60.000: Imposto é zero");
+
+    // Faixa 1: Excedente até $10.000 (Ex: Carteira de $70.000 -> Excedente de $10.000 @ 18% = $1.800)
+    const calcFaixa1 = engine.calcularEstateTaxProgressivo(70000);
+    assert(calcFaixa1.excedenteUSD === 10000, "Total $70k: Excedente é $10.000");
+    assert(calcFaixa1.impostoTotalUSD === 1800, "Faixa 1: $10.000 a 18% = $1.800");
+    assert(calcFaixa1.aliquotaEfetivaExcedente === 18, "Alíquota efetiva sobre excedente = 18%");
+    assert(calcFaixa1.aliquotaMarginal === 18, "Alíquota marginal = 18%");
+
+    // Faixa 2: Excedente de $20.000 (Ex: Carteira de $80.000 -> $10k @ 18% + $10k @ 20% = $3.800)
+    const calcFaixa2 = engine.calcularEstateTaxProgressivo(80000);
+    assert(calcFaixa2.excedenteUSD === 20000, "Total $80k: Excedente é $20.000");
+    assert(calcFaixa2.impostoTotalUSD === 3800, "Faixa 2: $1.800 + $2.000 = $3.800");
+    assert(calcFaixa2.aliquotaMarginal === 20, "Alíquota marginal = 20%");
+
+    // Faixa 6: Excedente de $100.000 (Ex: Carteira de $160.000 -> Imposto acumulado = $23.800)
+    const calcFaixa6 = engine.calcularEstateTaxProgressivo(160000);
+    assert(calcFaixa6.excedenteUSD === 100000, "Total $160k: Excedente é $100.000");
+    assert(calcFaixa6.impostoTotalUSD === 23800, "Faixa 6: Imposto acumulado até $100k excedente = $23.800");
+    assert(calcFaixa6.aliquotaMarginal === 28, "Alíquota marginal = 28%");
+
+    // Faixa 11: Excedente de $1.000.000 (Ex: Carteira de $1.060.000 -> Imposto acumulado = $345.800)
+    const calcFaixa11 = engine.calcularEstateTaxProgressivo(1060000);
+    assert(calcFaixa11.excedenteUSD === 1000000, "Total $1.060.000: Excedente é $1.000.000");
+    assert(calcFaixa11.impostoTotalUSD === 345800, "Faixa 11: Imposto acumulado até $1.000.000 excedente = $345.800");
+    assert(calcFaixa11.aliquotaMarginal === 39, "Alíquota marginal = 39%");
+
+    // Faixa 12: Excedente de $2.000.000 (Ex: Carteira de $2.060.000 -> $345.800 + $1.000.000 * 40% = $745.800)
+    const calcFaixa12 = engine.calcularEstateTaxProgressivo(2060000);
+    assert(calcFaixa12.excedenteUSD === 2000000, "Total $2.060.000: Excedente é $2.000.000");
+    assert(calcFaixa12.impostoTotalUSD === 745800, "Faixa 12: $345.800 + $400.000 = $745.800");
+    assert(calcFaixa12.aliquotaMarginal === 40, "Alíquota marginal = 40%");
+    assert(calcFaixa12.aliquotaEfetivaExcedente === 37.29, "Alíquota efetiva sobre excedente = 37.29%");
+
+    // Verificação de integração em analisarExposicaoEstateTax
+    const diagIntegrado = engine.analisarExposicaoEstateTax({ valorOffshoreUSD: 160000, ativosIsentos: [] });
+    assert(diagIntegrado.calculoProgressivo && diagIntegrado.calculoProgressivo.impostoTotalUSD === 23800, "analisarExposicaoEstateTax embute cálculo progressivo exato");
+    assert(diagIntegrado.fraseExplicativa.includes("excedente aos 60 mil dólares"), "analisarExposicaoEstateTax contém a frase explicativa obrigatória");
 
     console.log("\n=================================================");
     console.log(`RESUMO DA SUÍTE DE TESTES:`);

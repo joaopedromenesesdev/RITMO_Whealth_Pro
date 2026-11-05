@@ -24,6 +24,223 @@
     // Limite de isenção anual legal do ITCMD (2.500 UFESPs / SP como padrão de referência nacional)
     LIMITE_ISENCAO_ANUAL: 96050,
 
+    // Tipos de Conta no Exterior & Regras Sucessórias (Página 5 BTG Pactual)
+    TIPOS_CONTA_EXTERIOR: {
+      individual: {
+        id: "individual",
+        nome: "Conta Individual",
+        nomeCurto: "Conta Individual",
+        sujeitoInventario: true,
+        congelamentoInventario: "Conta é congelada e está sujeita a inventário (somente liberada com o inventário e forms IRS)",
+        inventario: "Sujeita a inventário nos EUA (Probate judicial)",
+        congelamento: "Conta é congelada e somente liberada com inventário e envio de forms do IRS",
+        estateTax: "Conta está sujeita ao estate tax (tributável se >USD60K em ativos americanos)",
+        forms: "Form 706/705NA (apuração de estate tax) e Form 5173 (comprovante de recolhimento)",
+        formsNecessarios: "Form 706/705NA (apuração de estate tax) e Form 5173 (comprovante de recolhimento)"
+      },
+      tod: {
+        id: "tod",
+        nome: "Transfer on Death (TOD)",
+        nomeCurto: "Transfer on Death",
+        sujeitoInventario: false,
+        congelamentoInventario: "Conta é congelada e NÃO está sujeita a inventário (dispensa probate nos EUA)",
+        inventario: "Não está sujeita a inventário",
+        congelamento: "Conta é congelada e liberada após envio de forms do IRS",
+        estateTax: "Conta está sujeita ao estate tax (tributável se >USD60K em ativos americanos)",
+        forms: "Form 706/705NA (apuração de estate tax) e Form 5173 (comprovante de recolhimento)",
+        formsNecessarios: "Form 706/705NA (apuração de estate tax) e Form 5173 (comprovante de recolhimento)"
+      },
+      tic: {
+        id: "tic",
+        nome: "Joint Tenants in Common (TIC)",
+        nomeCurto: "Joint Tenants in Common",
+        sujeitoInventario: true,
+        congelamentoInventario: "Conta é congelada na proporção da participação do falecido (outra parcela é liberada)",
+        inventario: "Sujeita a inventário na proporção da participação do falecido",
+        congelamento: "Conta é congelada na proporção da participação do falecido, sendo liberada a outra parcela",
+        estateTax: "Conta está sujeita ao estate tax (tributável se >USD60K em ativos americanos)",
+        forms: "Form 706/705NA (apuração de estate tax) e Form 5173 (comprovante de recolhimento)",
+        formsNecessarios: "Form 706/705NA (apuração de estate tax) e Form 5173 (comprovante de recolhimento)"
+      },
+      jtwrs: {
+        id: "jtwrs",
+        nome: "JTWRS (Joint Tenants with Rights of Survivorship)",
+        nomeCurto: "JTWRS",
+        sujeitoInventario: false,
+        congelamentoInventario: "Conta é congelada e NÃO está sujeita a inventário (transmissão ao titular sobrevivente)",
+        inventario: "Não está sujeita a inventário",
+        congelamento: "Conta é congelada temporariamente para apuração fiscal",
+        estateTax: "Conta está sujeita ao estate tax (tributável se >USD60K em ativos americanos)",
+        forms: "Form 706/705NA (apuração de estate tax) e Form 5173 (comprovante de recolhimento)",
+        formsNecessarios: "Form 706/705NA (apuração de estate tax) e Form 5173 (comprovante de recolhimento)"
+      }
+    },
+
+    // Ativos NÃO sujeitos ao US Estate Tax (Página 4 BTG Pactual)
+    ATIVOS_ISENTOS_ESTATE_TAX: [
+      { id: "tbills", nome: "T-Bills (Treasury Bills)", categoria: "Renda Fixa Pública" },
+      { id: "bonds_federais", nome: "Bonds federais (US Treasuries)", categoria: "Renda Fixa Pública" },
+      { id: "bonds_corpo_us", nome: "Bonds emitidos por companhias americanas", categoria: "Renda Fixa Corporativa" },
+      { id: "bonds_corpo_non_us", nome: "Bonds emitidos por companhias fora dos Estados Unidos", categoria: "Renda Fixa Internacional" },
+      { id: "fundos_non_us", nome: "Fundos de investimentos registrados fora dos Estados Unidos (ex: ETFs UCITS)", categoria: "Fundos / ETFs" },
+      { id: "acoes_non_us", nome: "Ações emitidas fora dos Estados Unidos", categoria: "Renda Variável Internacional" },
+      { id: "conta_banco_us", nome: "Conta em banco americano (depósito bancário)", categoria: "Caixa / Disponibilidade" },
+      { id: "seguro_vida", nome: "Life insurance death benefit (Seguro de Vida)", categoria: "Seguros" },
+      { id: "imovel_non_us", nome: "Imóvel localizado fora dos Estados Unidos", categoria: "Imóveis" }
+    ],
+
+    // Tabela progressiva oficial de US Estate Tax para não-residentes (Página 3 BTG Pactual)
+    // Aplicada estritamente sobre a base que exceder a isenção geral de USD 60.000,00
+    FAIXAS_ESTATE_TAX: [
+      { faixa: 1, de: 0, ate: 10000, aliquota: 0.18, aliquotaPercentual: 18, baseMaxima: 10000, impostoAcumuladoAnterior: 0 },
+      { faixa: 2, de: 10000, ate: 20000, aliquota: 0.20, aliquotaPercentual: 20, baseMaxima: 10000, impostoAcumuladoAnterior: 1800 },
+      { faixa: 3, de: 20000, ate: 40000, aliquota: 0.22, aliquotaPercentual: 22, baseMaxima: 20000, impostoAcumuladoAnterior: 3800 },
+      { faixa: 4, de: 40000, ate: 60000, aliquota: 0.24, aliquotaPercentual: 24, baseMaxima: 20000, impostoAcumuladoAnterior: 8200 },
+      { faixa: 5, de: 60000, ate: 80000, aliquota: 0.26, aliquotaPercentual: 26, baseMaxima: 20000, impostoAcumuladoAnterior: 13000 },
+      { faixa: 6, de: 80000, ate: 100000, aliquota: 0.28, aliquotaPercentual: 28, baseMaxima: 20000, impostoAcumuladoAnterior: 18200 },
+      { faixa: 7, de: 100000, ate: 150000, aliquota: 0.30, aliquotaPercentual: 30, baseMaxima: 50000, impostoAcumuladoAnterior: 23800 },
+      { faixa: 8, de: 150000, ate: 250000, aliquota: 0.32, aliquotaPercentual: 32, baseMaxima: 100000, impostoAcumuladoAnterior: 38800 },
+      { faixa: 9, de: 250000, ate: 500000, aliquota: 0.34, aliquotaPercentual: 34, baseMaxima: 250000, impostoAcumuladoAnterior: 70800 },
+      { faixa: 10, de: 500000, ate: 750000, aliquota: 0.37, aliquotaPercentual: 37, baseMaxima: 250000, impostoAcumuladoAnterior: 155800 },
+      { faixa: 11, de: 750000, ate: 1000000, aliquota: 0.39, aliquotaPercentual: 39, baseMaxima: 250000, impostoAcumuladoAnterior: 248300 },
+      { faixa: 12, de: 1000000, ate: Infinity, aliquota: 0.40, aliquotaPercentual: 40, baseMaxima: Infinity, impostoAcumuladoAnterior: 345800 }
+    ],
+
+    // Calcula o US Estate Tax de forma progressiva
+    // Regra mandatória: O imposto incide exclusivamente sobre o valor excedente aos USD 60.000,00 e não sobre o total.
+    calcularEstateTaxProgressivo(valorTotalUSD) {
+      const totalUSD = Math.max(0, Number(valorTotalUSD) || 0);
+      const isencaoUSD = 60000;
+      const excedenteUSD = Math.max(0, totalUSD - isencaoUSD);
+      const fraseExplicativa = "O imposto é cobrado exclusivamente sobre o valor excedente aos 60 mil dólares e não sobre o valor total.";
+
+      if (excedenteUSD === 0) {
+        return {
+          totalUSD,
+          isencaoUSD,
+          excedenteUSD: 0,
+          impostoTotalUSD: 0,
+          aliquotaEfetivaExcedente: 0,
+          aliquotaEfetivaTotal: 0,
+          aliquotaMarginal: 0,
+          fraseExplicativa,
+          isento: true,
+          detalhamento: []
+        };
+      }
+
+      let impostoTotalUSD = 0;
+      let aliquotaMarginal = 0;
+      const detalhamento = [];
+
+      for (let i = 0; i < this.FAIXAS_ESTATE_TAX.length; i++) {
+        const faixa = this.FAIXAS_ESTATE_TAX[i];
+        if (excedenteUSD > faixa.de) {
+          const baseNaFaixa = Math.min(excedenteUSD - faixa.de, faixa.ate - faixa.de);
+          const impostoFaixa = baseNaFaixa * faixa.aliquota;
+          impostoTotalUSD += impostoFaixa;
+          aliquotaMarginal = faixa.aliquotaPercentual;
+
+          detalhamento.push({
+            faixaNumero: faixa.faixa,
+            de: faixa.de,
+            ate: faixa.ate === Infinity ? null : faixa.ate,
+            baseTributada: Math.round(baseNaFaixa * 100) / 100,
+            aliquota: faixa.aliquotaPercentual,
+            impostoFaixa: Math.round(impostoFaixa * 100) / 100
+          });
+        }
+      }
+
+      impostoTotalUSD = Math.round(impostoTotalUSD * 100) / 100;
+      const aliquotaEfetivaExcedente = excedenteUSD > 0
+        ? Math.round((impostoTotalUSD / excedenteUSD) * 10000) / 100
+        : 0;
+      const aliquotaEfetivaTotal = totalUSD > 0
+        ? Math.round((impostoTotalUSD / totalUSD) * 10000) / 100
+        : 0;
+
+      return {
+        totalUSD,
+        isencaoUSD,
+        excedenteUSD: Math.round(excedenteUSD * 100) / 100,
+        impostoTotalUSD,
+        aliquotaEfetivaExcedente,
+        aliquotaEfetivaTotal,
+        aliquotaMarginal,
+        fraseExplicativa,
+        isento: false,
+        detalhamento
+      };
+    },
+
+    // Analisa exposição a Estate Tax com base no saldo e ativos isentos
+    analisarExposicaoEstateTax(params = {}) {
+      const valorUSD = Math.max(0, Number(params.valorOffshoreUSD) || 0);
+      const ativosIsentos = Array.isArray(params.ativosIsentos) ? params.ativosIsentos : [];
+      const qtdIsentos = ativosIsentos.length;
+      const limiteIsencaoGeralUSD = 60000;
+      const temOffshore = valorUSD > 0;
+      const excedeIsencaoGeral = valorUSD > limiteIsencaoGeralUSD;
+      const calculoProgressivo = this.calcularEstateTaxProgressivo(valorUSD);
+      const fraseExplicativa = "O imposto é cobrado exclusivamente sobre o valor excedente aos 60 mil dólares e não sobre o valor total.";
+
+      if (!temOffshore) {
+        return {
+          status: "sem_offshore",
+          mensagem: "Sem aplicações offshore cadastradas.",
+          classeBadge: "neutral",
+          exposicao: false,
+          fraseExplicativa,
+          calculoProgressivo
+        };
+      }
+
+      if (qtdIsentos > 0) {
+        return {
+          status: "ativos_isentos_selecionados",
+          mensagem: `${qtdIsentos} ativo(s) sem incidência de Estate Tax selecionado(s). Ativos como T-Bills, Treasuries, Bonds e fundos UCITS possuem isenção fiscal nos EUA.`,
+          classeBadge: "protegido",
+          exposicao: false,
+          qtdIsentos,
+          fraseExplicativa,
+          calculoProgressivo: {
+            ...calculoProgressivo,
+            impostoTotalUSD: 0,
+            aliquotaEfetivaExcedente: 0,
+            aliquotaEfetivaTotal: 0,
+            isentoPorAtivo: true
+          }
+        };
+      }
+
+      if (excedeIsencaoGeral) {
+        return {
+          status: "potencial_exposicao",
+          mensagem: `Atenção: Saldo superior a USD 60.000. Se houver ações de empresas americanas diretas ou ETFs sediados nos EUA (como SPY/VOO), haverá incidência de Estate Tax progressivo (18% a 40%) sobre o valor excedente.`,
+          classeBadge: "alerta",
+          exposicao: true,
+          fraseExplicativa,
+          calculoProgressivo
+        };
+      }
+
+      return {
+        status: "dentro_limite_isencao",
+        mensagem: "Saldo offshore dentro da faixa de isenção geral de USD 60.000 para não-residentes (NRA).",
+        classeBadge: "info",
+        exposicao: false,
+        fraseExplicativa,
+        calculoProgressivo
+      };
+    },
+
+    // Consulta de regras da conta exterior com fallback seguro para Conta Individual
+    obterRegrasContaExterior(tipoId) {
+      const chave = String(tipoId || "individual").toLowerCase().trim();
+      return this.TIPOS_CONTA_EXTERIOR[chave] || this.TIPOS_CONTA_EXTERIOR.individual;
+    },
+
     // Valida e aplica trava ao valor anual de doação isenta
     validarLimiteDoacaoIsenta(valor) {
       const num = Math.max(0, Number(valor) || 0);
@@ -63,6 +280,62 @@
         valorCustas,
         totalPrejuizo,
         pctPrejuizoTotal
+      };
+    },
+
+    // Gera a memória de cálculo analítica e auditável do prejuízo tributário
+    calcularMemoriaPrejuizo(params) {
+      const p = params || {};
+      const patrimonioBruto = Math.max(0, Number(p.totalPatrimonio) || 0);
+      const valorPrevidencia = Math.max(0, Number(p.valorPrevidencia) || 0);
+      const valorOffshore = Math.max(0, Number(p.valorOffshore) || 0);
+
+      // Subtotal líquido excluindo ativos isentos de inventário e ativos offshore
+      const subtotalLiquido = Math.max(0, patrimonioBruto - valorPrevidencia - valorOffshore);
+
+      // Avaliação do regime matrimonial
+      const regimeStr = String(p.regime || "").toLowerCase();
+      const temMeacao = regimeStr.includes("comunhão") || regimeStr.includes("comunhao") ||
+                        regimeStr.includes("participação final") || regimeStr.includes("participacao final") ||
+                        regimeStr.includes("aquestos");
+      const multiplicadorRegime = temMeacao ? 0.5 : 1.0;
+      const regimeDescricao = temMeacao ? "50% (Meação do Cônjuge)" : "100% (Sem Meação)";
+
+      // Base tributável final
+      const baseTributavel = subtotalLiquido * multiplicadorRegime;
+
+      // Taxas e encargos incidentes
+      const taxaITCMD = Math.max(0, Number(p.itcmd) || 0);
+      const taxaHonorarios = Math.max(0, Number(p.honorarios) || 0);
+      const taxaCustas = Math.max(0, Number(p.custas) || 0);
+      const taxaTotal = taxaITCMD + taxaHonorarios + taxaCustas;
+
+      // Valores nominais de cada custo
+      const valorITCMD = baseTributavel * (taxaITCMD / 100);
+      const valorHonorarios = baseTributavel * (taxaHonorarios / 100);
+      const valorCustas = baseTributavel * (taxaCustas / 100);
+      const prejuizoTotal = baseTributavel * (taxaTotal / 100);
+
+      const pctSobrePatrimonio = patrimonioBruto > 0 ? (prejuizoTotal / patrimonioBruto) * 100 : 0;
+
+      return {
+        patrimonioBruto,
+        valorPrevidencia,
+        valorOffshore,
+        subtotalLiquido,
+        multiplicadorRegime,
+        temMeacao,
+        regimeDescricao,
+        baseTributavel,
+        taxaITCMD,
+        valorITCMD,
+        taxaHonorarios,
+        valorHonorarios,
+        taxaCustas,
+        valorCustas,
+        taxaTotal,
+        prejuizoTotal,
+        pctSobrePatrimonio
       };
     },
 
@@ -122,10 +395,11 @@
 
       const totalNum = Math.max(0, Number(params.totalPatrimonio) || 0);
       const prevNum = Math.max(0, Number(params.valorPrevidencia) || 0);
+      const offshoreNum = Math.max(0, Number(params.valorOffshore) || 0);
       const bensParticularesNum = Math.max(0, Number(params.bensParticulares) || 0);
 
-      // Previdência não entra em inventário (isenta da partilha judicial)
-      const totalCalculo = Math.max(0, totalNum - prevNum);
+      // Previdência e Aplicações Offshore não entram no inventário estadual brasileiro
+      const totalCalculo = Math.max(0, totalNum - prevNum - offshoreNum);
 
       const casado = String(fam.estadoCivil || "").toLowerCase() === "casado";
       const temFilhos = String(fam.temFilhos || "").toLowerCase() === "sim";
@@ -373,6 +647,57 @@
           premioMensal
         }
       };
+    },
+
+    /**
+     * 9. Consolida métricas de usabilidade por usuário (acessos e relatórios gerados) para o Painel Master
+     */
+    consolidarUsabilidadeMaster(perfis = [], relatorios = []) {
+      const mapa = new Map();
+      const masterUid = "130e3598-89b9-4702-a4cc-2c5923fa3a66";
+
+      (Array.isArray(perfis) ? perfis : []).forEach(p => {
+        if (!p || !p.id) return;
+        const roleFinal = (p.id === masterUid || String(p.role || "").toLowerCase() === "master")
+          ? "master"
+          : (p.role || "assessor").toLowerCase();
+        mapa.set(p.id, {
+          id: p.id,
+          email: p.email || "",
+          full_name: p.full_name || "Assessor",
+          role: roleFinal,
+          ultimo_acesso: p.ultimo_acesso || p.last_sign_in_at || null,
+          total_relatorios: 0,
+          total_patrimonio: 0
+        });
+      });
+
+      (Array.isArray(relatorios) ? relatorios : []).forEach(r => {
+        if (!r || !r.userId) return;
+        const u = mapa.get(r.userId);
+        if (u) {
+          u.total_relatorios += 1;
+          u.total_patrimonio += Number(r.totalPatrimonio) || 0;
+          if (!u.ultimo_acesso || (r.dataCriacao && new Date(r.dataCriacao) > new Date(u.ultimo_acesso))) {
+            u.ultimo_acesso = r.dataCriacao;
+          }
+        }
+      });
+
+      return Array.from(mapa.values());
+    },
+
+    /**
+     * 10. Filtra relatórios conforme perfil do usuário (Master tem acesso completo a todos os relatórios)
+     */
+    filtrarRelatoriosPorPermissao(relatorios = [], usuario = null) {
+      if (!usuario || !Array.isArray(relatorios)) return [];
+      const masterUid = "130e3598-89b9-4702-a4cc-2c5923fa3a66";
+      const isMaster = usuario.role === "master" ||
+        usuario.profile_role === "master" ||
+        usuario.id === masterUid;
+      if (isMaster) return [...relatorios];
+      return relatorios.filter(r => r.userId === usuario.id);
     }
   };
 

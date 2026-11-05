@@ -20,7 +20,7 @@ window.onload = function () {
   let rv = parseValor(dados.rv);
   let inter = parseValor(dados.inter);
   let prev = parseValor(dados.prev);
-  let offshore = parseValor(dados.offshore);
+  let offshore = obterOffshoreBRL(dados);
 
   let apt = parseValor(dados.apt);
   let casa = parseValor(dados.casa);
@@ -231,6 +231,54 @@ function parseValor(v) {
       .replace(/\./g, "")
       .replace(",", ".")
   ) || 0;
+}
+
+function obterOffshoreBRL(dadosPatrimonio) {
+  if (!dadosPatrimonio) return 0;
+  if (dadosPatrimonio.offshore_brl !== undefined && dadosPatrimonio.offshore_brl !== null) {
+    return Number(dadosPatrimonio.offshore_brl) || 0;
+  }
+  const raw = parseValor(dadosPatrimonio.offshore);
+  if (dadosPatrimonio.offshore_modo === "usd") {
+    let cotacaoCache = {};
+    try {
+      cotacaoCache = JSON.parse(sessionStorage.getItem("ptax_cotacao_cache") || "{}");
+    } catch (e) { }
+    const ptax = Number(dadosPatrimonio.offshore_ptax) || Number(cotacaoCache.cotacao) || 1;
+    return raw * ptax;
+  }
+  return raw;
+}
+
+function calcularPatrimonioNacionalBruto(dadosPatrimonio) {
+  if (!dadosPatrimonio || Object.keys(dadosPatrimonio).length === 0) {
+    const salvo = sessionStorage.getItem("total_patrimonio_nacional");
+    if (salvo !== null) return Number(salvo) || 0;
+    return Number(sessionStorage.getItem("total_patrimonio")) || 0;
+  }
+  const rf = parseValor(dadosPatrimonio.rf);
+  const rv = parseValor(dadosPatrimonio.rv);
+  const inter = parseValor(dadosPatrimonio.inter);
+  const prev = parseValor(dadosPatrimonio.prev);
+
+  const apt = parseValor(dadosPatrimonio.apt);
+  const casa = parseValor(dadosPatrimonio.casa);
+  const terr = parseValor(dadosPatrimonio.terr);
+  const galp = parseValor(dadosPatrimonio.galp);
+  const bens_particulares = parseValor(dadosPatrimonio.bens_particulares);
+
+  const bens = parseValor(dadosPatrimonio.bens);
+
+  let totalEmpresas = 0;
+  if (Array.isArray(dadosPatrimonio.empresas)) {
+    dadosPatrimonio.empresas.forEach(emp => {
+      const valor = parseValor(emp.valor);
+      const pct = Number(emp.pct) || 0;
+      totalEmpresas += valor * (pct / 100);
+    });
+  }
+
+  return rf + rv + inter + prev + apt + casa + terr + galp + bens_particulares + bens + totalEmpresas;
 }
 
 
@@ -609,7 +657,7 @@ function criarGraficos(dados, scope = document) {
   let rv = parseValor(dados.rv);
   let inter = parseValor(dados.inter);
   let prev = parseValor(dados.prev);
-  let offshore = parseValor(dados.offshore);
+  let offshore = obterOffshoreBRL(dados);
 
   let apt = parseValor(dados.apt);
   let casa = parseValor(dados.casa);
@@ -954,8 +1002,13 @@ function carregarResumoSidebar() {
   const totalAtual = Number(sessionStorage.getItem("total_patrimonio")) || 0;
   const dadosPatrimonio = JSON.parse(sessionStorage.getItem("patrimonio_dados")) || {};
   const prev = parseValor(dadosPatrimonio.prev);
+  const offshore = obterOffshoreBRL(dadosPatrimonio);
 
-  const dadosEvolucao = JSON.parse(sessionStorage.getItem("evolucao_dados")) || { resultados: [], resultadosPrev: [] };
+  const patrimonioNacionalAtual = Object.keys(dadosPatrimonio).length > 0
+    ? calcularPatrimonioNacionalBruto(dadosPatrimonio)
+    : Math.max(0, totalAtual - offshore);
+
+  const dadosEvolucao = JSON.parse(sessionStorage.getItem("evolucao_dados")) || { resultados: [], resultadosPrev: [], resultadosNacional: [] };
   const totalProjetado = (dadosEvolucao.resultados && dadosEvolucao.resultados.length > 0)
     ? dadosEvolucao.resultados[dadosEvolucao.resultados.length - 1]
     : totalAtual;
@@ -964,23 +1017,177 @@ function carregarResumoSidebar() {
     ? dadosEvolucao.resultadosPrev[dadosEvolucao.resultadosPrev.length - 1]
     : prev;
 
+  // Calcula o patrimônio nacional projetado de forma 100% determinística e imune a offshore
+  let patrimonioNacionalProjetado = patrimonioNacionalAtual;
+  const anosProj = Number(dadosEvolucao.tempo) || (Array.isArray(dadosEvolucao.resultados) && dadosEvolucao.resultados.length > 1 ? dadosEvolucao.resultados.length - 1 : 0);
+  if (anosProj > 0 && dadosEvolucao.taxa !== undefined) {
+    const taxaNum = parseValor(dadosEvolucao.taxa) / 100;
+    const aporteAnual = Number(dadosEvolucao.aporteAnual) || 0;
+    let nacAcum = patrimonioNacionalAtual;
+    for (let i = 0; i < anosProj; i++) {
+      nacAcum = nacAcum * (1 + taxaNum) + aporteAnual;
+    }
+    patrimonioNacionalProjetado = Math.round(nacAcum);
+  } else if (Array.isArray(dadosEvolucao.resultadosNacional) && dadosEvolucao.resultadosNacional.length > 0) {
+    patrimonioNacionalProjetado = dadosEvolucao.resultadosNacional[dadosEvolucao.resultadosNacional.length - 1];
+  }
+
   const dadosFamilia = JSON.parse(sessionStorage.getItem("familia")) || {};
   const regime = dadosFamilia.regime || "Não informado";
 
   const elAtual = document.getElementById("resumo_atual");
   const elPrevAtual = document.getElementById("resumo_prev_atual");
+  const elOffAtual = document.getElementById("resumo_offshore_atual");
   const elProj = document.getElementById("resumo_projetado");
   const elPrevProj = document.getElementById("resumo_prev_projetada");
   const elRegime = document.getElementById("resumo_regime");
 
   if (elAtual) elAtual.innerText = "R$ " + totalAtual.toLocaleString("pt-BR");
   if (elPrevAtual) elPrevAtual.innerText = "R$ " + prev.toLocaleString("pt-BR");
+  if (elOffAtual) elOffAtual.innerText = "R$ " + offshore.toLocaleString("pt-BR");
   if (elProj) elProj.innerText = "R$ " + totalProjetado.toLocaleString("pt-BR");
   if (elPrevProj) elPrevProj.innerText = "R$ " + prevProjetado.toLocaleString("pt-BR");
   if (elRegime) elRegime.innerText = regime;
 
   // Armazena para uso no cálculo
-  window.dadosCalculo = { totalAtual, totalProjetado, prev, prevProjetado, regime };
+  window.dadosCalculo = {
+    totalAtual,
+    totalProjetado,
+    patrimonioNacionalAtual,
+    patrimonioNacionalProjetado,
+    prev,
+    prevProjetado,
+    offshore,
+    regime
+  };
+
+  atualizarBlocoOffshoreEstateTaxUI(dadosPatrimonio);
+}
+
+function atualizarBlocoOffshoreEstateTaxUI(dadosPatrimonio) {
+  const blocoSimulacao = document.getElementById("bloco_simulacao_estate_tax");
+  const blocoPdf = document.getElementById("bloco_pdf_offshore_estate_tax");
+  if (!dadosPatrimonio) return;
+
+  const offshoreBRL = obterOffshoreBRL(dadosPatrimonio);
+  const ptax = Number(dadosPatrimonio.offshore_ptax) || Number(cotacaoCache.cotacao) || 5.5;
+  const offshoreUSD = (dadosPatrimonio.offshore_modo === "usd" && dadosPatrimonio.offshore_usd !== undefined && dadosPatrimonio.offshore_usd !== null)
+    ? Number(dadosPatrimonio.offshore_usd) || 0
+    : (offshoreBRL > 0 ? offshoreBRL / ptax : 0);
+
+  if (offshoreBRL <= 0 && offshoreUSD <= 0) {
+    if (blocoSimulacao) blocoSimulacao.style.display = "none";
+    if (blocoPdf) blocoPdf.style.display = "none";
+    return;
+  }
+
+  const ativosIsentos = Array.isArray(dadosPatrimonio.ativos_sem_estate_tax)
+    ? dadosPatrimonio.ativos_sem_estate_tax
+    : [];
+
+  let diag;
+  if (window.TributarioEngine && typeof window.TributarioEngine.analisarExposicaoEstateTax === "function") {
+    diag = window.TributarioEngine.analisarExposicaoEstateTax({
+      valorOffshoreUSD: offshoreUSD,
+      ativosIsentos
+    });
+  } else {
+    const excede = offshoreUSD > 60000;
+    const excedente = Math.max(0, offshoreUSD - 60000);
+    diag = {
+      classeBadge: ativosIsentos.length > 0 ? "protegido" : (excede ? "alerta" : "info"),
+      mensagem: ativosIsentos.length > 0
+        ? `${ativosIsentos.length} ativo(s) sem incidência de Estate Tax selecionado(s).`
+        : (excede ? "Saldo superior a USD 60.000 sujeito a Estate Tax sobre o excedente." : "Saldo dentro do limite de USD 60.000."),
+      calculoProgressivo: {
+        totalUSD: offshoreUSD,
+        isencaoUSD: 60000,
+        excedenteUSD: excedente,
+        impostoTotalUSD: 0,
+        aliquotaEfetivaExcedente: 0,
+        aliquotaMarginal: 0
+      }
+    };
+  }
+
+  const calc = diag.calculoProgressivo || {
+    totalUSD: offshoreUSD,
+    isencaoUSD: 60000,
+    excedenteUSD: Math.max(0, offshoreUSD - 60000),
+    impostoTotalUSD: 0,
+    aliquotaEfetivaExcedente: 0,
+    aliquotaMarginal: 0
+  };
+
+  const tipoConta = String(dadosPatrimonio.tipo_conta_exterior || "individual").toLowerCase();
+  const regrasConta = window.TributarioEngine && typeof window.TributarioEngine.obterRegrasContaExterior === "function"
+    ? window.TributarioEngine.obterRegrasContaExterior(tipoConta)
+    : { nome: "Conta Individual", inventario: "Sujeita a inventário nos EUA" };
+
+  const fmtUSD = (v) => "USD " + Number(v || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtBRL = (v) => "R$ " + Number(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  // 1. Atualiza Card da Tela de Simulação
+  if (blocoSimulacao) {
+    blocoSimulacao.style.display = "block";
+    const elBadgeConta = document.getElementById("badge_tipo_conta_offshore");
+    if (elBadgeConta) elBadgeConta.innerText = (regrasConta.nome || "Conta Individual").toUpperCase();
+
+    const elDesc = document.getElementById("desc_diagnostico_offshore");
+    if (elDesc) {
+      elDesc.innerHTML = `
+        <strong>Estrutura: ${regrasConta.nome}.</strong> ${regrasConta.inventario || "Excluída do inventário no Brasil."}
+        ${diag.mensagem}
+      `;
+    }
+
+    const elTotalUSD = document.getElementById("metrica_offshore_total");
+    const elTotalBRL = document.getElementById("metrica_offshore_brl");
+    const elExcedente = document.getElementById("metrica_offshore_excedente");
+    const elImpostoUSD = document.getElementById("metrica_offshore_imposto");
+    const elImpostoBRL = document.getElementById("metrica_offshore_imposto_brl");
+    const elAliquota = document.getElementById("metrica_offshore_aliquota");
+    const elMarginal = document.getElementById("metrica_offshore_marginal");
+
+    if (elTotalUSD) elTotalUSD.innerText = fmtUSD(calc.totalUSD);
+    if (elTotalBRL) elTotalBRL.innerText = `~ ${fmtBRL(offshoreBRL)}`;
+    if (elExcedente) elExcedente.innerText = fmtUSD(calc.excedenteUSD);
+    if (elImpostoUSD) {
+      elImpostoUSD.innerText = fmtUSD(calc.impostoTotalUSD);
+      elImpostoUSD.style.color = calc.impostoTotalUSD > 0 ? "#b91c1c" : "#16a34a";
+    }
+    if (elImpostoBRL) elImpostoBRL.innerText = `~ ${fmtBRL(calc.impostoTotalUSD * ptax)}`;
+    if (elAliquota) elAliquota.innerText = `${calc.aliquotaEfetivaExcedente}%`;
+    if (elMarginal) elMarginal.innerText = `Marginal: ${calc.aliquotaMarginal}%`;
+
+    const elAviso = document.getElementById("aviso_regra_excedente_offshore");
+    if (elAviso) {
+      elAviso.className = diag.classeBadge === "protegido"
+        ? "aviso-excedente-estate-tax aviso-sucesso"
+        : (diag.classeBadge === "alerta" ? "aviso-excedente-estate-tax" : "aviso-excedente-estate-tax aviso-info");
+    }
+  }
+
+  // 2. Atualiza Card no Relatório PDF
+  if (blocoPdf) {
+    blocoPdf.style.display = "block";
+    const elPdfTag = document.getElementById("pdf_tag_conta_offshore");
+    const elPdfDesc = document.getElementById("pdf_desc_offshore");
+    const elPdfTotal = document.getElementById("pdf_val_offshore_usd");
+    const elPdfTax = document.getElementById("pdf_val_estate_tax");
+
+    if (elPdfTag) elPdfTag.innerText = (regrasConta.nome || "Conta Individual").toUpperCase();
+    if (elPdfDesc) {
+      elPdfDesc.innerText = `Patrimônio offshore (${regrasConta.nome}) excluído da partilha no Brasil. ${diag.mensagem}`;
+    }
+    if (elPdfTotal) elPdfTotal.innerText = `${fmtUSD(calc.totalUSD)} (~ ${fmtBRL(offshoreBRL)})`;
+    if (elPdfTax) {
+      elPdfTax.innerText = calc.impostoTotalUSD > 0
+        ? `${fmtUSD(calc.impostoTotalUSD)} (${calc.aliquotaEfetivaExcedente}%)`
+        : "USD 0,00 (Isento)";
+      elPdfTax.style.color = calc.impostoTotalUSD > 0 ? "#b91c1c" : "#16a34a";
+    }
+  }
 }
 
 function atualizarITCMD() {
@@ -995,7 +1202,16 @@ function atualizarITCMD() {
 function calcularPrejuizo() {
   if (!window.dadosCalculo) carregarResumoSidebar();
 
-  const { totalAtual, totalProjetado, prev, prevProjetado, regime } = window.dadosCalculo;
+  const {
+    totalAtual,
+    totalProjetado,
+    patrimonioNacionalAtual,
+    patrimonioNacionalProjetado,
+    prev,
+    prevProjetado,
+    offshore = 0,
+    regime
+  } = window.dadosCalculo;
 
   const itcmd = Number(document.getElementById("taxa_itcmd")?.value) || 0;
   const honorarios = Number(document.getElementById("taxa_honorarios")?.value) || 0;
@@ -1007,9 +1223,12 @@ function calcularPrejuizo() {
   const regimeLower = regime.toLowerCase();
   const multiplicadorRegime = (regimeLower.includes("comunhão") || regimeLower.includes("participação final") || regimeLower.includes("aquestos")) ? 0.5 : 1;
 
-  // Base de Cálculo: Abate a previdência e a meação
-  const baseAtual = Math.max(0, totalAtual - prev) * multiplicadorRegime;
-  const baseProjetada = Math.max(0, totalProjetado - prevProjetado) * multiplicadorRegime;
+  // Base de Cálculo: Usa exclusivamente o patrimônio nacional (excluindo 100% de offshore e seus rendimentos) e abate a previdência e a meação
+  const nacAtual = patrimonioNacionalAtual !== undefined ? patrimonioNacionalAtual : Math.max(0, totalAtual - offshore);
+  const nacProj = patrimonioNacionalProjetado !== undefined ? patrimonioNacionalProjetado : Math.max(0, totalProjetado - offshore);
+
+  const baseAtual = Math.max(0, nacAtual - prev) * multiplicadorRegime;
+  const baseProjetada = Math.max(0, nacProj - prevProjetado) * multiplicadorRegime;
 
   const prejuizoAtual = baseAtual * (taxaTotal / 100);
   const prejuizoProjetado = baseProjetada * (taxaTotal / 100);
@@ -1040,7 +1259,6 @@ function calcularPrejuizo() {
   const dadosPatrimonio = JSON.parse(sessionStorage.getItem("patrimonio_dados")) || {};
   const rf = parseValor(dadosPatrimonio.rf);
   const inter = parseValor(dadosPatrimonio.inter);
-  const offshore = parseValor(dadosPatrimonio.offshore);
   const liquidez = rf + prev + inter + offshore;
   const imobilizado = totalAtual > 0 ? (totalAtual - liquidez) : 0;
 
@@ -1497,6 +1715,7 @@ function calcularPartilha(total, regime) {
   const familia = JSON.parse(sessionStorage.getItem("familia")) || {};
   const dadosPatrimonio = JSON.parse(sessionStorage.getItem("patrimonio_dados")) || {};
   const prev = parseValor(dadosPatrimonio.prev);
+  const offshore = parseValor(dadosPatrimonio.offshore);
   const bensParticulares = parseValor(dadosPatrimonio.bens_particulares);
 
   // 2. Chamada ao Model Puro (TributarioEngine)
@@ -1505,18 +1724,19 @@ function calcularPartilha(total, regime) {
     resultado = window.TributarioEngine.calcularPartilhaSucessoria({
       totalPatrimonio: total,
       valorPrevidencia: prev,
+      valorOffshore: offshore,
       bensParticulares: bensParticulares,
       familia: Object.assign({}, familia, { regime: regime || familia.regime })
     });
   } else {
     // Fallback de contingência
     resultado = {
-      totalCalculo: Math.max(0, total - prev),
+      totalCalculo: Math.max(0, total - prev - offshore),
       meacao: 0,
-      heranca: Math.max(0, total - prev),
+      heranca: Math.max(0, total - prev - offshore),
       fatiaConjugeTotal: 0,
       labels: ["Patrimônio"],
-      fatias: [Math.max(0, total - prev)]
+      fatias: [Math.max(0, total - prev - offshore)]
     };
   }
 
@@ -1550,10 +1770,14 @@ function calcularPartilha(total, regime) {
   const possuiColaterais = familia.possuiColaterais === "sim";
   const qtdColaterais = Number(familia.qtdColaterais) || 0;
 
-  // Previdência não entra em inventário (isenta/excluída da partilha judicial de meação e herança)
+  // Previdência e Aplicações Offshore não entram em inventário nacional (excluídas da partilha judicial de meação e herança no Brasil)
   const dadosPatrimonio = JSON.parse(sessionStorage.getItem("patrimonio_dados")) || {};
   const prev = parseValor(dadosPatrimonio.prev);
-  const totalCalculo = Math.max(0, total - prev);
+  const offshore = obterOffshoreBRL(dadosPatrimonio);
+  const nacTotal = Object.keys(dadosPatrimonio).length > 0
+    ? calcularPatrimonioNacionalBruto(dadosPatrimonio)
+    : Math.max(0, total - offshore);
+  const totalCalculo = Math.max(0, nacTotal - prev);
 
   let fatias = [];
   let labels = [];
@@ -2012,6 +2236,14 @@ async function abrirPreview() {
 
   // Limpa o modal antes de clonar
   modalBody.innerHTML = "";
+
+  // Garante sincronização dos dados offshore no preview
+  try {
+    const dadosPat = JSON.parse(sessionStorage.getItem("patrimonio_dados")) || {};
+    atualizarBlocoOffshoreEstateTaxUI(dadosPat);
+  } catch (e) {
+    console.warn("Erro ao atualizar bloco offshore no preview:", e);
+  }
 
   // Clona o conteúdo
   const clone = reportArea.cloneNode(true);

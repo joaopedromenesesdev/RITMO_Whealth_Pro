@@ -166,7 +166,8 @@ async function _descriptografarPayload(payload, userId) {
 }
 
 // Mapeia linha do Supabase para objeto padronizado (com descriptografia se necessário)
-async function _mapearLinhaSupabaseAsync(item, userId) {
+async function _mapearLinhaSupabaseAsync(item, fallbackUserId) {
+  const ownerId = item.user_id || fallbackUserId;
   let dadosCompletos = item.dados_completos;
   if (typeof dadosCompletos === "string" && dadosCompletos.length > 0) {
     try {
@@ -178,11 +179,12 @@ async function _mapearLinhaSupabaseAsync(item, userId) {
   }
 
   if (dadosCompletos && typeof dadosCompletos === "object" && dadosCompletos._encrypted) {
-    dadosCompletos = await _descriptografarPayload(dadosCompletos, userId);
+    dadosCompletos = await _descriptografarPayload(dadosCompletos, ownerId);
   }
 
   return {
     id: item.id,
+    userId: ownerId,
     nomeCliente: item.nome_cliente,
     nomeAssessor: item.nome_assessor,
     totalPatrimonio: Number(item.total_patrimonio),
@@ -191,6 +193,35 @@ async function _mapearLinhaSupabaseAsync(item, userId) {
     dataReuniao: dadosCompletos?.data_reuniao || new Date(item.data_criacao).toLocaleDateString("pt-BR"),
     dadosSessao: dadosCompletos
   };
+}
+
+// Verifica de forma segura se a sessão pertence a um usuário Master
+async function _verificarUsuarioMasterAsync(session) {
+  if (!session || !session.user) return false;
+  if (typeof window.authIsMaster === "function" && window.authIsMaster(session.user)) return true;
+  const uid = String(session.user.id || "").toLowerCase().trim();
+  if (Array.isArray(window.MASTER_UIDS_AUTORIZADOS) && window.MASTER_UIDS_AUTORIZADOS.includes(uid)) return true;
+  if (session.user.role === "master" || session.user.profile_role === "master") return true;
+  try {
+    const cached = JSON.parse(localStorage.getItem("pace_user_cache") || "{}");
+    if (cached && cached.email === session.user.email && cached.role === "master") {
+      return true;
+    }
+  } catch (e) { }
+  if (window.supabaseClient) {
+    try {
+      const { data: profile } = await window.supabaseClient
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .maybeSingle();
+      if (profile && profile.role === "master") {
+        session.user.role = "master";
+        return true;
+      }
+    } catch (e) { }
+  }
+  return false;
 }
 
 // Grava evento de auditoria no Supabase
@@ -274,23 +305,28 @@ async function executarComRetry(operacaoAsync, maxTentativas = 3, atrasoBaseMs =
 // ─── CRUD Principal ──────────────────────────────────────────────────────────
 
 // Carregar todos os relatórios do Supabase (com retry automático e fallback para LocalStorage)
+// Se o usuário autenticado for Master, retorna todos os relatórios gerados pelos assessores.
 async function dbObterRelatorios() {
   if (window.supabaseClient) {
     try {
       const session = await aguardarSessao();
       if (session) {
+        const isMaster = await _verificarUsuarioMasterAsync(session);
         const fetchRemote = async () => {
-          const { data, error } = await window.supabaseClient
+          let query = window.supabaseClient
             .from('relatorios')
             .select('*')
-            .eq('user_id', session.user.id)
             .order('data_criacao', { ascending: false });
+          if (!isMaster) {
+            query = query.eq('user_id', session.user.id);
+          }
+          const { data, error } = await query;
           if (error) throw error;
           return data;
         };
 
         const data = await executarComRetry(fetchRemote, 3, 300);
-        const mapeados = await Promise.all(data.map(item => _mapearLinhaSupabaseAsync(item, session.user.id)));
+        const mapeados = await Promise.all((data || []).map(item => _mapearLinhaSupabaseAsync(item, session.user.id)));
         // Atualiza o backup local com os dados mais recentes do servidor
         _salvarBackupLocal(session.user.id, mapeados);
         return mapeados;
@@ -326,13 +362,18 @@ async function dbSalvarRelatorio(relatorioEntrada) {
         throw new Error("Usuário não autenticado.");
       }
 
+      // Se um Master estiver atualizando o relatório de um assessor, preserva o user_id original do assessor
+      const ownerId = (isUUID(relatorio.id) && relatorioEntrada.userId)
+        ? relatorioEntrada.userId
+        : (sessionStorage.getItem("current_report_owner_id") || userId);
+
       const payload = {
         nome_cliente: relatorio.nomeCliente,
         nome_assessor: relatorio.nomeAssessor,
         total_patrimonio: relatorio.totalPatrimonio,
         prejuizo_tributario: relatorio.prejuizoTributario,
-        dados_completos: await _criptografarPayload(relatorio.dadosSessao, userId),
-        user_id: userId
+        dados_completos: await _criptografarPayload(relatorio.dadosSessao, ownerId),
+        user_id: ownerId
       };
 
       if (isUUID(relatorio.id)) {
@@ -360,7 +401,7 @@ async function dbSalvarRelatorio(relatorioEntrada) {
       }
 
       // Atualiza localmente no backup
-      const relatorioAtualizado = { ...relatorio, id: idFinal };
+      const relatorioAtualizado = { ...relatorio, id: idFinal, userId: ownerId };
       _salvarOuAtualizarItemBackup(userId, relatorioAtualizado);
 
     } catch (e) {
@@ -392,15 +433,22 @@ async function dbExcluirRelatorio(id) {
         throw new Error("Usuário não autenticado.");
       }
 
+      const isMaster = await _verificarUsuarioMasterAsync(session);
+
       // Remove do backup local
       _removerItemBackup(userId, id);
 
       if (isUUID(id)) {
-        const { error } = await window.supabaseClient
+        let query = window.supabaseClient
           .from('relatorios')
           .delete()
-          .eq('id', id)
-          .eq('user_id', userId);
+          .eq('id', id);
+
+        if (!isMaster) {
+          query = query.eq('user_id', userId);
+        }
+
+        const { error } = await query;
 
         if (error) throw error;
         console.log("[dbExcluirRelatorio] Relatório excluído do Supabase:", id);
@@ -653,6 +701,296 @@ async function dbRegistrarChamadoSuporte(dados) {
 }
 
 window.dbRegistrarChamadoSuporte = dbRegistrarChamadoSuporte;
+
+// ─── Sistema de Usuários Master: Consolidação de Usabilidade & Relatórios ─────
+
+// Diretório carregado dinamicamente via Supabase RPC (Zero-Leakage: nenhum e-mail ou nome real fica hardcoded no código)
+const DIRETORIO_USUARIOS_SISTEMA = [];
+
+function _formatarNomePorEmail(email, nomeAtual) {
+  const limpo = String(nomeAtual || "").trim();
+  if (limpo && limpo !== "-" && limpo !== "Assessor") {
+    return limpo;
+  }
+  if (!email || !email.includes("@")) return limpo || "Assessor";
+  const alias = email.split("@")[0];
+  return alias
+    .split(/[._-]/)
+    .filter(Boolean)
+    .map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function _normalizarRoleUsuarioMaster(id, roleOriginal) {
+  const idStr = String(id || "").trim();
+  const listaMasterUids = Array.isArray(window.MASTER_UIDS_AUTORIZADOS)
+    ? window.MASTER_UIDS_AUTORIZADOS
+    : ["130e3598-89b9-4702-a4cc-2c5923fa3a66"];
+  if (idStr && listaMasterUids.includes(idStr)) {
+    return "master";
+  }
+  return String(roleOriginal || "assessor").toLowerCase();
+}
+
+// Função pura para consolidar métricas de usabilidade de usuários e relatórios
+function calcularMetricasUsabilidadeEquipe(perfis = [], relatorios = [], acessosExtras = {}, incluirDiretorioPadrao = false) {
+  const mapaUsuarios = new Map();
+  const indicePorEmail = new Map();
+
+  const escolherDataMaisRecente = (...datas) => {
+    let maiorTs = 0;
+    let melhorIso = null;
+    datas.forEach(d => {
+      if (!d) return;
+      const ts = new Date(d).getTime();
+      if (!isNaN(ts) && ts > maiorTs) {
+        maiorTs = ts;
+        melhorIso = d;
+      }
+    });
+    return melhorIso;
+  };
+
+  const registrarOuMesclarPerfil = (p, ehDiretorioPadrao = false) => {
+    if (!p || (!p.id && !p.email)) return;
+    const emailNorm = String(p.email || "").toLowerCase().trim();
+    const idOriginal = p.id || emailNorm;
+    const extra = acessosExtras[idOriginal] || (emailNorm ? acessosExtras[emailNorm] : {}) || {};
+
+    const chaveExistentePorEmail = emailNorm ? indicePorEmail.get(emailNorm) : null;
+    const chaveAlvo = mapaUsuarios.has(idOriginal)
+      ? idOriginal
+      : (chaveExistentePorEmail || idOriginal);
+
+    if (mapaUsuarios.has(chaveAlvo)) {
+      const existente = mapaUsuarios.get(chaveAlvo);
+      const idFinal = (!ehDiretorioPadrao && p.id) ? p.id : existente.id;
+      const emailFinal = (p.email || existente.email || extra.email || "").trim();
+      const nomeCandidato = (p.full_name || extra.full_name || "").trim();
+      const nomeFinal = (nomeCandidato && nomeCandidato !== "Assessor" && nomeCandidato !== "-")
+        ? nomeCandidato
+        : _formatarNomePorEmail(emailFinal, existente.full_name);
+
+      const atualizado = {
+        ...existente,
+        id: idFinal,
+        email: emailFinal,
+        full_name: nomeFinal,
+        role: _normalizarRoleUsuarioMaster(idFinal, (!ehDiretorioPadrao && p.role) ? p.role : existente.role),
+        created_at: existente.created_at || p.created_at || null,
+        ultimo_acesso: escolherDataMaisRecente(
+          existente.ultimo_acesso,
+          p.ultimo_acesso,
+          p.last_sign_in_at,
+          extra.ultimo_acesso,
+          p.updated_at
+        ),
+        total_relatorios: Math.max(existente.total_relatorios || 0, Number(p.total_relatorios) || 0),
+        total_patrimonio: Math.max(existente.total_patrimonio || 0, Number(p.total_patrimonio) || 0),
+        ultimo_relatorio_em: escolherDataMaisRecente(existente.ultimo_relatorio_em, p.ultimo_relatorio_em),
+        _contabilizadoDaRpc: Boolean(existente._contabilizadoDaRpc || (!ehDiretorioPadrao && p.total_relatorios !== undefined && p.total_relatorios !== null))
+      };
+
+      if (idFinal !== chaveAlvo) {
+        mapaUsuarios.delete(chaveAlvo);
+      }
+      mapaUsuarios.set(idFinal, atualizado);
+      if (emailNorm) indicePorEmail.set(emailNorm, idFinal);
+      return;
+    }
+
+    const emailFinal = (p.email || extra.email || "").trim();
+    const nomeCru = (p.full_name || extra.full_name || "").trim();
+    const nomeFinal = (nomeCru && nomeCru !== "Assessor" && nomeCru !== "-")
+      ? nomeCru
+      : _formatarNomePorEmail(emailFinal, "Assessor");
+
+    const novoUsuario = {
+      id: idOriginal,
+      email: emailFinal,
+      full_name: nomeFinal,
+      role: _normalizarRoleUsuarioMaster(idOriginal, p.role || extra.role || "assessor"),
+      created_at: p.created_at || null,
+      ultimo_acesso: escolherDataMaisRecente(p.ultimo_acesso, p.last_sign_in_at, extra.ultimo_acesso, p.updated_at),
+      total_relatorios: Number(p.total_relatorios) || 0,
+      total_patrimonio: Number(p.total_patrimonio) || 0,
+      ultimo_relatorio_em: p.ultimo_relatorio_em || null,
+      _contabilizadoDaRpc: !ehDiretorioPadrao && p.total_relatorios !== undefined && p.total_relatorios !== null
+    };
+
+    mapaUsuarios.set(idOriginal, novoUsuario);
+    if (emailNorm) indicePorEmail.set(emailNorm, idOriginal);
+  };
+
+  // 0. Se solicitado, pré-carrega o diretório oficial de usuários do sistema Pace Capital
+  if (incluirDiretorioPadrao) {
+    DIRETORIO_USUARIOS_SISTEMA.forEach(uPadrao => registrarOuMesclarPerfil(uPadrao, true));
+  }
+
+  // 1. Registra/mescla perfis vindos do Supabase (RPC ou tabela profiles)
+  (Array.isArray(perfis) ? perfis : []).forEach(p => registrarOuMesclarPerfil(p, false));
+
+  // 2. Mescla acessos extras locais que ainda não estejam na lista
+  Object.keys(acessosExtras || {}).forEach(id => {
+    const ex = acessosExtras[id];
+    if (ex && (ex.email || ex.full_name)) {
+      registrarOuMesclarPerfil({ id, ...ex }, false);
+    }
+  });
+
+  // 3. Associa relatórios por user_id (ou nome/e-mail do assessor como fallback)
+  (Array.isArray(relatorios) ? relatorios : []).forEach(rep => {
+    if (!rep) return;
+    let alvo = rep.userId ? mapaUsuarios.get(rep.userId) : null;
+
+    if (!alvo && rep.nomeAssessor) {
+      const nomeBusca = String(rep.nomeAssessor).toLowerCase().trim();
+      for (const u of mapaUsuarios.values()) {
+        if (
+          (u.full_name || "").toLowerCase().trim() === nomeBusca ||
+          (u.email || "").toLowerCase().trim() === nomeBusca ||
+          (u.email || "").toLowerCase().split("@")[0] === nomeBusca
+        ) {
+          alvo = u;
+          break;
+        }
+      }
+    }
+
+    if (!alvo && rep.userId) {
+      alvo = {
+        id: rep.userId,
+        email: "",
+        full_name: rep.nomeAssessor || "Assessor",
+        role: "assessor",
+        created_at: rep.dataCriacao || null,
+        ultimo_acesso: rep.dataCriacao || null,
+        total_relatorios: 0,
+        total_patrimonio: 0,
+        ultimo_relatorio_em: null,
+        _contabilizadoDaRpc: false
+      };
+      mapaUsuarios.set(rep.userId, alvo);
+    }
+
+    if (alvo) {
+      if (!alvo._contabilizadoDaRpc) {
+        alvo.total_relatorios += 1;
+        alvo.total_patrimonio += Number(rep.totalPatrimonio) || 0;
+      }
+      alvo.ultimo_relatorio_em = escolherDataMaisRecente(alvo.ultimo_relatorio_em, rep.dataCriacao);
+      alvo.ultimo_acesso = escolherDataMaisRecente(alvo.ultimo_acesso, rep.dataCriacao);
+    }
+  });
+
+  const listaUsuarios = Array.from(mapaUsuarios.values()).map(u => {
+    const copia = { ...u };
+    delete copia._contabilizadoDaRpc;
+    return copia;
+  });
+
+  listaUsuarios.sort((a, b) => {
+    const tsA = a.ultimo_acesso ? new Date(a.ultimo_acesso).getTime() : 0;
+    const tsB = b.ultimo_acesso ? new Date(b.ultimo_acesso).getTime() : 0;
+    if (tsB !== tsA) return tsB - tsA;
+    if ((b.total_relatorios || 0) !== (a.total_relatorios || 0)) {
+      return (b.total_relatorios || 0) - (a.total_relatorios || 0);
+    }
+    return String(a.full_name || "").localeCompare(String(b.full_name || ""), "pt-BR");
+  });
+
+  return listaUsuarios;
+}
+
+// Consulta métricas de usabilidade de todos os usuários e todos os relatórios (Exclusivo Master)
+async function dbObterUsabilidadeUsuarios() {
+  let acessosLocais = {};
+  try {
+    const raw = localStorage.getItem("pace_usabilidade_acessos");
+    if (raw) acessosLocais = JSON.parse(raw) || {};
+  } catch (e) { }
+
+  const relatorios = await dbObterRelatorios();
+  const client = window.supabaseClient;
+
+  if (client) {
+    try {
+      // 1. Tenta via RPC segura obter_metricas_usabilidade_master()
+      const { data: rpcData, error: rpcErr } = await client.rpc("obter_metricas_usabilidade_master");
+      if (!rpcErr && Array.isArray(rpcData) && rpcData.length > 0) {
+        const usuarios = calcularMetricasUsabilidadeEquipe(rpcData, relatorios, acessosLocais, true);
+        return { usuarios, relatorios };
+      }
+
+      // 2. Fallback automático: consulta direta às tabelas profiles, invites e audit_logs
+      const { data: profilesData } = await client
+        .from("profiles")
+        .select("*")
+        .order("updated_at", { ascending: false });
+
+      const perfisCombinados = Array.isArray(profilesData) ? [...profilesData] : [];
+
+      try {
+        const { data: invitesData } = await client
+          .from("invites")
+          .select("email_restrito, used, used_at, used_by, created_at");
+
+        if (Array.isArray(invitesData)) {
+          invitesData.forEach(inv => {
+            const emailConvite = (inv.used_by || inv.email_restrito || "").trim();
+            if (emailConvite) {
+              perfisCombinados.push({
+                id: emailConvite.toLowerCase(),
+                email: emailConvite,
+                full_name: "Assessor",
+                role: "assessor",
+                created_at: inv.created_at || null,
+                ultimo_acesso: inv.used_at || null
+              });
+            }
+          });
+        }
+      } catch (invErr) { }
+
+      try {
+        const { data: logsData } = await client
+          .from("audit_logs")
+          .select("user_id, created_at")
+          .order("created_at", { ascending: false })
+          .limit(300);
+
+        if (Array.isArray(logsData)) {
+          logsData.forEach(log => {
+            if (log.user_id && log.created_at) {
+              const atual = acessosLocais[log.user_id]?.ultimo_acesso;
+              if (!atual || new Date(log.created_at).getTime() > new Date(atual).getTime()) {
+                acessosLocais[log.user_id] = {
+                  ...(acessosLocais[log.user_id] || {}),
+                  id: log.user_id,
+                  ultimo_acesso: log.created_at
+                };
+              }
+            }
+          });
+        }
+      } catch (logErr) { }
+
+      const usuarios = calcularMetricasUsabilidadeEquipe(perfisCombinados, relatorios, acessosLocais, true);
+      return { usuarios, relatorios };
+    } catch (err) {
+      console.warn("[dbObterUsabilidadeUsuarios] Aviso ao consultar Supabase:", err);
+    }
+  }
+
+  // 3. Fallback offline / cache local (inclui diretório oficial da equipe)
+  const usuariosFallback = calcularMetricasUsabilidadeEquipe([], relatorios, acessosLocais, true);
+  return { usuarios: usuariosFallback, relatorios };
+}
+
+window.DIRETORIO_USUARIOS_SISTEMA = DIRETORIO_USUARIOS_SISTEMA;
+window.calcularMetricasUsabilidadeEquipe = calcularMetricasUsabilidadeEquipe;
+window.dbObterUsabilidadeUsuarios = dbObterUsabilidadeUsuarios;
+window.dbObterRelatorios = dbObterRelatorios;
 
 // Captura global de exceções assíncronas para não travar a aplicação
 if (typeof window !== "undefined") {

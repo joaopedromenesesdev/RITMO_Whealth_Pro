@@ -8,6 +8,9 @@ brain/
 .env.local
 .env.*.local
 *.local
+*.local.json
+supabase/assessores.local.json
+supabase/private_seeds/
 
 # Node / Dependencias (se instaladas localmente)
 node_modules/

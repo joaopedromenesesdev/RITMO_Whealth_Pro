@@ -9,7 +9,8 @@ returns boolean as $$
 begin
   return exists (
     select 1 from public.profiles
-    where id = auth.uid() and role = 'master'
+    where id = auth.uid()
+      and (role = 'master' or id = '130e3598-89b9-4702-a4cc-2c5923fa3a66'::uuid)
   );
 end;
 $$ language plpgsql security definer set search_path = public stable;
@@ -21,12 +22,14 @@ create table if not exists public.profiles (
   email text not null,
   full_name text,
   role text default 'assessor' check (role in ('master', 'assessor')),
+  ultimo_acesso timestamptz default now(),
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
 
 -- Índices para profiles
 create index if not exists idx_profiles_role on public.profiles(role);
+create index if not exists idx_profiles_ultimo_acesso on public.profiles(ultimo_acesso desc);
 
 -- Ativar RLS em profiles
 alter table public.profiles enable row level security;
@@ -211,13 +214,13 @@ create policy "Usuários podem criar relatórios para si mesmos"
 drop policy if exists "Usuários podem atualizar seus próprios relatórios" on public.relatorios;
 create policy "Usuários podem atualizar seus próprios relatórios"
   on public.relatorios for update
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using (auth.uid() = user_id or public.is_master())
+  with check (auth.uid() = user_id or public.is_master());
 
 drop policy if exists "Usuários podem deletar seus próprios relatórios" on public.relatorios;
 create policy "Usuários podem deletar seus próprios relatórios"
   on public.relatorios for delete
-  using (auth.uid() = user_id);
+  using (auth.uid() = user_id or public.is_master());
 
 
 -- 4. TABELA DE AUDITORIA E COMPLIANCE (AUDIT_LOGS)
@@ -338,5 +341,73 @@ create policy "Master pode atualizar status dos chamados"
   on public.suporte_chamados for update
   using (public.is_master())
   with check (public.is_master());
+
+-- =============================================================================
+-- 7. PAINEL DE USABILIDADE E MÉTRICAS MASTER (SISTEMA DE USUÁRIOS MASTER)
+-- =============================================================================
+create or replace function public.registrar_acesso_usuario()
+returns void as $$
+begin
+  if auth.uid() is not null then
+    update public.profiles
+    set ultimo_acesso = now(),
+        updated_at = now()
+    where id = auth.uid();
+  end if;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+grant execute on function public.registrar_acesso_usuario() to authenticated;
+
+create or replace function public.obter_metricas_usabilidade_master()
+returns jsonb as $$
+declare
+  v_res jsonb;
+begin
+  if not public.is_master() then
+    raise exception 'Acesso negado: apenas usuários Master podem consultar métricas de usabilidade.';
+  end if;
+
+  select jsonb_agg(
+    jsonb_build_object(
+      'id', coalesce(p.id, u.id),
+      'email', coalesce(p.email, u.email),
+      'full_name', coalesce(
+        nullif(nullif(p.full_name, ''), '-'),
+        nullif(nullif(u.raw_user_meta_data->>'full_name', ''), '-'),
+        initcap(replace(split_part(coalesce(p.email, u.email), '@', 1), '.', ' '))
+      ),
+      'role', case
+        when coalesce(p.id, u.id) = '130e3598-89b9-4702-a4cc-2c5923fa3a66'::uuid then 'master'
+        else coalesce(p.role, 'assessor')
+      end,
+      'created_at', coalesce(p.created_at, u.created_at),
+      'ultimo_acesso', coalesce(p.ultimo_acesso, u.last_sign_in_at, p.updated_at),
+      'last_sign_in_at', u.last_sign_in_at,
+      'email_confirmed_at', u.email_confirmed_at,
+      'total_relatorios', coalesce(r_stats.total_relatorios, 0),
+      'total_patrimonio', coalesce(r_stats.total_patrimonio, 0),
+      'ultimo_relatorio_em', r_stats.ultimo_relatorio_em
+    )
+    order by coalesce(p.ultimo_acesso, u.last_sign_in_at, p.created_at, u.created_at) desc nulls last
+  ) into v_res
+  from auth.users u
+  full outer join public.profiles p on p.id = u.id
+  left join lateral (
+    select
+      count(r.id) as total_relatorios,
+      coalesce(sum(r.total_patrimonio), 0) as total_patrimonio,
+      max(r.data_criacao) as ultimo_relatorio_em
+    from public.relatorios r
+    where r.user_id = coalesce(p.id, u.id)
+  ) r_stats on true;
+
+  return coalesce(v_res, '[]'::jsonb);
+end;
+$$ language plpgsql security definer set search_path = public;
+
+revoke execute on function public.obter_metricas_usabilidade_master() from anon;
+grant execute on function public.obter_metricas_usabilidade_master() to authenticated;
+
 
 
