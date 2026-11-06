@@ -770,6 +770,72 @@
     assert(diagIntegrado.calculoProgressivo && diagIntegrado.calculoProgressivo.impostoTotalUSD === 23800, "analisarExposicaoEstateTax embute cálculo progressivo exato");
     assert(diagIntegrado.fraseExplicativa.includes("excedente aos 60 mil dólares"), "analisarExposicaoEstateTax contém a frase explicativa obrigatória");
 
+    // ==========================================
+    // 24. TESTE: POLÍTICAS AVANÇADAS DE ESTATE TAX, ESTRUTURA PIC E LEI 14.754/2023
+    // ==========================================
+    console.log("\nExecutando Testes 24: Políticas Avançadas de Estate Tax, Estrutura PIC e Lei 14.754/2023...");
+
+    // 1. Estrutura PIC presente e com metadados corretos
+    assert(engine.TIPOS_CONTA_EXTERIOR.pic !== undefined, "Tipo de conta 'pic' exportado no engine");
+    assert(engine.TIPOS_CONTA_EXTERIOR.pic.sujeitoInventario === false, "PIC dispensa inventário judicial nos EUA");
+    assert(engine.TIPOS_CONTA_EXTERIOR.pic.estateTax.includes("Isento"), "PIC classificada como isenta de US Estate Tax");
+
+    // 2. Diagnóstico com PIC gera imposto zero e não-exposição mesmo com valores altos
+    const diagPIC = engine.analisarExposicaoEstateTax({ valorOffshoreUSD: 2000000, tipoConta: "pic" });
+    assert(diagPIC.status === "estrutura_pic_isenta", "PIC identificada com status estrutura_pic_isenta");
+    assert(diagPIC.classeBadge === "protegido", "PIC recebe badge protegido");
+    assert(diagPIC.exposicao === false, "PIC tem exposicao = false");
+    assert(diagPIC.calculoProgressivo.impostoTotalUSD === 0, "PIC tem imposto total USD = 0");
+
+    // 3. Conta TIC (Joint Tenants in Common) com cota de 50%
+    // Saldo total USD 200.000 -> Cota 50% = USD 100.000 -> Excedente a USD 60.000 = USD 40.000
+    // Faixa 1 (10k a 18% = 1800) + Faixa 2 (10k a 20% = 2000) + Faixa 3 (20k a 22% = 4400) = USD 8.200
+    const diagTIC = engine.analisarExposicaoEstateTax({
+      valorOffshoreUSD: 200000,
+      tipoConta: "tic",
+      cotaFalecidoPercentual: 50,
+      percentualUSSitus: 100
+    });
+    assert(diagTIC.saldoRelevanteUSD === 100000, "TIC 50%: Saldo relevante do falecido = USD 100.000");
+    assert(diagTIC.calculoProgressivo.excedenteUSD === 40000, "TIC 50%: Excedente aos USD 60k = USD 40.000");
+    assert(diagTIC.calculoProgressivo.impostoTotalUSD === 8200, "TIC 50%: Imposto progressivo sobre USD 40k = USD 8.200");
+
+    // 4. Rateio proporcional entre ativos US Situs e Non-US Situs
+    // Saldo USD 500.000 com 30% em US Situs = USD 150.000 exposto
+    // Excedente aos 60k = USD 90.000
+    // Imposto até $80k excedente = $18.200 + $10k excedente a 28% = $2.800 -> Total = USD 21.000
+    const diagProporcional = engine.analisarExposicaoEstateTax({
+      valorOffshoreUSD: 500000,
+      tipoConta: "individual",
+      percentualUSSitus: 30
+    });
+    assert(diagProporcional.saldoExpostoUSD === 150000, "Rateio 30% US Situs: Saldo exposto = USD 150.000");
+    assert(diagProporcional.saldoIsentoUSD === 350000, "Rateio 30% US Situs: Saldo isento = USD 350.000");
+    assert(diagProporcional.calculoProgressivo.excedenteUSD === 90000, "Rateio 30%: Excedente = USD 90.000");
+    assert(diagProporcional.calculoProgressivo.impostoTotalUSD === 21000, "Rateio 30%: Imposto = USD 21.000");
+
+    // 5. Rateio 0% em US Situs (100% em ativos isentos / UCITS / Treasuries)
+    const diagZeroSitus = engine.analisarExposicaoEstateTax({
+      valorOffshoreUSD: 1000000,
+      tipoConta: "individual",
+      percentualUSSitus: 0
+    });
+    assert(diagZeroSitus.status === "100_porcento_isento", "0% US Situs: Status 100_porcento_isento");
+    assert(diagZeroSitus.calculoProgressivo.impostoTotalUSD === 0, "0% US Situs: Imposto é zero");
+    assert(diagZeroSitus.exposicao === false, "0% US Situs: exposicao = false");
+
+    // 6. Nomenclatura dos formulários do IRS
+    assert(engine.TIPOS_CONTA_EXTERIOR.individual.forms.includes("Form 706-NA"), "Formulário de apuração nomeado como Form 706-NA");
+    assert(engine.TIPOS_CONTA_EXTERIOR.individual.forms.includes("Form 5173"), "Formulário de quitação nomeado como Form 5173");
+
+    // 7. Estimativa consultiva da Lei nº 14.754/2023 (15% IRPF DAA)
+    assert(typeof engine.calcularEstimativaLei14754 === "function", "calcularEstimativaLei14754 disponível no engine");
+    const estimativaLei = engine.calcularEstimativaLei14754(100000, 0.05, 5.5);
+    assert(estimativaLei.rendimentoAnualUSD === 5000, "Rendimento anual a 5% sobre $100k = $5.000");
+    assert(estimativaLei.aliquotaPercentual === 15, "Alíquota IRPF Lei 14.754/2023 = 15%");
+    assert(estimativaLei.impostoAnualUSD === 750, "Imposto anual IRPF = USD 750");
+    assert(estimativaLei.impostoAnualBRL === 4125, "Imposto anual convertido PTAX 5.5 = R$ 4.125");
+
     console.log("\n=================================================");
     console.log(`RESUMO DA SUÍTE DE TESTES:`);
     console.log(`   Total: ${totalTestes} | Passados: ${testesPassados} | Falhas: ${testesFalhados}`);

@@ -212,16 +212,28 @@
               <option value="tod">Transfer on Death (TOD)</option>
               <option value="tic">Joint Tenants in Common (TIC)</option>
               <option value="jtwrs">JTWRS (Joint Tenants with Rights of Survivorship)</option>
+              <option value="pic">Empresa Offshore / PIC (Pessoa Jurídica)</option>
             </select>
+
+            <!-- Cota do falecido em conta TIC (Joint Tenants in Common) -->
+            <div id="grupo_cota_tic" style="display: none; margin-bottom: 8px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+              <label for="cota_falecido_tic" style="display: flex; justify-content: space-between; align-items: center; margin: 0 0 4px 0; font-weight: 500; font-size: 12.5px; color: #475569;">
+                <span>Cota-parte do titular falecido</span>
+                <span id="label_val_cota_tic" style="font-weight: 700; color: #0f172a;">50%</span>
+              </label>
+              <input type="number" id="cota_falecido_tic" min="1" max="100" value="50"
+                oninput="if (document.getElementById('label_val_cota_tic')) document.getElementById('label_val_cota_tic').innerText = this.value + '%'; window.atualizarDiagnosticoEstateTaxUI(); salvarPatrimonio();"
+                style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; font-size: 13px; color: #09090b; outline: none;">
+            </div>
 
             <!-- Card de Regras Sucessórias da Conta no Exterior -->
             <div id="card_regras_conta_exterior"
               style="padding: 10px 12px; border-radius: 8px; background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.18); font-size: 12px; line-height: 1.45; color: #1e3a8a;">
               <div id="regra_conta_titulo" style="font-weight: 700; color: #1d4ed8; margin-bottom: 3px;">Conta Individual</div>
               <div id="regra_conta_detalhes" style="color: #334155;">
-                • <strong>Inventário:</strong> Conta é congelada e está sujeita a inventário (somente liberada com o inventário e forms IRS)<br>
-                • <strong>Estate Tax:</strong> Conta está sujeita ao estate tax (tributável se >USD60K em ativos americanos)<br>
-                • <strong>Forms IRS:</strong> Form 706/705NA (apuração de estate tax) e Form 5173 (comprovante de recolhimento)
+                • <strong>Inventário:</strong> Conta é congelada e está sujeita a inventário nos EUA (Probate judicial)<br>
+                • <strong>Estate Tax:</strong> Sujeita ao US Estate Tax (18% a 40% sobre o excedente a USD 60k em US Situs Assets)<br>
+                • <strong>Forms IRS:</strong> Form 706-NA (apuração de estate tax) e Form 5173 (Transfer Certificate perante o IRS)
               </div>
             </div>
 
@@ -252,6 +264,32 @@
                   <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   <span>Selecionar Ativos</span>
                 </button>
+              </div>
+
+              <!-- Rateio Proporcional em Ativos US Situs (Ações/ETFs EUA) -->
+              <div id="grupo_rateio_us_situs" style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #e4e4e7;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <label for="percentual_us_situs" style="margin: 0; font-weight: 500; font-size: 13px; color: #71717a;">
+                    Parcela em Ativos US Situs (Ações / ETFs nos EUA)
+                  </label>
+                  <span id="label_val_perc_us_situs" style="font-size: 12px; font-weight: 700; color: #dc2626;">100% (Exposto)</span>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px;">
+                  <div class="input-box" style="position: relative; flex: 1;">
+                    <input type="number" id="percentual_us_situs" min="0" max="100" step="any" value="100"
+                      placeholder="100"
+                      oninput="window.definirPercentualUSSitus(this.value)"
+                      style="width: 100%; padding: 8px 30px 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; font-family: 'Outfit', sans-serif; font-size: 13.5px; font-weight: 600; color: #09090b; outline: none;">
+                    <span style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 12.5px; font-weight: 700; color: #94a3b8; pointer-events: none;">%</span>
+                  </div>
+                  <div class="botoes-preset-situs" style="display: flex; gap: 6px;">
+                    <button type="button" class="btn-preset-situs" data-val="0" onclick="window.definirPercentualUSSitus(0)" title="0% em ativos americanos (Carteira 100% Isenta)">0% Isento</button>
+                    <button type="button" class="btn-preset-situs active" data-val="100" onclick="window.definirPercentualUSSitus(100)" title="100% em ativos americanos (Totalmente Exposto)">100% Exposto</button>
+                  </div>
+                </div>
+                <div style="font-size: 11.5px; color: #64748b; line-height: 1.35;">
+                  Informe a porcentagem exata em acoes e ETFs dos EUA ou utilize os atalhos rapidos.
+                </div>
               </div>
 
               <!-- Card de diagnóstico dinâmico de Estate Tax -->

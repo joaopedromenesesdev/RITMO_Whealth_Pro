@@ -951,6 +951,8 @@ function salvarPatrimonio() {
     offshore_brl: offshoreBrl,
     offshore_ptax: taxaPtax,
     tipo_conta_exterior: document.getElementById("tipo_conta_exterior") ? document.getElementById("tipo_conta_exterior").value : "individual",
+    cota_falecido_tic: document.getElementById("cota_falecido_tic") ? document.getElementById("cota_falecido_tic").value : "50",
+    percentual_us_situs: document.getElementById("percentual_us_situs") ? document.getElementById("percentual_us_situs").value : "100",
     qtd_ativos_sem_estate_tax: qtdAtivosSemEstateTax,
     ativos_sem_estate_tax: ativosSemEstateTax,
 
@@ -1069,6 +1071,22 @@ window.onload = function () {
 
   window.atualizarResumoEmpresasBadge();
   calcular();
+
+  if (dados.cota_falecido_tic !== undefined && dados.cota_falecido_tic !== null) {
+    const elCota = document.getElementById("cota_falecido_tic");
+    if (elCota) {
+      elCota.value = dados.cota_falecido_tic;
+      const elLabelCota = document.getElementById("label_val_cota_tic");
+      if (elLabelCota) elLabelCota.innerText = dados.cota_falecido_tic + "%";
+    }
+  }
+
+  if (dados.percentual_us_situs !== undefined && dados.percentual_us_situs !== null) {
+    definirPercentualUSSitus(Number(dados.percentual_us_situs), false);
+  } else {
+    definirPercentualUSSitus(100, false);
+  }
+
   atualizarRegrasContaExterior();
 
   if (dados.qtd_ativos_sem_estate_tax !== undefined && dados.qtd_ativos_sem_estate_tax !== null) {
@@ -1105,18 +1123,78 @@ function atualizarRegrasContaExterior() {
     };
   }
 
+  // Toggle do campo de cota TIC
+  const elGrupoCota = document.getElementById("grupo_cota_tic");
+  if (elGrupoCota) {
+    elGrupoCota.style.display = tipo === "tic" ? "block" : "none";
+  }
+
+  // Toggle do bloco de rateio US Situs (se for PIC, oculta pois PIC é 100% isenta)
+  const elGrupoRateio = document.getElementById("grupo_rateio_us_situs");
+  if (elGrupoRateio) {
+    elGrupoRateio.style.display = tipo === "pic" ? "none" : "block";
+  }
+
   const elTitulo = document.getElementById("regra_conta_titulo");
   const elDetalhes = document.getElementById("regra_conta_detalhes");
   if (elTitulo) elTitulo.innerText = regra.nome || "Conta Internacional";
   if (elDetalhes) {
+    const extraAlerta = regra.alertaSucessorio ? `<br>• <strong>Diretriz Sucessória:</strong> ${regra.alertaSucessorio}` : "";
     elDetalhes.innerHTML = `
       • <strong>Inventário:</strong> ${regra.congelamentoInventario}<br>
       • <strong>Estate Tax:</strong> ${regra.estateTax}<br>
-      • <strong>Forms IRS:</strong> ${regra.formsNecessarios}
+      • <strong>Forms IRS:</strong> ${regra.formsNecessarios}${extraAlerta}
     `;
+  }
+
+  if (typeof window.atualizarDiagnosticoEstateTaxUI === "function") {
+    window.atualizarDiagnosticoEstateTaxUI();
   }
 }
 window.atualizarRegrasContaExterior = atualizarRegrasContaExterior;
+
+function definirPercentualUSSitus(val, triggerSave = true) {
+  const elInput = document.getElementById("percentual_us_situs");
+  const isInputFocused = elInput && document.activeElement === elInput;
+
+  let num;
+  if (val === "" || val === null || val === undefined) {
+    num = 0;
+  } else {
+    num = Number(val);
+    if (isNaN(num)) num = 0;
+    num = Math.max(0, Math.min(100, num));
+  }
+
+  if (elInput && !isInputFocused) {
+    elInput.value = num;
+  } else if (elInput && isInputFocused && Number(val) > 100) {
+    elInput.value = 100;
+    num = 100;
+  }
+
+  const elLabel = document.getElementById("label_val_perc_us_situs");
+  if (elLabel) {
+    elLabel.innerText = num === 0 ? "0% (100% Isento)" : (num === 100 ? "100% (Exposto)" : `${num}% Exposto`);
+    elLabel.style.color = num === 0 ? "#16a34a" : (num > 50 ? "#dc2626" : "#d97706");
+  }
+
+  document.querySelectorAll(".btn-preset-situs").forEach(btn => {
+    if (val !== "" && Number(btn.getAttribute("data-val")) === num) {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
+    }
+  });
+
+  if (typeof window.atualizarDiagnosticoEstateTaxUI === "function") {
+    window.atualizarDiagnosticoEstateTaxUI();
+  }
+  if (triggerSave && typeof salvarPatrimonio === "function") {
+    salvarPatrimonio();
+  }
+}
+window.definirPercentualUSSitus = definirPercentualUSSitus;
 
 // =========================
 // ATIVOS ISENTOS DE ESTATE TAX (BTG PACTUAL PÁG. 4)
@@ -1210,6 +1288,69 @@ function atualizarResumoPillAtivos() {
 }
 window.atualizarResumoPillAtivos = atualizarResumoPillAtivos;
 
+function removerAtivoIsento(index) {
+  const container = document.getElementById("modal_lista_ativos_sem_estate_tax") || document.getElementById("lista_ativos_sem_estate_tax");
+  const inputQtd = document.getElementById("qtd_ativos_sem_estate_tax");
+  if (!container || !inputQtd) return;
+
+  const selects = [];
+  container.querySelectorAll(".ativo-isento-select").forEach(sel => {
+    selects.push(sel.value);
+  });
+
+  if (index >= 0 && index < selects.length) {
+    selects.splice(index, 1);
+  }
+
+  inputQtd.value = selects.length;
+  renderizarInputsAtivosSemEstateTax(selects, false);
+
+  if (typeof salvarPatrimonio === "function") {
+    salvarPatrimonio();
+  }
+  if (typeof atualizarResumoPillAtivos === "function") {
+    atualizarResumoPillAtivos();
+  }
+  if (typeof window.atualizarDiagnosticoEstateTaxUI === "function") {
+    window.atualizarDiagnosticoEstateTaxUI();
+  }
+}
+window.removerAtivoIsento = removerAtivoIsento;
+
+function adicionarAtivoIsento() {
+  const container = document.getElementById("modal_lista_ativos_sem_estate_tax") || document.getElementById("lista_ativos_sem_estate_tax");
+  const inputQtd = document.getElementById("qtd_ativos_sem_estate_tax");
+  if (!container || !inputQtd) return;
+
+  const selects = [];
+  container.querySelectorAll(".ativo-isento-select").forEach(sel => {
+    selects.push(sel.value);
+  });
+
+  if (selects.length >= 9) return;
+
+  const opcoes = (window.TributarioEngine && Array.isArray(window.TributarioEngine.ATIVOS_ISENTOS_ESTATE_TAX))
+    ? window.TributarioEngine.ATIVOS_ISENTOS_ESTATE_TAX
+    : LISTA_ATIVOS_SEM_ESTATE_TAX;
+
+  const naoUsado = opcoes.find(op => !selects.includes(op.id));
+  selects.push(naoUsado ? naoUsado.id : opcoes[selects.length % opcoes.length].id);
+
+  inputQtd.value = selects.length;
+  renderizarInputsAtivosSemEstateTax(selects, false);
+
+  if (typeof salvarPatrimonio === "function") {
+    salvarPatrimonio();
+  }
+  if (typeof atualizarResumoPillAtivos === "function") {
+    atualizarResumoPillAtivos();
+  }
+  if (typeof window.atualizarDiagnosticoEstateTaxUI === "function") {
+    window.atualizarDiagnosticoEstateTaxUI();
+  }
+}
+window.adicionarAtivoIsento = adicionarAtivoIsento;
+
 function renderizarInputsAtivosSemEstateTax(valoresSalvos = null, abrirModalSeMaiorZero = false) {
   const inputQtd = document.getElementById("qtd_ativos_sem_estate_tax");
   const container = document.getElementById("modal_lista_ativos_sem_estate_tax") || document.getElementById("lista_ativos_sem_estate_tax");
@@ -1238,9 +1379,17 @@ function renderizarInputsAtivosSemEstateTax(valoresSalvos = null, abrirModalSeMa
   container.innerHTML = "";
 
   if (qtd === 0) {
+    container.innerHTML = `
+      <div style="padding: 18px; text-align: center; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; color: #64748b; font-size: 12.5px;">
+        <p style="margin: 0 0 10px 0; font-weight: 500;">Nenhum ativo isento cadastrado no momento.</p>
+        <button type="button" class="btn-adicionar-ativo-isento" onclick="window.adicionarAtivoIsento()" style="max-width: 240px; margin: 0 auto;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>Adicionar Ativo Isento</span>
+        </button>
+      </div>
+    `;
     atualizarResumoPillAtivos();
     window.atualizarDiagnosticoEstateTaxUI();
-    fecharModalAtivosIsentos();
     return;
   }
 
@@ -1266,6 +1415,10 @@ function renderizarInputsAtivosSemEstateTax(valoresSalvos = null, abrirModalSeMa
     card.innerHTML = `
       <div class="ativo-isento-header">
         <span class="ativo-isento-label">${esc(labelAtivo)}</span>
+        <button type="button" class="btn-excluir-ativo-isento" onclick="window.removerAtivoIsento(${i})" title="Excluir este ativo">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+          <span>Excluir</span>
+        </button>
       </div>
       <select class="ativo-isento-select" onchange="salvarPatrimonio(); window.atualizarResumoPillAtivos(); window.atualizarDiagnosticoEstateTaxUI();">
         ${optionsHtml}
@@ -1273,6 +1426,18 @@ function renderizarInputsAtivosSemEstateTax(valoresSalvos = null, abrirModalSeMa
     `;
 
     container.appendChild(card);
+  }
+
+  if (qtd < 9) {
+    const btnAddWrapper = document.createElement("div");
+    btnAddWrapper.style.marginTop = "2px";
+    btnAddWrapper.innerHTML = `
+      <button type="button" class="btn-adicionar-ativo-isento" onclick="window.adicionarAtivoIsento()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span>Adicionar Outro Ativo Isento</span>
+      </button>
+    `;
+    container.appendChild(btnAddWrapper);
   }
 
   atualizarResumoPillAtivos();
@@ -1347,18 +1512,30 @@ function atualizarDiagnosticoEstateTaxUI() {
     return;
   }
 
+  const elTipoConta = document.getElementById("tipo_conta_exterior");
+  const tipoConta = elTipoConta ? elTipoConta.value : "individual";
+  const elPercSitus = document.getElementById("percentual_us_situs");
+  const percentualUSSitus = elPercSitus && elPercSitus.value !== "" && !isNaN(Number(elPercSitus.value))
+    ? Number(elPercSitus.value)
+    : 100;
+  const elCotaTIC = document.getElementById("cota_falecido_tic");
+  const cotaFalecidoPercentual = elCotaTIC ? Number(elCotaTIC.value) : 50;
+
   let diag;
   if (window.TributarioEngine && typeof window.TributarioEngine.analisarExposicaoEstateTax === "function") {
     diag = window.TributarioEngine.analisarExposicaoEstateTax({
       valorOffshoreUSD,
-      ativosIsentos: ativosSelecionados
+      ativosIsentos: ativosSelecionados,
+      tipoConta,
+      percentualUSSitus,
+      cotaFalecidoPercentual
     });
   } else {
     diag = {
-      classeBadge: qtd > 0 ? "protegido" : (valorOffshoreUSD > 60000 ? "alerta" : "info"),
-      mensagem: qtd > 0
-        ? `${qtd} ativo(s) isento(s) de Estate Tax selecionado(s).`
-        : "Nenhum ativo isento de Estate Tax selecionado.",
+      classeBadge: qtd > 0 || tipoConta === "pic" || percentualUSSitus === 0 ? "protegido" : (valorOffshoreUSD > 60000 ? "alerta" : "info"),
+      mensagem: tipoConta === "pic"
+        ? "Estrutura PIC blindada contra Estate Tax nos EUA."
+        : (qtd > 0 ? `${qtd} ativo(s) isento(s) de Estate Tax selecionado(s).` : "Nenhum ativo isento de Estate Tax selecionado."),
       calculoProgressivo: {
         totalUSD: valorOffshoreUSD,
         isencaoUSD: 60000,
@@ -1419,6 +1596,11 @@ function atualizarDiagnosticoEstateTaxUI() {
           <span class="estate-tax-metric-val">${fmtUSD(calc.totalUSD)}</span>
         </div>
         <div class="estate-tax-metric-card">
+          <span class="estate-tax-metric-label">Parcela US Situs</span>
+          <span class="estate-tax-metric-val" style="color: #dc2626;">${fmtUSD(diag.saldoExpostoUSD || calc.totalUSD)}</span>
+          <span style="font-size: 10px; color: #64748b;">${diag.percUSSitus !== undefined ? diag.percUSSitus : 100}% exposto</span>
+        </div>
+        <div class="estate-tax-metric-card">
           <span class="estate-tax-metric-label">Isenção Geral IRS</span>
           <span class="estate-tax-metric-val" style="color: #16a34a;">USD 60.000,00</span>
         </div>
@@ -1471,10 +1653,11 @@ function atualizarDiagnosticoEstateTaxUI() {
       ` : ""}
     `;
   } else if (diag.classeBadge === "protegido") {
+    const ehPIC = diag.status === "estrutura_pic_isenta";
     card.innerHTML = `
       <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; color: #065f46; margin-bottom: 6px;">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
-        <span>Diagnóstico Sucessório Internacional — Carteira Isenta de US Estate Tax</span>
+        <span>Diagnóstico Sucessório Internacional — ${ehPIC ? "100% Blindado via Empresa Offshore (PIC)" : "Carteira Isenta de US Estate Tax"}</span>
       </div>
       <div style="font-size: 12px; color: #065f46; line-height: 1.45; margin-bottom: 8px;">
         ${diag.mensagem}
@@ -1487,7 +1670,7 @@ function atualizarDiagnosticoEstateTaxUI() {
         </div>
         <div class="estate-tax-metric-card">
           <span class="estate-tax-metric-label">Status Sucessório</span>
-          <span class="estate-tax-metric-val" style="color: #16a34a; font-size: 12px;">Isento de Estate Tax</span>
+          <span class="estate-tax-metric-val" style="color: #16a34a; font-size: 12px;">${ehPIC ? "Isenção PJ (Non-US)" : "Isento de Estate Tax"}</span>
         </div>
         <div class="estate-tax-metric-card">
           <span class="estate-tax-metric-label">Estate Tax Estimado</span>
@@ -1498,7 +1681,9 @@ function atualizarDiagnosticoEstateTaxUI() {
       <div class="aviso-excedente-estate-tax aviso-sucesso">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
         <div>
-          <strong>Isenção por Classe de Ativo:</strong> Seus ativos offshore selecionados não estão sujeitos ao Estate Tax americano. Lembramos que, para ativos tributáveis nos EUA, o imposto incidiria exclusivamente sobre o valor excedente aos 60 mil dólares e não sobre o valor total.
+          ${ehPIC 
+            ? "<strong>Proteção via Pessoa Jurídica:</strong> As ações de empresas offshore (BVI/Cayman) são ativos Non-US Situs perante o IRS, anulando o Estate Tax americano sobre os investimentos subjacentes. Recomendamos testamento local estrangeiro para evitar inventário de 1 a 2 anos na corte local."
+            : "<strong>Isenção por Classe de Ativo:</strong> Seus ativos offshore (Treasuries, Bonds, fundos UCITS) não estão sujeitos ao Estate Tax americano. Para ativos tributáveis diretos nos EUA, o imposto incidiria exclusivamente sobre o valor excedente aos 60 mil dólares e não sobre o valor total."}
         </div>
       </div>
     `;

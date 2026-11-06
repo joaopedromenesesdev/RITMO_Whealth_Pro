@@ -1082,20 +1082,33 @@ function atualizarBlocoOffshoreEstateTaxUI(dadosPatrimonio) {
     ? dadosPatrimonio.ativos_sem_estate_tax
     : [];
 
+  const tipoConta = String(dadosPatrimonio.tipo_conta_exterior || "individual").toLowerCase();
+  const percentualUSSitus = dadosPatrimonio.percentual_us_situs !== undefined && dadosPatrimonio.percentual_us_situs !== null
+    ? Number(dadosPatrimonio.percentual_us_situs)
+    : (ativosIsentos.length > 0 ? 0 : 100);
+  const cotaFalecidoPercentual = dadosPatrimonio.cota_falecido_tic !== undefined && dadosPatrimonio.cota_falecido_tic !== null
+    ? Number(dadosPatrimonio.cota_falecido_tic)
+    : 50;
+
   let diag;
   if (window.TributarioEngine && typeof window.TributarioEngine.analisarExposicaoEstateTax === "function") {
     diag = window.TributarioEngine.analisarExposicaoEstateTax({
       valorOffshoreUSD: offshoreUSD,
-      ativosIsentos
+      ativosIsentos,
+      tipoConta,
+      percentualUSSitus,
+      cotaFalecidoPercentual
     });
   } else {
     const excede = offshoreUSD > 60000;
     const excedente = Math.max(0, offshoreUSD - 60000);
     diag = {
-      classeBadge: ativosIsentos.length > 0 ? "protegido" : (excede ? "alerta" : "info"),
-      mensagem: ativosIsentos.length > 0
-        ? `${ativosIsentos.length} ativo(s) sem incidência de Estate Tax selecionado(s).`
-        : (excede ? "Saldo superior a USD 60.000 sujeito a Estate Tax sobre o excedente." : "Saldo dentro do limite de USD 60.000."),
+      classeBadge: ativosIsentos.length > 0 || tipoConta === "pic" || percentualUSSitus === 0 ? "protegido" : (excede ? "alerta" : "info"),
+      mensagem: tipoConta === "pic"
+        ? "Estrutura PIC blindada contra Estate Tax nos EUA."
+        : (ativosIsentos.length > 0
+          ? `${ativosIsentos.length} ativo(s) sem incidência de Estate Tax selecionado(s).`
+          : (excede ? "Saldo superior a USD 60.000 sujeito a Estate Tax sobre o excedente." : "Saldo dentro do limite de USD 60.000.")),
       calculoProgressivo: {
         totalUSD: offshoreUSD,
         isencaoUSD: 60000,
@@ -1116,7 +1129,6 @@ function atualizarBlocoOffshoreEstateTaxUI(dadosPatrimonio) {
     aliquotaMarginal: 0
   };
 
-  const tipoConta = String(dadosPatrimonio.tipo_conta_exterior || "individual").toLowerCase();
   const regrasConta = window.TributarioEngine && typeof window.TributarioEngine.obterRegrasContaExterior === "function"
     ? window.TributarioEngine.obterRegrasContaExterior(tipoConta)
     : { nome: "Conta Individual", inventario: "Sujeita a inventário nos EUA" };
@@ -1162,6 +1174,15 @@ function atualizarBlocoOffshoreEstateTaxUI(dadosPatrimonio) {
       elAviso.className = diag.classeBadge === "protegido"
         ? "aviso-excedente-estate-tax aviso-sucesso"
         : (diag.classeBadge === "alerta" ? "aviso-excedente-estate-tax" : "aviso-excedente-estate-tax aviso-info");
+    }
+
+    const cardLei = document.getElementById("card_consultivo_lei_14754");
+    const elEstimativaLei = document.getElementById("estimativa_lei_14754_valores");
+    if (cardLei && elEstimativaLei && window.TributarioEngine && typeof window.TributarioEngine.calcularEstimativaLei14754 === "function") {
+      const est = window.TributarioEngine.calcularEstimativaLei14754(offshoreUSD, 0.05, ptax);
+      elEstimativaLei.innerHTML = `
+        Estimativa Consultiva (Rentabilidade Referência 5% a.a.): Rendimento anual estimado em ${fmtUSD(est.rendimentoAnualUSD)} -> IRPF anual devido (15%): <strong>${fmtUSD(est.impostoAnualUSD)}</strong> (~ ${fmtBRL(est.impostoAnualBRL)}).
+      `;
     }
   }
 

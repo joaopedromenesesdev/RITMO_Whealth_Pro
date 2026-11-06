@@ -24,55 +24,68 @@
     // Limite de isenção anual legal do ITCMD (2.500 UFESPs / SP como padrão de referência nacional)
     LIMITE_ISENCAO_ANUAL: 96050,
 
-    // Tipos de Conta no Exterior & Regras Sucessórias (Página 5 BTG Pactual)
+    // Tipos de Conta no Exterior & Regras Sucessórias (Páginas 4 e 5 BTG Pactual)
     TIPOS_CONTA_EXTERIOR: {
       individual: {
         id: "individual",
         nome: "Conta Individual",
         nomeCurto: "Conta Individual",
         sujeitoInventario: true,
-        congelamentoInventario: "Conta é congelada e está sujeita a inventário (somente liberada com o inventário e forms IRS)",
+        congelamentoInventario: "Conta é congelada e está sujeita a inventário nos EUA (Probate judicial)",
         inventario: "Sujeita a inventário nos EUA (Probate judicial)",
-        congelamento: "Conta é congelada e somente liberada com inventário e envio de forms do IRS",
-        estateTax: "Conta está sujeita ao estate tax (tributável se >USD60K em ativos americanos)",
-        forms: "Form 706/705NA (apuração de estate tax) e Form 5173 (comprovante de recolhimento)",
-        formsNecessarios: "Form 706/705NA (apuração de estate tax) e Form 5173 (comprovante de recolhimento)"
+        congelamento: "Conta é congelada e somente liberada com inventário e forms do IRS",
+        estateTax: "Sujeita ao US Estate Tax (18% a 40% sobre o excedente a USD 60k em US Situs Assets)",
+        forms: "Form 706-NA (apuração de estate tax para não-residentes) e Form 5173 (Transfer Certificate perante o IRS)",
+        formsNecessarios: "Form 706-NA (apuração de estate tax) e Form 5173 (certificado de liberação do IRS)"
       },
       tod: {
         id: "tod",
         nome: "Transfer on Death (TOD)",
         nomeCurto: "Transfer on Death",
         sujeitoInventario: false,
-        congelamentoInventario: "Conta é congelada e NÃO está sujeita a inventário (dispensa probate nos EUA)",
-        inventario: "Não está sujeita a inventário",
+        congelamentoInventario: "Conta é congelada temporariamente e NÃO está sujeita a inventário (dispensa probate nos EUA)",
+        inventario: "Não está sujeita a inventário judicial (dispensa Probate)",
         congelamento: "Conta é congelada e liberada após envio de forms do IRS",
-        estateTax: "Conta está sujeita ao estate tax (tributável se >USD60K em ativos americanos)",
-        forms: "Form 706/705NA (apuração de estate tax) e Form 5173 (comprovante de recolhimento)",
-        formsNecessarios: "Form 706/705NA (apuração de estate tax) e Form 5173 (comprovante de recolhimento)"
+        estateTax: "Sujeita ao US Estate Tax (18% a 40% sobre o excedente a USD 60k em US Situs Assets)",
+        forms: "Form 706-NA (apuração de estate tax para não-residentes) e Form 5173 (Transfer Certificate perante o IRS)",
+        formsNecessarios: "Form 706-NA (apuração de estate tax) e Form 5173 (certificado de liberação do IRS)"
       },
       tic: {
         id: "tic",
         nome: "Joint Tenants in Common (TIC)",
         nomeCurto: "Joint Tenants in Common",
         sujeitoInventario: true,
-        congelamentoInventario: "Conta é congelada na proporção da participação do falecido (outra parcela é liberada)",
-        inventario: "Sujeita a inventário na proporção da participação do falecido",
+        congelamentoInventario: "Conta é congelada na proporção da cota do falecido (fração do cotitular é liberada)",
+        inventario: "Sujeita a inventário na proporção da participação do titular falecido",
         congelamento: "Conta é congelada na proporção da participação do falecido, sendo liberada a outra parcela",
-        estateTax: "Conta está sujeita ao estate tax (tributável se >USD60K em ativos americanos)",
-        forms: "Form 706/705NA (apuração de estate tax) e Form 5173 (comprovante de recolhimento)",
-        formsNecessarios: "Form 706/705NA (apuração de estate tax) e Form 5173 (comprovante de recolhimento)"
+        estateTax: "Sujeita ao US Estate Tax sobre a cota-parte do falecido (> USD 60k em US Situs Assets)",
+        forms: "Form 706-NA (apuração de estate tax para não-residentes) e Form 5173 (Transfer Certificate perante o IRS)",
+        formsNecessarios: "Form 706-NA (apuração de estate tax) e Form 5173 (certificado de liberação do IRS)"
       },
       jtwrs: {
         id: "jtwrs",
         nome: "JTWRS (Joint Tenants with Rights of Survivorship)",
         nomeCurto: "JTWRS",
         sujeitoInventario: false,
-        congelamentoInventario: "Conta é congelada e NÃO está sujeita a inventário (transmissão ao titular sobrevivente)",
-        inventario: "Não está sujeita a inventário",
+        congelamentoInventario: "Conta é congelada temporariamente e NÃO está sujeita a inventário (transmissão ao titular sobrevivente)",
+        inventario: "Não está sujeita a inventário judicial (dispensa Probate)",
         congelamento: "Conta é congelada temporariamente para apuração fiscal",
-        estateTax: "Conta está sujeita ao estate tax (tributável se >USD60K em ativos americanos)",
-        forms: "Form 706/705NA (apuração de estate tax) e Form 5173 (comprovante de recolhimento)",
-        formsNecessarios: "Form 706/705NA (apuração de estate tax) e Form 5173 (comprovante de recolhimento)"
+        estateTax: "Sujeita ao US Estate Tax (18% a 40% sobre o excedente a USD 60k em US Situs Assets)",
+        forms: "Form 706-NA (apuração de estate tax para não-residentes) e Form 5173 (Transfer Certificate perante o IRS)",
+        formsNecessarios: "Form 706-NA (apuração de estate tax) e Form 5173 (certificado de liberação do IRS)"
+      },
+      pic: {
+        id: "pic",
+        nome: "Empresa Offshore / PIC (BVI, Cayman, Bahamas)",
+        nomeCurto: "Pessoa Jurídica (PIC)",
+        sujeitoInventario: false,
+        congelamentoInventario: "Ativos não sofrem inventário nos EUA; ações da PIC seguem as leis societárias da jurisdição sede",
+        inventario: "Dispensa inventário nos EUA (Probate); sucessão das ações ocorre na jurisdição da PIC",
+        congelamento: "Sem bloqueio pelo IRS americano. Requer instrumento sucessório local para transmissão das ações",
+        estateTax: "Isento de US Estate Tax (Ações de empresa estrangeira são ativos Non-US Situs perante o IRS)",
+        forms: "Dispensa Form 706-NA perante o IRS americano para ativos subjacentes",
+        formsNecessarios: "Dispensa formulários do IRS para ativos subjacentes",
+        alertaSucessorio: "Recomendável formalizar Testamento Local (Foreign Will) na jurisdição da PIC para liberação em 3 a 6 meses"
       }
     },
 
@@ -174,15 +187,15 @@
       };
     },
 
-    // Analisa exposição a Estate Tax com base no saldo e ativos isentos
+    // Analisa exposição a Estate Tax com suporte a tipos de conta, cota TIC, ativos isentos e proporção US Situs
     analisarExposicaoEstateTax(params = {}) {
       const valorUSD = Math.max(0, Number(params.valorOffshoreUSD) || 0);
+      const tipoConta = String(params.tipoConta || "individual").toLowerCase().trim();
+      const regrasConta = this.obterRegrasContaExterior(tipoConta);
       const ativosIsentos = Array.isArray(params.ativosIsentos) ? params.ativosIsentos : [];
       const qtdIsentos = ativosIsentos.length;
       const limiteIsencaoGeralUSD = 60000;
       const temOffshore = valorUSD > 0;
-      const excedeIsencaoGeral = valorUSD > limiteIsencaoGeralUSD;
-      const calculoProgressivo = this.calcularEstateTaxProgressivo(valorUSD);
       const fraseExplicativa = "O imposto é cobrado exclusivamente sobre o valor excedente aos 60 mil dólares e não sobre o valor total.";
 
       if (!temOffshore) {
@@ -191,21 +204,91 @@
           mensagem: "Sem aplicações offshore cadastradas.",
           classeBadge: "neutral",
           exposicao: false,
+          tipoConta,
+          regrasConta,
+          saldoTotalUSD: 0,
+          saldoRelevanteUSD: 0,
+          percUSSitus: 0,
+          saldoExpostoUSD: 0,
+          saldoIsentoUSD: 0,
           fraseExplicativa,
-          calculoProgressivo
+          calculoProgressivo: this.calcularEstateTaxProgressivo(0)
         };
       }
 
-      if (qtdIsentos > 0) {
+      // 1. ESTRUTURA DE PESSOA JURÍDICA (PIC - BVI, CAYMAN, BAHAMAS)
+      // Ações de PIC são ativos Non-US Situs perante o IRS: Isenção total de US Estate Tax
+      if (tipoConta === "pic") {
+        const calcZero = {
+          ...this.calcularEstateTaxProgressivo(0),
+          totalUSD: valorUSD,
+          isencaoUSD: limiteIsencaoGeralUSD,
+          excedenteUSD: 0,
+          impostoTotalUSD: 0,
+          aliquotaEfetivaExcedente: 0,
+          aliquotaMarginal: 0,
+          isentoPorEstruturaPJ: true
+        };
+        return {
+          status: "estrutura_pic_isenta",
+          mensagem: "Estrutura Pessoa Jurídica (Empresa Offshore / PIC) blindada contra US Estate Tax nos EUA (ações de offshore estrangeira são ativos Non-US Situs). Recomendável formalizar Testamento Local (Foreign Will) na jurisdição sede para liberação ágil das cotas.",
+          classeBadge: "protegido",
+          exposicao: false,
+          tipoConta,
+          regrasConta,
+          saldoTotalUSD: valorUSD,
+          saldoRelevanteUSD: valorUSD,
+          percUSSitus: 0,
+          saldoExpostoUSD: 0,
+          saldoIsentoUSD: valorUSD,
+          fraseExplicativa,
+          calculoProgressivo: calcZero
+        };
+      }
+
+      // 2. COTA-PARTE EM CONTA CONJUNTA (TIC - Joint Tenants in Common)
+      let cotaFalecido = 100;
+      let saldoRelevanteUSD = valorUSD;
+      if (tipoConta === "tic") {
+        cotaFalecido = params.cotaFalecidoPercentual !== undefined && params.cotaFalecidoPercentual !== null && params.cotaFalecidoPercentual !== ""
+          ? Math.max(1, Math.min(100, Number(params.cotaFalecidoPercentual)))
+          : 50;
+        saldoRelevanteUSD = (valorUSD * cotaFalecido) / 100;
+      }
+
+      // 3. APURAÇÃO DA PROPORÇÃO EM ATIVOS US SITUS vs ISENTOS
+      let percUSSitus = 100;
+      if (params.percentualUSSitus !== undefined && params.percentualUSSitus !== null && params.percentualUSSitus !== "") {
+        percUSSitus = Math.max(0, Math.min(100, Number(params.percentualUSSitus)));
+      } else if (qtdIsentos > 0) {
+        // Fallback compatível com chamadas legadas
+        percUSSitus = 0;
+      }
+
+      const saldoExpostoUSD = Math.round(((saldoRelevanteUSD * percUSSitus) / 100) * 100) / 100;
+      const saldoIsentoUSD = Math.round((saldoRelevanteUSD - saldoExpostoUSD) * 100) / 100;
+      const calculoProgressivo = this.calcularEstateTaxProgressivo(saldoExpostoUSD);
+
+      // CASO A: Compatibilidade com teste legado (ativosIsentos passados sem percentualUSSitus explícito)
+      if (qtdIsentos > 0 && params.percentualUSSitus === undefined) {
         return {
           status: "ativos_isentos_selecionados",
           mensagem: `${qtdIsentos} ativo(s) sem incidência de Estate Tax selecionado(s). Ativos como T-Bills, Treasuries, Bonds e fundos UCITS possuem isenção fiscal nos EUA.`,
           classeBadge: "protegido",
           exposicao: false,
           qtdIsentos,
+          tipoConta,
+          regrasConta,
+          saldoTotalUSD: valorUSD,
+          saldoRelevanteUSD,
+          percUSSitus: 0,
+          saldoExpostoUSD: 0,
+          saldoIsentoUSD: saldoRelevanteUSD,
+          cotaFalecidoPercentual: cotaFalecido,
           fraseExplicativa,
           calculoProgressivo: {
             ...calculoProgressivo,
+            totalUSD: valorUSD,
             impostoTotalUSD: 0,
             aliquotaEfetivaExcedente: 0,
             aliquotaEfetivaTotal: 0,
@@ -214,24 +297,100 @@
         };
       }
 
-      if (excedeIsencaoGeral) {
+      // CASO B: Carteira 100% em ativos isentos (Non-US Situs)
+      if (percUSSitus === 0) {
         return {
-          status: "potencial_exposicao",
-          mensagem: `Atenção: Saldo superior a USD 60.000. Se houver ações de empresas americanas diretas ou ETFs sediados nos EUA (como SPY/VOO), haverá incidência de Estate Tax progressivo (18% a 40%) sobre o valor excedente.`,
-          classeBadge: "alerta",
-          exposicao: true,
+          status: "100_porcento_isento",
+          mensagem: "100% da carteira alocada em ativos isentos de Estate Tax nos EUA (Non-US Situs, como T-Bills, US Treasuries, Bonds corporativos ou fundos/ETFs UCITS).",
+          classeBadge: "protegido",
+          exposicao: false,
+          tipoConta,
+          regrasConta,
+          saldoTotalUSD: valorUSD,
+          saldoRelevanteUSD,
+          percUSSitus: 0,
+          saldoExpostoUSD: 0,
+          saldoIsentoUSD: saldoRelevanteUSD,
+          cotaFalecidoPercentual: cotaFalecido,
           fraseExplicativa,
-          calculoProgressivo
+          calculoProgressivo: {
+            ...calculoProgressivo,
+            totalUSD: valorUSD,
+            impostoTotalUSD: 0,
+            aliquotaEfetivaExcedente: 0,
+            aliquotaEfetivaTotal: 0,
+            isentoPorAtivo: true
+          }
         };
       }
 
+      // CASO C: Saldo exposto acima de USD 60.000 (Tributável)
+      if (saldoExpostoUSD > limiteIsencaoGeralUSD) {
+        const complementoTIC = tipoConta === "tic" ? ` (apurado sobre a cota de ${cotaFalecido}% do falecido)` : "";
+        return {
+          status: "potencial_exposicao",
+          mensagem: `Atenção: Saldo em ativos americanos tributáveis (USD ${saldoExpostoUSD.toLocaleString("en-US", { minimumFractionDigits: 2 })}${complementoTIC}) excede a isenção de USD 60.000. Haverá incidência de Estate Tax progressivo (18% a 40%) sobre o valor excedente.`,
+          classeBadge: "alerta",
+          exposicao: true,
+          tipoConta,
+          regrasConta,
+          saldoTotalUSD: valorUSD,
+          saldoRelevanteUSD,
+          percUSSitus,
+          saldoExpostoUSD,
+          saldoIsentoUSD,
+          cotaFalecidoPercentual: cotaFalecido,
+          fraseExplicativa,
+          calculoProgressivo: {
+            ...calculoProgressivo,
+            totalUSD: valorUSD,
+            saldoExpostoUSD
+          }
+        };
+      }
+
+      // CASO D: Saldo exposto dentro da faixa de isenção geral de USD 60k
       return {
         status: "dentro_limite_isencao",
-        mensagem: "Saldo offshore dentro da faixa de isenção geral de USD 60.000 para não-residentes (NRA).",
+        mensagem: `Saldo exposto a ativos americanos (USD ${saldoExpostoUSD.toLocaleString("en-US", { minimumFractionDigits: 2 })}) dentro da faixa de isenção geral de USD 60.000 para não-residentes (NRA).`,
         classeBadge: "info",
         exposicao: false,
+        tipoConta,
+        regrasConta,
+        saldoTotalUSD: valorUSD,
+        saldoRelevanteUSD,
+        percUSSitus,
+        saldoExpostoUSD,
+        saldoIsentoUSD,
+        cotaFalecidoPercentual: cotaFalecido,
         fraseExplicativa,
-        calculoProgressivo
+        calculoProgressivo: {
+          ...calculoProgressivo,
+          totalUSD: valorUSD,
+          saldoExpostoUSD
+        }
+      };
+    },
+
+    // Estimativa de IRPF Anual no exterior na Pessoa Física (Lei nº 14.754/2023 - 15% na DAA)
+    calcularEstimativaLei14754(saldoUSD, rentabilidadeEstimada = 0.05, ptax = 5.5) {
+      const saldo = Math.max(0, Number(saldoUSD) || 0);
+      const taxaRent = Math.max(0, Number(rentabilidadeEstimada) || 0.05);
+      const cotacao = Math.max(0.1, Number(ptax) || 5.5);
+      const rendimentoAnualUSD = Math.round(saldo * taxaRent * 100) / 100;
+      const aliquotaIRPF = 0.15;
+      const impostoAnualUSD = Math.round(rendimentoAnualUSD * aliquotaIRPF * 100) / 100;
+      const impostoAnualBRL = Math.round(impostoAnualUSD * cotacao * 100) / 100;
+
+      return {
+        saldoUSD: saldo,
+        taxaRentabilidade: taxaRent,
+        rendimentoAnualUSD,
+        aliquotaPercentual: 15,
+        impostoAnualUSD,
+        impostoAnualBRL,
+        ptax: cotacao,
+        regra: "Alíquota fixa de 15% apurada anualmente na Declaração de Ajuste Anual (DAA), com regime de caixa e tributação integral da variação cambial."
       };
     },
 
