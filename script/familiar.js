@@ -1,4 +1,22 @@
 // =========================
+// SISTEMA DE ABAS EXECUTIVAS CENTRALIZADAS
+// =========================
+window.trocarAbaFamiliar = function (tabId) {
+  document.querySelectorAll(".tab-pane-familiar").forEach(el => el.classList.remove("active"));
+  document.querySelectorAll(".tab-btn-familiar").forEach(el => el.classList.remove("active"));
+
+  const targetPane = document.getElementById(tabId);
+  if (targetPane) targetPane.classList.add("active");
+
+  const targetBtn = document.getElementById("btn_" + tabId);
+  if (targetBtn) targetBtn.classList.add("active");
+
+  if (tabId === "tab_organograma" && typeof renderizarOrganogramaFamiliar === "function") {
+    renderizarOrganogramaFamiliar();
+  }
+};
+
+// =========================
 // ESTADO CIVIL
 // =========================
 document.getElementById("estado_civil").addEventListener("change", function () {
@@ -350,28 +368,13 @@ document.getElementById("regime").addEventListener("change", function() {
 });
 
 // =========================
-// TOGGLE VISIBILIDADE DO ORGANOGRAMA
+// TOGGLE / NAVEGAÇÃO DO ORGANOGRAMA
 // =========================
 window.alternarVisualizacaoOrganograma = function () {
-  const secao = document.getElementById("organograma_section");
-  const btn = document.getElementById("btn_toggle_organograma");
-  const label = document.getElementById("btn_toggle_organograma_label");
-  if (!secao) return;
-
-  const estaOculto = secao.style.display === "none";
-
-  if (estaOculto) {
-    secao.style.display = "flex";
-    if (btn) btn.classList.add("ativo");
-    if (label) label.textContent = "Ocultar Organograma";
-    renderizarOrganogramaFamiliar();
-    setTimeout(() => {
-      secao.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 50);
-  } else {
-    secao.style.display = "none";
-    if (btn) btn.classList.remove("ativo");
-    if (label) label.textContent = "Ver Organograma Sucessório";
+  trocarAbaFamiliar("tab_organograma");
+  const targetPane = document.getElementById("tab_organograma");
+  if (targetPane) {
+    targetPane.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 };
 
@@ -384,8 +387,9 @@ function renderizarOrganogramaFamiliar() {
   const alertasContainer = document.getElementById("alertas_sucessorios_container");
   if (!treeContainer) return;
 
+  const tabPane = document.getElementById("tab_organograma");
   const secao = document.getElementById("organograma_section");
-  if (secao && secao.style.display === "none") return;
+  if (tabPane && !tabPane.classList.contains("active") && secao && secao.style.display === "none") return;
 
   // 1. Obter dados dos inputs
   const nomeCliente = (document.getElementById("nome_cliente")?.value || "").trim() || "Cliente (Titular)";
