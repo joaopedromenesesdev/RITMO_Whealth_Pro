@@ -1,3 +1,18 @@
+
+// =========================
+// SOLUÇÃO 4: NAVEGAÇÃO DE ABAS EXECUTIVAS
+// =========================
+window.trocarAbaPatrimonio = function (tabId) {
+  document.querySelectorAll(".tab-pane-patrimonio").forEach(el => el.classList.remove("active"));
+  document.querySelectorAll(".tab-btn-patrimonio").forEach(el => el.classList.remove("active"));
+
+  const targetPane = document.getElementById(tabId);
+  if (targetPane) targetPane.classList.add("active");
+
+  const targetBtn = document.getElementById("btn_" + tabId);
+  if (targetBtn) targetBtn.classList.add("active");
+};
+
 let g1, g2, g3, g4;
 Chart.register(ChartDataLabels);
 
@@ -646,6 +661,55 @@ window.alternarVisualizacaoGraficos = function () {
   }
 };
 
+function atualizarInsightsPatrimonio(rf, rv, inter, prev, totalI, bens) {
+  const fmt = (v) => "R$ " + Number(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  // 1. Subtotal Onshore e %
+  const totalOn = Number(rf || 0) + Number(rv || 0) + Number(inter || 0) + Number(prev || 0);
+  const elSubtotalOn = document.getElementById("subtotal_onshore_val");
+  if (elSubtotalOn) elSubtotalOn.textContent = fmt(totalOn);
+
+  const pct = (val) => totalOn > 0 ? ((Number(val || 0) / totalOn) * 100).toFixed(0) : "0";
+  const pctRf = pct(rf);
+  const pctRv = pct(rv);
+  const pctInter = pct(inter);
+  const pctPrev = pct(prev);
+
+  const elBarraRf = document.getElementById("barra_rf");
+  const elBarraRv = document.getElementById("barra_rv");
+  const elBarraInter = document.getElementById("barra_inter");
+  const elBarraPrev = document.getElementById("barra_prev");
+
+  if (elBarraRf) elBarraRf.style.width = pctRf + "%";
+  if (elBarraRv) elBarraRv.style.width = pctRv + "%";
+  if (elBarraInter) elBarraInter.style.width = pctInter + "%";
+  if (elBarraPrev) elBarraPrev.style.width = pctPrev + "%";
+
+  const elPctRf = document.getElementById("pct_rf_val");
+  const elPctRv = document.getElementById("pct_rv_val");
+  const elPctInter = document.getElementById("pct_inter_val");
+  const elPctPrev = document.getElementById("pct_prev_val");
+
+  if (elPctRf) elPctRf.textContent = pctRf + "%";
+  if (elPctRv) elPctRv.textContent = pctRv + "%";
+  if (elPctInter) elPctInter.textContent = pctInter + "%";
+  if (elPctPrev) elPctPrev.textContent = pctPrev + "%";
+
+  // Previdência fora de inventário
+  const elPrevProt = document.getElementById("prev_protegida_val");
+  if (elPrevProt) elPrevProt.textContent = fmt(prev);
+
+  // 2. Subtotal Imóveis e Bens Físicos
+  const totalFisico = Number(totalI || 0) + Number(bens || 0);
+  const elSubtotalImoveis = document.getElementById("subtotal_imoveis_val");
+  if (elSubtotalImoveis) elSubtotalImoveis.textContent = fmt(totalFisico);
+
+  // Atrito sucessório estimado (~8% entre ITCMD e custas)
+  const atritoEstimado = totalFisico * 0.08;
+  const elAtritoImoveis = document.getElementById("custo_transmissao_imoveis_val");
+  if (elAtritoImoveis) elAtritoImoveis.textContent = fmt(atritoEstimado);
+}
+
 function calcular() {
 
   let valoresEmpresas = document.querySelectorAll(".empresa_valor");
@@ -714,6 +778,9 @@ function calcular() {
   window.valorTotalAntigo = totalGeral;
 
   animateValue("total", valorAnterior, totalGeral, 650);
+
+  // Atualiza em tempo real os cards de insights patrimoniais e alocação (Solução 1)
+  atualizarInsightsPatrimonio(rf, rv, inter, prev, totalI, bens);
 
   // Não renderiza gráficos no canvas caso a seção esteja oculta pelo botão
   const secaoGraficos = document.getElementById("secao_graficos_patrimonio");
@@ -1236,6 +1303,7 @@ function toggleTabelaEstateTax(btn) {
   if (!wrapper) return;
   const visivel = wrapper.style.display !== "none";
   wrapper.style.display = visivel ? "none" : "block";
+    btn.classList.toggle("is-open", !visivel);
   if (btn) {
     const textoSpan = btn.querySelector("span");
     if (textoSpan) {

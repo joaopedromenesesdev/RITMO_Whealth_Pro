@@ -27,7 +27,6 @@
   <script src="script/auth.js"></script>
   <script src="script/db.js"></script>
 
-
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
@@ -58,68 +57,124 @@
       <h1 class="reveal" style="margin: 0 auto; text-align: center;">Análise Patrimonial</h1>
     </div>
 
-    <!-- INPUTS -->
-    <div class="container_inputs">
+    <!-- ======================================================== -->
+    <!-- SOLUÇÃO 4: SISTEMA DE ABAS / TABS EXECUTIVAS CENTRALIZADAS -->
+    <!-- ======================================================== -->
+    <div class="container_tabs_patrimonio">
 
-      <!-- APLICAÇÕES -->
-      <div class="bloco card-premium reveal delay-1">
-        <h2>Aplicações Onshore</h2>
+      <!-- BARRA DE NAVEGAÇÃO DE ABAS COM MÉTRICAS EM TEMPO REAL -->
+      <div class="tabs-nav-patrimonio">
+        <button type="button" id="btn_tab_onshore" class="tab-btn-patrimonio active" onclick="trocarAbaPatrimonio('tab_onshore')">
+          <span class="tab-btn-titulo">Aplicações Onshore</span>
+        </button>
 
-        <div class="input-group">
-          <label>Renda Fixa</label>
-          <div class="input-box"><span>R$</span><input type="text" id="rf"></div>
-        </div>
+        <button type="button" id="btn_tab_offshore" class="tab-btn-patrimonio" onclick="trocarAbaPatrimonio('tab_offshore')">
+          <span class="tab-btn-titulo">Aplicações Offshore</span>
+        </button>
 
-        <div class="input-group">
-          <label>Renda Variável</label>
-          <div class="input-box"><span>R$</span><input type="text" id="rv"></div>
-        </div>
+        <button type="button" id="btn_tab_imoveis" class="tab-btn-patrimonio" onclick="trocarAbaPatrimonio('tab_imoveis')">
+          <span class="tab-btn-titulo">Bens Imóveis & Móveis</span>
+        </button>
 
-        <div class="input-group">
-          <label>Fundos de Investimento</label>
-          <div class="input-box"><span>R$</span><input type="text" id="inter"></div>
-        </div>
+        <button type="button" id="btn_tab_empresas" class="tab-btn-patrimonio" onclick="trocarAbaPatrimonio('tab_empresas')">
+          <span class="tab-btn-titulo">Empresas / Holding</span>
+        </button>
+      </div>
 
-        <div class="input-group">
-          <label>Fundo de Previdência</label>
-          <div class="input-box"><span>R$</span><input type="text" id="prev"></div>
+      <!-- ============================================== -->
+      <!-- ABA 1: APLICAÇÕES ONSHORE (ATIVA POR PADRÃO) -->
+      <!-- ============================================== -->
+      <div id="tab_onshore" class="tab-pane-patrimonio active">
+        <div class="tab-card-container">
+          <div class="tab-card-header">
+            <div>
+              <h2>Aplicações Onshore</h2>
+              <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-muted);">
+                Renda fixa, ações, multimercado e previdência privada nacional
+              </p>
+            </div>
+            <span class="badge-quadrante">Liquidez Nacional</span>
+          </div>
+
+          <div class="input-group">
+            <label>Renda Fixa</label>
+            <div class="input-box"><span>R$</span><input type="text" id="rf"></div>
+          </div>
+
+          <div class="input-group">
+            <label>Renda Variável</label>
+            <div class="input-box"><span>R$</span><input type="text" id="rv"></div>
+          </div>
+
+          <div class="input-group">
+            <label>Fundos de Investimento</label>
+            <div class="input-box"><span>R$</span><input type="text" id="inter"></div>
+          </div>
+
+          <div class="input-group">
+            <label>Fundo de Previdência</label>
+            <div class="input-box"><span>R$</span><input type="text" id="prev"></div>
+          </div>
+
+          <!-- INSIGHT CARD: SUBTOTAL & BARRA DE ALOCAÇÃO ONSHORE -->
+          <div class="card-insight-bloco">
+            <div class="insight-subtotal-row">
+              <span class="insight-subtotal-label">Subtotal Onshore</span>
+              <span id="subtotal_onshore_val" class="insight-subtotal-val">R$ 0,00</span>
+            </div>
+            <div class="insight-barra-alocacao" title="Distribuição de Ativos Onshore">
+              <div id="barra_rf" class="insight-barra-segmento" style="width: 0%; background: #2563eb;"></div>
+              <div id="barra_rv" class="insight-barra-segmento" style="width: 0%; background: #059669;"></div>
+              <div id="barra_inter" class="insight-barra-segmento" style="width: 0%; background: #d97706;"></div>
+              <div id="barra_prev" class="insight-barra-segmento" style="width: 0%; background: #7c3aed;"></div>
+            </div>
+            <div class="insight-barra-legendas">
+              <div class="insight-legenda-item"><span class="insight-legenda-dot" style="background:#2563eb;"></span>RF: <strong id="pct_rf_val">0%</strong></div>
+              <div class="insight-legenda-item"><span class="insight-legenda-dot" style="background:#059669;"></span>RV: <strong id="pct_rv_val">0%</strong></div>
+              <div class="insight-legenda-item"><span class="insight-legenda-dot" style="background:#d97706;"></span>Fundos: <strong id="pct_inter_val">0%</strong></div>
+              <div class="insight-legenda-item"><span class="insight-legenda-dot" style="background:#7c3aed;"></span>Prev: <strong id="pct_prev_val">0%</strong></div>
+            </div>
+          </div>
+
+          <!-- BOX DE INTELIGÊNCIA SUCESSÓRIA: PREVIDÊNCIA PRIVADA -->
+          <div class="card-inteligencia-sucessoria verde">
+            <div class="card-inteligencia-titulo">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span>Isenção de Inventário em Previdência</span>
+            </div>
+            <div>
+              Planos VGBL/PGBL não entram na partilha judicial e são transmitidos rapidamente (Art. 794 CC).
+              <div style="margin-top: 6px; font-weight: 700;">
+                Fora do inventário: <span id="prev_protegida_val" style="color: #15803d;">R$ 0,00</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-pane-footer-nav">
+            <div></div>
+            <button type="button" class="btn-tab-nav primary" onclick="trocarAbaPatrimonio('tab_offshore')">
+              <span>Próxima: Aplicações Offshore</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- IMÓVEIS -->
-      <div class="bloco card-premium reveal delay-2">
-        <h2>Bens Imóveis</h2>
+      <!-- ============================================== -->
+      <!-- ABA 2: APLICAÇÕES OFFSHORE -->
+      <!-- ============================================== -->
+      <div id="tab_offshore" class="tab-pane-patrimonio">
+        <div class="tab-card-container">
+          <div class="tab-card-header">
+            <div>
+              <h2>Aplicações Offshore</h2>
+              <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-muted);">
+                Patrimônio global, contas internacionais e planejamento de Estate Tax
+              </p>
+            </div>
+            <span class="badge-quadrante">Alocação Global</span>
+          </div>
 
-        <div class="input-group">
-          <label>Apartamento</label>
-          <div class="input-box"><span>R$</span><input type="text" id="apt"></div>
-        </div>
-
-        <div class="input-group">
-          <label>Casa</label>
-          <div class="input-box"><span>R$</span><input type="text" id="casa"></div>
-        </div>
-
-        <div class="input-group">
-          <label>Terreno</label>
-          <div class="input-box"><span>R$</span><input type="text" id="terr"></div>
-        </div>
-
-        <div class="input-group">
-          <label>Imóvel Comercial/Imóvel Rural</label>
-          <div class="input-box"><span>R$</span><input type="text" id="galp"></div>
-        </div>
-
-        <div class="input-group">
-          <label>Bens Particulares</label>
-          <div class="input-box"><span>R$</span><input type="text" id="bens_particulares"></div>
-        </div>
-      </div>
-
-      <!-- BENS E EMPRESAS -->
-      <div class="bloco card-premium reveal delay-3" style="display: flex; flex-direction: column; gap: 28px;">
-        <div>
-          <h2>Aplicações Offshore</h2>
           <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
             <label style="margin:0;">Investimentos no Exterior</label>
             <div id="offshore_toggle"
@@ -131,10 +186,12 @@
                 style="padding:3px 12px; border-radius:16px; font-size:12px; font-weight:600; color:#09090b; transition:all .2s;">USD</span>
             </div>
           </div>
+
           <div class="input-box">
             <span id="offshore_prefix">R$</span>
             <input type="text" id="offshore" oninput="formatar(this); atualizarBadgeOffshore(); salvarPatrimonio();">
           </div>
+
           <div id="offshore_badge"
             style="display:none; margin-top:8px; padding:8px 12px; background:#fafafa; border-radius:10px; border:1px solid #e4e4e7;">
             <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:4px;">
@@ -182,7 +239,7 @@
                   style="width: 100%; padding: 11px 14px; border-radius: 10px; border: 1px solid #e4e4e7; background: #fff; font-family: 'Outfit', sans-serif; font-size: 13.5px; color: #09090b; outline: none;">
               </div>
 
-              <!-- Pílula compacta de resumo dos ativos isentos configurados (Substitui lista de inputs da tela) -->
+              <!-- Pílula compacta de resumo dos ativos isentos configurados -->
               <div id="bloco_resumo_ativos_isentos" class="bloco-resumo-ativos-isentos" style="display: none;">
                 <div style="display: flex; flex-direction: column; gap: 3px; flex: 1;">
                   <div style="display: flex; align-items: center; gap: 6px;">
@@ -201,35 +258,136 @@
               <div id="card_diagnostico_estate_tax" style="display: none; margin-top: 10px; padding: 10px 12px; border-radius: 8px; font-size: 12px; line-height: 1.45;"></div>
             </div>
           </div>
+
+          <div class="tab-pane-footer-nav">
+            <button type="button" class="btn-tab-nav" onclick="trocarAbaPatrimonio('tab_onshore')">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+              <span>Anterior: Onshore</span>
+            </button>
+            <button type="button" class="btn-tab-nav primary" onclick="trocarAbaPatrimonio('tab_imoveis')">
+              <span>Próxima: Bens Imóveis & Móveis</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </button>
+          </div>
         </div>
+      </div>
 
-        <hr style="border: 0; border-top: 1px solid rgba(0,0,0,0.06); margin: 0;">
+      <!-- ============================================== -->
+      <!-- ABA 3: BENS IMÓVEIS & MÓVEIS -->
+      <!-- ============================================== -->
+      <div id="tab_imoveis" class="tab-pane-patrimonio">
+        <div class="tab-card-container">
+          <div class="tab-card-header">
+            <div>
+              <h2>Bens Imóveis & Móveis</h2>
+              <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-muted);">
+                Patrimônio físico residencial, rural, comercial e bens particulares
+              </p>
+            </div>
+            <span class="badge-quadrante">Patrimônio Físico</span>
+          </div>
 
-        <div>
-          <h2>Bens Móveis</h2>
           <div class="input-group">
-            <label>Bens Gerais</label>
+            <label>Apartamento</label>
+            <div class="input-box"><span>R$</span><input type="text" id="apt"></div>
+          </div>
+
+          <div class="input-group">
+            <label>Casa</label>
+            <div class="input-box"><span>R$</span><input type="text" id="casa"></div>
+          </div>
+
+          <div class="input-group">
+            <label>Terreno</label>
+            <div class="input-box"><span>R$</span><input type="text" id="terr"></div>
+          </div>
+
+          <div class="input-group">
+            <label>Imóvel Comercial / Rural</label>
+            <div class="input-box"><span>R$</span><input type="text" id="galp"></div>
+          </div>
+
+          <div class="input-group">
+            <label>Bens Particulares</label>
+            <div class="input-box"><span>R$</span><input type="text" id="bens_particulares"></div>
+          </div>
+
+          <div class="input-group" style="padding-top: 10px; border-top: 1px dashed rgba(0,0,0,0.08); margin-top: 12px;">
+            <label>Bens Gerais (Veículos, Outros Móveis)</label>
             <div class="input-box"><span>R$</span><input type="text" id="bens"></div>
           </div>
-        </div>
 
-        <hr style="border: 0; border-top: 1px solid rgba(0,0,0,0.06); margin: 0;">
-
-        <div>
-          <h2>Empresas / Holding</h2>
-          <div class="input-group">
-            <label>Possui empresas?</label>
-            <select id="tem_empresas">
-              <option value="">Selecione</option>
-              <option value="nao">Não</option>
-              <option value="sim">Sim</option>
-            </select>
+          <!-- INSIGHT CARD: SUBTOTAL DE BENS FÍSICOS -->
+          <div class="card-insight-bloco">
+            <div class="insight-subtotal-row">
+              <span class="insight-subtotal-label">Subtotal Bens Físicos</span>
+              <span id="subtotal_imoveis_val" class="insight-subtotal-val">R$ 0,00</span>
+            </div>
+            <div style="font-size: 11px; color: #64748b; line-height: 1.35;">
+              Total consolidado de imóveis, bens particulares e bens móveis gerais.
+            </div>
           </div>
 
-          <div id="area_empresas" style="display:none;" class="area-empresas-container">
+          <!-- BOX DE INTELIGÊNCIA SUCESSÓRIA: TRANSMISSÃO IMOBILIÁRIA -->
+          <div class="card-inteligencia-sucessoria azul">
+            <div class="card-inteligencia-titulo">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><line x1="9" y1="22" x2="9" y2="2"/><line x1="15" y1="22" x2="15" y2="2"/><line x1="4" y1="12" x2="20" y2="12"/></svg>
+              <span>Atrito Sucessório Estimado em Bens Físicos</span>
+            </div>
+            <div>
+              A transferência de imóveis na PF gera despesas com ITCMD e emolumentos de cartório (~8%):
+              <div style="margin-top: 6px; font-weight: 700;">
+                Impacto sucessório estimado: <span id="custo_transmissao_imoveis_val" style="color: #0369a1;">R$ 0,00</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-pane-footer-nav">
+            <button type="button" class="btn-tab-nav" onclick="trocarAbaPatrimonio('tab_offshore')">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+              <span>Anterior: Offshore</span>
+            </button>
+            <button type="button" class="btn-tab-nav primary" onclick="trocarAbaPatrimonio('tab_empresas')">
+              <span>Próxima: Empresas / Holding</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================== -->
+      <!-- ABA 4: EMPRESAS & PARTICIPAÇÕES SOCIETÁRIAS (HOLDING) -->
+      <!-- ============================================== -->
+      <div id="tab_empresas" class="tab-pane-patrimonio">
+        <div class="tab-card-container">
+          <div class="empresas-holding-header">
+            <div>
+              <h2 style="margin: 0; padding-bottom: 4px; border: none;">Empresas / Holding</h2>
+              <p style="margin: 4px 0 0 0; font-size: 12.5px; color: var(--text-muted);">
+                Participações societárias, holdings patrimoniais e valor patrimonial contábil
+              </p>
+            </div>
+            <div class="empresas-toggle-wrapper">
+              <label for="tem_empresas" style="margin: 0; font-weight: 600; font-size: 13px; color: #09090b;">Possui empresas?</label>
+              <select id="tem_empresas" style="min-width: 120px; padding: 8px 12px; border-radius: 10px; border: 1px solid #e4e4e7; background: #fff; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer;">
+                <option value="">Selecione</option>
+                <option value="nao">Não</option>
+                <option value="sim">Sim</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Placeholder card elegante quando 'Não' ou 'Selecione' -->
+          <div id="empresas_placeholder_info" class="empresas-placeholder-card">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>
+            <p>Nenhuma empresa ou holding vinculada</p>
+            <span>Alterne "Possui empresas?" para "Sim" para cadastrar participações societárias e apurar o patrimônio empresarial.</span>
+          </div>
+
+          <div id="area_empresas" style="display:none; margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(0,0,0,0.06);" class="area-empresas-container">
             <div class="empresas-resumo-card" id="empresas_resumo_card">
               <div class="empresas-resumo-info">
-                <span class="empresas-resumo-label">Total em Participações</span>
+                <span class="empresas-resumo-label">Total em Participações Societárias</span>
                 <span class="empresas-resumo-valor" id="total_empresas_badge">R$ 0,00</span>
               </div>
               <div class="empresas-resumo-badge" id="qtd_empresas_badge">
@@ -245,6 +403,14 @@
               <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i>
               <span>Adicionar Empresa / Holding</span>
             </button>
+          </div>
+
+          <div class="tab-pane-footer-nav">
+            <button type="button" class="btn-tab-nav" onclick="trocarAbaPatrimonio('tab_imoveis')">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+              <span>Anterior: Bens Imóveis</span>
+            </button>
+            <div></div>
           </div>
         </div>
       </div>

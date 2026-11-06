@@ -570,3 +570,376 @@
   }
 }
 
+
+
+/* ===== CARDS DE INSIGHTS E INTELIGÊNCIA PATRIMONIAL (SOLUÇÃO 1) ===== */
+.card-insight-bloco {
+  margin-top: 18px;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.insight-subtotal-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.insight-subtotal-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.insight-subtotal-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Barra de alocação de ativos */
+.insight-barra-alocacao {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #e2e8f0;
+  gap: 2px;
+}
+
+.insight-barra-segmento {
+  height: 100%;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.insight-barra-legendas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.insight-legenda-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.insight-legenda-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* Box de recomendação e inteligência sucessória */
+.card-inteligencia-sucessoria {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left: 3.5px solid #0284c7;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #334155;
+}
+
+.card-inteligencia-sucessoria.verde {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  border-left-color: #16a34a;
+  color: #166534;
+}
+
+.card-inteligencia-sucessoria.azul {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+  border-left-color: #0284c7;
+  color: #0369a1;
+}
+
+.card-inteligencia-sucessoria.roxo {
+  background: #faf5ff;
+  border-color: #e9d5ff;
+  border-left-color: #9333ea;
+  color: #6b21a8;
+}
+
+.card-inteligencia-titulo {
+  font-weight: 700;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+
+/* ===== SOLUÇÃO 4: ABAS / TABS EXECUTIVAS CENTRALIZADAS ===== */
+.container_tabs_patrimonio {
+  max-width: 920px;
+  margin: 30px auto 40px auto;
+  width: 100%;
+}
+
+.tabs-nav-patrimonio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #f4f4f5;
+  padding: 6px;
+  border-radius: 16px;
+  border: 1px solid #e4e4e7;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.tab-btn-patrimonio {
+  flex: 1;
+  min-width: 160px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 18px;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: 'Outfit', sans-serif;
+  user-select: none;
+  text-align: center;
+}
+
+.tab-btn-patrimonio:hover {
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.tab-btn-patrimonio.active {
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.tab-btn-titulo {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #52525b;
+  transition: color 0.2s ease;
+}
+
+.tab-btn-patrimonio.active .tab-btn-titulo {
+  color: #09090b;
+  font-weight: 700;
+}
+
+.tab-btn-badge-valor {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #71717a;
+  background: rgba(0, 0, 0, 0.04);
+  padding: 2px 10px;
+  border-radius: 20px;
+  transition: all 0.2s ease;
+}
+
+.tab-btn-patrimonio.active .tab-btn-badge-valor {
+  background: #09090b;
+  color: #ffffff;
+}
+
+/* Painéis de Conteúdo das Abas */
+.tab-pane-patrimonio {
+  display: none;
+}
+
+.tab-pane-patrimonio.active {
+  display: block;
+  animation: tabFadeIn 0.22s ease-out;
+}
+
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.tab-card-container {
+  background: white;
+  padding: 36px 36px;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.tab-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding-bottom: 14px;
+  border-bottom: 1.5px solid rgba(0, 0, 0, 0.06);
+}
+
+.tab-card-header h2 {
+  font-size: 21px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.badge-quadrante {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+}
+
+.tab-pane-footer-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid #f4f4f5;
+  gap: 12px;
+}
+
+.btn-tab-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  border: 1px solid #e4e4e7;
+  background: #ffffff;
+  color: #09090b;
+}
+
+.btn-tab-nav:hover {
+  background: #f4f4f5;
+  border-color: #d4d4d8;
+}
+
+.btn-tab-nav.primary {
+  background: #09090b;
+  color: #ffffff;
+  border-color: #09090b;
+}
+
+.btn-tab-nav.primary:hover {
+  background: #27272a;
+}
+
+.empresas-holding-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.empresas-toggle-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.empresas-placeholder-card {
+  margin-top: 18px;
+  padding: 32px 20px;
+  background: #fafafa;
+  border-radius: 14px;
+  border: 1.5px dashed #e4e4e7;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #71717a;
+  flex: 1;
+}
+
+.empresas-placeholder-card p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #3f3f46;
+}
+
+.empresas-placeholder-card span {
+  font-size: 11.5px;
+  color: #71717a;
+  max-width: 340px;
+  line-height: 1.45;
+}
+
+@media (max-width: 768px) {
+  .tab-card-container {
+    padding: 24px 18px;
+  }
+  .tab-btn-patrimonio {
+    min-width: 140px;
+    padding: 8px 10px;
+  }
+}
+
+
+/* Botão de Detalhamento das Faixas do Estate Tax (Padronizado) */
+.btn-toggle-tabela-estate {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  padding: 8px 14px !important;
+  border-radius: 8px !important;
+  border: 1px solid #cbd5e1 !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  margin-top: 8px !important;
+  line-height: 1.4 !important;
+}
+
+.btn-toggle-tabela-estate:hover {
+  background: #09090b !important;
+  color: #ffffff !important;
+  border-color: #09090b !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+}
+
+.btn-toggle-tabela-estate svg {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  stroke: currentColor;
+  flex-shrink: 0;
+}
+
+.btn-toggle-tabela-estate.is-open svg {
+  transform: rotate(180deg);
+}

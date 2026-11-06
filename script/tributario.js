@@ -164,7 +164,6 @@ function renderizarEstruturaFamiliar() {
 
   // Filhos ou Ascendentes ou Colaterais
   if (qtdFilhos > 0) {
-    const fatiaPorFilho = (100 / qtdFilhos).toFixed(1);
     html += `
       <div class="pdf-tree-connector-down"></div>
       <div class="pdf-tree-row pdf-children-row">
@@ -172,14 +171,14 @@ function renderizarEstruturaFamiliar() {
 
     for (let i = 0; i < qtdFilhos; i++) {
       const idade = idadesFilhos[i];
-      const idadeStr = idade !== null && idade !== undefined && idade !== "" ? `${idade} anos` : "";
+      const idadeStr = idade !== null && idade !== undefined && idade !== "" ? `${idade} anos` : "Idade não informada";
       const ehMenor = idade !== null && idade !== undefined && idade < 18;
 
       html += `
         <div class="pdf-node-card pdf-node-filho ${ehMenor ? 'pdf-menor' : ''}">
           <div class="pdf-node-role">Filho(a) ${i + 1}</div>
           <div class="pdf-node-name">Herdeiro Necessário</div>
-          <div class="pdf-node-sub">${idadeStr ? idadeStr + ' · ' : ''}${fatiaPorFilho}% da legítima</div>
+          <div class="pdf-node-sub">${escapeHTML(idadeStr)}</div>
         </div>
       `;
     }
@@ -1066,8 +1065,7 @@ function carregarResumoSidebar() {
 
 function atualizarBlocoOffshoreEstateTaxUI(dadosPatrimonio) {
   const blocoSimulacao = document.getElementById("bloco_simulacao_estate_tax");
-  const blocoPdf = document.getElementById("bloco_pdf_offshore_estate_tax");
-  if (!dadosPatrimonio) return;
+    if (!dadosPatrimonio) return;
 
   const offshoreBRL = obterOffshoreBRL(dadosPatrimonio);
   const ptax = Number(dadosPatrimonio.offshore_ptax) || Number(cotacaoCache.cotacao) || 5.5;
@@ -1077,8 +1075,7 @@ function atualizarBlocoOffshoreEstateTaxUI(dadosPatrimonio) {
 
   if (offshoreBRL <= 0 && offshoreUSD <= 0) {
     if (blocoSimulacao) blocoSimulacao.style.display = "none";
-    if (blocoPdf) blocoPdf.style.display = "none";
-    return;
+        return;
   }
 
   const ativosIsentos = Array.isArray(dadosPatrimonio.ativos_sem_estate_tax)
@@ -1168,26 +1165,7 @@ function atualizarBlocoOffshoreEstateTaxUI(dadosPatrimonio) {
     }
   }
 
-  // 2. Atualiza Card no Relatório PDF
-  if (blocoPdf) {
-    blocoPdf.style.display = "block";
-    const elPdfTag = document.getElementById("pdf_tag_conta_offshore");
-    const elPdfDesc = document.getElementById("pdf_desc_offshore");
-    const elPdfTotal = document.getElementById("pdf_val_offshore_usd");
-    const elPdfTax = document.getElementById("pdf_val_estate_tax");
 
-    if (elPdfTag) elPdfTag.innerText = (regrasConta.nome || "Conta Individual").toUpperCase();
-    if (elPdfDesc) {
-      elPdfDesc.innerText = `Patrimônio offshore (${regrasConta.nome}) excluído da partilha no Brasil. ${diag.mensagem}`;
-    }
-    if (elPdfTotal) elPdfTotal.innerText = `${fmtUSD(calc.totalUSD)} (~ ${fmtBRL(offshoreBRL)})`;
-    if (elPdfTax) {
-      elPdfTax.innerText = calc.impostoTotalUSD > 0
-        ? `${fmtUSD(calc.impostoTotalUSD)} (${calc.aliquotaEfetivaExcedente}%)`
-        : "USD 0,00 (Isento)";
-      elPdfTax.style.color = calc.impostoTotalUSD > 0 ? "#b91c1c" : "#16a34a";
-    }
-  }
 }
 
 function atualizarITCMD() {

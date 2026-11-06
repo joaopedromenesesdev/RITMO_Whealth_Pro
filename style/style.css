@@ -2935,17 +2935,41 @@
 }
 
 .btn-toggle-tabela-estate {
-  background: none;
-  border: none;
-  padding: 0;
-  color: #1e40af;
-  font-size: 11.5px;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: underline;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  padding: 8px 14px !important;
+  border-radius: 8px !important;
+  border: 1px solid #cbd5e1 !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  margin-top: 8px !important;
+  line-height: 1.4 !important;
+}
+
+.btn-toggle-tabela-estate:hover {
+  background: #09090b !important;
+  color: #ffffff !important;
+  border-color: #09090b !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+}
+
+.btn-toggle-tabela-estate svg {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  stroke: currentColor;
+  flex-shrink: 0;
+}
+
+.btn-toggle-tabela-estate.is-open svg {
+  transform: rotate(180deg);
 }
 
 
