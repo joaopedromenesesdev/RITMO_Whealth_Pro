@@ -88,9 +88,49 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inicializa ergonomia de digitação (auto-seleção de valores numéricos ao focar)
     inicializarAutoSelectInputs();
 
+    // Inicializa banner de modo de visualização / auditoria Master se ativo
+    renderizarBannerAuditoriaMaster();
+
     // Inicializa o botão flutuante de suporte no canto inferior direito
     inicializarWidgetSuporte();
 });
+
+// Banner discreto para Modo de Visualização / Auditoria Master (Somente Leitura)
+function renderizarBannerAuditoriaMaster() {
+    if (sessionStorage.getItem("modo_auditoria_master") !== "true") return;
+    if (document.getElementById("master-audit-readonly-banner")) return;
+
+    const navbar = document.querySelector(".navbar");
+    if (!navbar) return;
+
+    const nomeAssessor = sessionStorage.getItem("auditoria_assessor_nome") || sessionStorage.getItem("nome_assessor") || "Assessor";
+    const esc = typeof window.escapeHTML === "function" ? window.escapeHTML : (s => String(s || ""));
+
+    const banner = document.createElement("div");
+    banner.id = "master-audit-readonly-banner";
+    banner.style.cssText = `
+        background: #09090b;
+        color: #ffffff;
+        padding: 10px 24px;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        z-index: 900;
+    `;
+    banner.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <span style="background: #27272a; color: #fafafa; font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.04em;">VISUALIZAÇÃO MASTER (SOMENTE LEITURA)</span>
+            <span style="color: #d4d4d8;">Inspecionando simulação do Assessor: <strong style="color: #ffffff;">${esc(nomeAssessor)}</strong> — O auto-salvamento está desativado para preservar os dados originais.</span>
+        </div>
+        <button type="button" onclick="sessionStorage.clear(); window.location.href='index.html';" style="background: #ffffff; color: #09090b; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;">
+            Voltar ao Meu Dashboard
+        </button>
+    `;
+    navbar.insertAdjacentElement("afterend", banner);
+}
 
 // =========================
 // EFEITO PARALLAX SUAVE
@@ -1142,7 +1182,10 @@ window.abrirRelatorioPeloPainelMaster = function(repId, modo = "editar") {
         let ds = rep.dadosSessao;
         if (ds.patrimonio && ds.patrimonio.dados) {
             sessionStorage.setItem("patrimonio_dados", JSON.stringify(ds.patrimonio.dados));
-            sessionStorage.setItem("total_patrimonio", ds.patrimonio.total ?? rep.totalPatrimonio ?? 0);
+            const tot = ds.patrimonio.total ?? rep.totalPatrimonio ?? 0;
+            sessionStorage.setItem("total_patrimonio", tot);
+            const off = Number(ds.patrimonio.dados.offshore_brl) || Number(ds.patrimonio.dados.offshore) || 0;
+            sessionStorage.setItem("total_patrimonio_nacional", ds.patrimonio.totalNacional ?? Math.max(0, tot - off));
             if (ds.familia) sessionStorage.setItem("familia", JSON.stringify(ds.familia));
             if (ds.evolucao?.inputs) sessionStorage.setItem("evolucao_inputs", JSON.stringify(ds.evolucao.inputs));
             if (ds.evolucao?.dados) sessionStorage.setItem("evolucao_dados", JSON.stringify(ds.evolucao.dados));
@@ -1158,8 +1201,15 @@ window.abrirRelatorioPeloPainelMaster = function(repId, modo = "editar") {
                     sessionStorage.setItem(k, typeof v === "object" ? JSON.stringify(v) : v);
                 }
             });
-            if (!ds.total_patrimonio && rep.totalPatrimonio) {
-                sessionStorage.setItem("total_patrimonio", rep.totalPatrimonio);
+            const tot = ds.total_patrimonio ?? rep.totalPatrimonio ?? 0;
+            sessionStorage.setItem("total_patrimonio", tot);
+            if (!sessionStorage.getItem("total_patrimonio_nacional")) {
+                let off = 0;
+                try {
+                    const dp = JSON.parse(sessionStorage.getItem("patrimonio_dados") || "{}");
+                    off = Number(dp.offshore_brl) || Number(dp.offshore) || 0;
+                } catch (_) {}
+                sessionStorage.setItem("total_patrimonio_nacional", Math.max(0, tot - off));
             }
         }
     } else {
@@ -1173,6 +1223,19 @@ window.abrirRelatorioPeloPainelMaster = function(repId, modo = "editar") {
     if (rep.userId) {
         sessionStorage.setItem("current_report_owner_id", rep.userId);
     }
+
+    let currentUid = "";
+    try {
+        const cached = JSON.parse(localStorage.getItem("pace_user_cache") || "{}");
+        if (cached && cached.id) currentUid = String(cached.id);
+    } catch (_) {}
+
+    const ehRelatorioDeOutroAssessor = !currentUid || !rep.userId || String(rep.userId) !== String(currentUid);
+    if (ehRelatorioDeOutroAssessor) {
+        sessionStorage.setItem("modo_auditoria_master", "true");
+        sessionStorage.setItem("auditoria_assessor_nome", rep.nomeAssessor || "Assessor");
+    }
+
     sessionStorage.setItem("current_report_id", rep.id);
     sessionStorage.setItem("simulacao_ativa", "true");
 

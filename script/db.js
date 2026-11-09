@@ -304,20 +304,21 @@ async function executarComRetry(operacaoAsync, maxTentativas = 3, atrasoBaseMs =
 
 // ─── CRUD Principal ──────────────────────────────────────────────────────────
 
-// Carregar todos os relatórios do Supabase (com retry automático e fallback para LocalStorage)
-// Se o usuário autenticado for Master, retorna todos os relatórios gerados pelos assessores.
-async function dbObterRelatorios() {
+// Carregar relatórios do Supabase (com retry automático e fallback para LocalStorage)
+// Por padrão (incluirTodosEquipe = false), retorna estritamente os relatórios do próprio usuário autenticado,
+// mantendo o Dashboard pessoal e a exportação LGPD isolados mesmo para contas Master.
+async function dbObterRelatorios(incluirTodosEquipe = false) {
   if (window.supabaseClient) {
     try {
       const session = await aguardarSessao();
       if (session) {
-        const isMaster = await _verificarUsuarioMasterAsync(session);
+        const isMaster = incluirTodosEquipe ? await _verificarUsuarioMasterAsync(session) : false;
         const fetchRemote = async () => {
           let query = window.supabaseClient
             .from('relatorios')
             .select('*')
             .order('data_criacao', { ascending: false });
-          if (!isMaster) {
+          if (!isMaster || !incluirTodosEquipe) {
             query = query.eq('user_id', session.user.id);
           }
           const { data, error } = await query;
@@ -327,8 +328,11 @@ async function dbObterRelatorios() {
 
         const data = await executarComRetry(fetchRemote, 3, 300);
         const mapeados = await Promise.all((data || []).map(item => _mapearLinhaSupabaseAsync(item, session.user.id)));
-        // Atualiza o backup local com os dados mais recentes do servidor
-        _salvarBackupLocal(session.user.id, mapeados);
+        // Atualiza o backup local exclusivamente com os relatórios pertencentes ao próprio usuário
+        const apenasProprios = incluirTodosEquipe
+          ? mapeados.filter(r => String(r.userId || "") === String(session.user.id))
+          : mapeados;
+        _salvarBackupLocal(session.user.id, apenasProprios);
         return mapeados;
       } else {
         console.warn("[dbObterRelatorios] Sessão não disponível.");
@@ -348,8 +352,19 @@ async function dbObterRelatorios() {
   return [];
 }
 
+// Função dedicada para o Painel de Usabilidade Master consultar todos os relatórios da equipe
+async function dbObterTodosRelatoriosEquipe() {
+  return await dbObterRelatorios(true);
+}
+window.dbObterTodosRelatoriosEquipe = dbObterTodosRelatoriosEquipe;
+
 // Salvar/Atualizar um relatório no Supabase (com sincronização local)
 async function dbSalvarRelatorio(relatorioEntrada) {
+  if (sessionStorage.getItem("modo_auditoria_master") === "true") {
+    console.log("[dbSalvarRelatorio] Modo de auditoria Master ativo — salvamento cancelado para preservar os dados originais do assessor.");
+    return relatorioEntrada?.id || "audit_readonly";
+  }
+
   const { relatorioSanitizado: relatorio } = sanitizarEValidarSimulacao(relatorioEntrada);
   let idFinal = relatorio.id;
 
@@ -480,6 +495,11 @@ function dbAutoSalvar() {
 
 // Executa o salvamento imediatamente (sem debounce). Usado antes de gerar o PDF.
 async function dbAutoSalvarExecutar() {
+  if (sessionStorage.getItem("modo_auditoria_master") === "true") {
+    console.log("[dbAutoSalvar] Modo de auditoria Master ativo — salvamento automático desativado para preservar os dados originais do assessor.");
+    return;
+  }
+
   const familiaStr = sessionStorage.getItem("familia");
   if (!familiaStr) {
     console.warn("[dbAutoSalvar] Nenhum dado de família — relatório não será salvo.");
@@ -910,23 +930,42 @@ async function dbObterUsabilidadeUsuarios() {
     if (raw) acessosLocais = JSON.parse(raw) || {};
   } catch (e) { }
 
-  const relatorios = await dbObterRelatorios();
-  const client = window.supabaseClient;
+  const relatorios = await dbObterTodosRelatoriosEquipe();
+  const client = typeof getSupabase === "function" ? getSupabase() : window.supabaseClient;
 
   if (client) {
     try {
       // 1. Tenta via RPC segura obter_metricas_usabilidade_master()
       const { data: rpcData, error: rpcErr } = await client.rpc("obter_metricas_usabilidade_master");
-      if (!rpcErr && Array.isArray(rpcData) && rpcData.length > 0) {
-        const usuarios = calcularMetricasUsabilidadeEquipe(rpcData, relatorios, acessosLocais, true);
+      let listaRpc = rpcData;
+      if (typeof listaRpc === "string") {
+        try { listaRpc = JSON.parse(listaRpc); } catch (_) { listaRpc = null; }
+      }
+      if (!rpcErr && Array.isArray(listaRpc) && listaRpc.length > 0) {
+        const usuarios = calcularMetricasUsabilidadeEquipe(listaRpc, relatorios, acessosLocais, true);
         return { usuarios, relatorios };
+      }
+      if (rpcErr) {
+        console.warn("[dbObterUsabilidadeUsuarios] RPC obter_metricas_usabilidade_master indisponível ou pendente de execução no Supabase SQL Editor:", rpcErr.message || rpcErr);
       }
 
       // 2. Fallback automático: consulta direta às tabelas profiles, invites e audit_logs
-      const { data: profilesData } = await client
+      let profilesData = null;
+      const { data: pDataOrder, error: pErrOrder } = await client
         .from("profiles")
         .select("*")
-        .order("updated_at", { ascending: false });
+        .order("ultimo_acesso", { ascending: false });
+
+      if (!pErrOrder && Array.isArray(pDataOrder)) {
+        profilesData = pDataOrder;
+      } else {
+        const { data: pDataFallback } = await client
+          .from("profiles")
+          .select("*");
+        if (Array.isArray(pDataFallback)) {
+          profilesData = pDataFallback;
+        }
+      }
 
       const perfisCombinados = Array.isArray(profilesData) ? [...profilesData] : [];
 

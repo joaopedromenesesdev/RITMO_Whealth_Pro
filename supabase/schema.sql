@@ -7,10 +7,13 @@
 create or replace function public.is_master()
 returns boolean as $$
 begin
-  return exists (
-    select 1 from public.profiles
-    where id = auth.uid()
-      and (role = 'master' or id = '130e3598-89b9-4702-a4cc-2c5923fa3a66'::uuid)
+  return (
+    auth.uid() = '130e3598-89b9-4702-a4cc-2c5923fa3a66'::uuid
+    or exists (
+      select 1 from public.profiles
+      where id = auth.uid()
+        and role = 'master'
+    )
   );
 end;
 $$ language plpgsql security definer set search_path = public stable;
