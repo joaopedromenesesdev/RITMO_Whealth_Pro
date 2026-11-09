@@ -643,6 +643,7 @@
     const authSource = fs.readFileSync('script/auth.js', 'utf8');
     const globalUiSource = fs.readFileSync('script/global_ui.js', 'utf8');
     const sqlMigrationSource = fs.readFileSync('supabase/migrations/20261104_sistema_usuarios_master_usabilidade.sql', 'utf8');
+    const sqlConsolidadoSource = fs.readFileSync('supabase/migrations/20261109_consolidacao_usabilidade_master_rls.sql', 'utf8');
 
     // Extrai DIRETORIO_USUARIOS_SISTEMA do db.js e garante que está vazio no bundle público
     const matchDiretorio = dbSource.match(/const DIRETORIO_USUARIOS_SISTEMA = (\[[\s\S]*?\]);/);
@@ -659,7 +660,8 @@
       { nome: "script/db.js", conteudo: dbSource },
       { nome: "script/auth.js", conteudo: authSource },
       { nome: "script/global_ui.js", conteudo: globalUiSource },
-      { nome: "supabase/migrations/20261104_sistema_usuarios_master_usabilidade.sql", conteudo: sqlMigrationSource }
+      { nome: "supabase/migrations/20261104_sistema_usuarios_master_usabilidade.sql", conteudo: sqlMigrationSource },
+      { nome: "supabase/migrations/20261109_consolidacao_usabilidade_master_rls.sql", conteudo: sqlConsolidadoSource }
     ];
 
     const emailsInstitucionaisPermitidos = new Set([
@@ -674,6 +676,15 @@
       const emailsNaoInstitucionais = matchesEmail.filter(e => !emailsInstitucionaisPermitidos.has(e.toLowerCase()));
       assert(emailsNaoInstitucionais.length === 0, `Zero e-mails pessoais expostos em ${arq.nome}`);
     });
+
+    assert(sqlConsolidadoSource.includes("on public.profiles for select"), "Migration consolidada inclui política RLS de SELECT em public.profiles para Master");
+    assert(sqlConsolidadoSource.includes("obter_metricas_usabilidade_master"), "Migration consolidada inclui RPC obter_metricas_usabilidade_master");
+
+    const dashboardSource = fs.readFileSync('script/dashboard.js', 'utf8');
+    assert(dbSource.includes("async function dbObterRelatorios(incluirTodosEquipe = false)"), "dbObterRelatorios isola relatórios próprios por padrão (incluirTodosEquipe = false)");
+    assert(dbSource.includes('sessionStorage.getItem("modo_auditoria_master") === "true"'), "dbAutoSalvarExecutar bloqueia salvamento automático em modo_auditoria_master");
+    assert(dashboardSource.includes('<option value="meus">Meus Relatórios'), "Dashboard define 'Meus Relatórios' como visão padrão para o usuário logado");
+    assert(globalUiSource.includes('sessionStorage.setItem("modo_auditoria_master", "true")'), "Painel Master ativa modo_auditoria_master ao inspecionar relatório de outro assessor");
 
     // ==========================================
     // 22. TESTE: MAPEAMENTO DE ATIVOS SEM ESTATE TAX (PÁGINA 4 BTG PACTUAL)
@@ -835,6 +846,47 @@
     assert(estimativaLei.aliquotaPercentual === 15, "Alíquota IRPF Lei 14.754/2023 = 15%");
     assert(estimativaLei.impostoAnualUSD === 750, "Imposto anual IRPF = USD 750");
     assert(estimativaLei.impostoAnualBRL === 4125, "Imposto anual convertido PTAX 5.5 = R$ 4.125");
+
+    // ==========================================
+    // 25. TESTE: RESILIÊNCIA DE DADOS PARCIAIS E NÃO-ZERAMENTO DE PREJUÍZO TRIBUTÁRIO
+    // ==========================================
+    console.log("\nExecutando Testes 25: Resiliência de Dados Parciais e Cálculo Defensivo...");
+
+    // Cenário Gabriel: Total R$ 3.300.000, Previdência R$ 500.000, Bens individuais vazios/não discriminados
+    const calculoGabriel = engine.calcularMemoriaPrejuizo({
+      totalPatrimonio: 3300000,
+      valorPrevidencia: 500000,
+      valorOffshore: 0,
+      regime: "comunhao_parcial",
+      itcmd: 4.0,
+      honorarios: 6.0,
+      custas: 1.0
+    });
+
+    assert(calculoGabriel.baseTributavel === 1400000, "Gabriel: Base tributável deve ser R$ 1.400.000");
+    assert(calculoGabriel.prejuizoTotal === 154000, "Gabriel: Prejuízo tributário deve ser exatamente R$ 154.000 (11%)");
+    assert(calculoGabriel.subtotalLiquido === 2800000, "Gabriel: Subtotal líquido deduzida previdência = R$ 2.800.000");
+
+    // Simulação do fallback defensivo Math.max(somaItens, pisoNacional)
+    const totalAtualMock = 3300000;
+    const offshoreMock = 0;
+    const dadosPatrimonioParciais = { prev: 500000 };
+    const somaItensMock = Number(dadosPatrimonioParciais.rf || 0) + Number(dadosPatrimonioParciais.prev || 0); // 500.000
+    const pisoNacionalMock = Math.max(0, totalAtualMock - offshoreMock); // 3.300.000
+    const nacAtualDefensivo = Math.max(somaItensMock, pisoNacionalMock);
+    assert(nacAtualDefensivo === 3300000, "Fallback defensivo assegura patrimônio nacional de R$ 3.300.000 mesmo com bens detalhados ausentes");
+
+    const baseCalculada = Math.max(0, nacAtualDefensivo - dadosPatrimonioParciais.prev) * 0.5;
+    assert(baseCalculada === 1400000, "Base calculada com fallback = R$ 1.400.000");
+    assert(baseCalculada * 0.11 === 154000, "Prejuízo calculado com fallback = R$ 154.000");
+
+    // Projeção futura defensiva
+    const totalProjetadoMock = 8559350;
+    const prevProjetadaMock = 1296871;
+    const nacProjetadoPiso = Math.max(0, totalProjetadoMock - offshoreMock);
+    const baseProjetadaDefensiva = Math.max(0, nacProjetadoPiso - prevProjetadaMock) * 0.5;
+    assert(baseProjetadaDefensiva === 3631239.5, "Base projetada defensiva consistente com projeção total (R$ 3.631.239,50)");
+    assert(Math.round(baseProjetadaDefensiva * 0.11) === 399436, "Prejuízo projetado defensivo = R$ 399.436");
 
     console.log("\n=================================================");
     console.log(`RESUMO DA SUÍTE DE TESTES:`);

@@ -346,7 +346,8 @@
         },
         patrimonio: {
           dados: patrimonioDados,
-          total: totalPatrimonio
+          total: totalPatrimonio,
+          totalNacional: Number(sessionStorage.getItem("total_patrimonio_nacional")) || Math.max(0, totalPatrimonio - (Number(patrimonioDados.offshore) || 0))
         },
         familia,
         evolucao: {

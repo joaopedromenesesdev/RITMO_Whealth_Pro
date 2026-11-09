@@ -250,10 +250,14 @@ function obterOffshoreBRL(dadosPatrimonio) {
 }
 
 function calcularPatrimonioNacionalBruto(dadosPatrimonio) {
+  const totalAtual = Number(sessionStorage.getItem("total_patrimonio")) || 0;
+  const offshore = obterOffshoreBRL(dadosPatrimonio);
+  const pisoNacional = Math.max(0, totalAtual - offshore);
+
   if (!dadosPatrimonio || Object.keys(dadosPatrimonio).length === 0) {
     const salvo = sessionStorage.getItem("total_patrimonio_nacional");
-    if (salvo !== null) return Number(salvo) || 0;
-    return Number(sessionStorage.getItem("total_patrimonio")) || 0;
+    if (salvo !== null) return Number(salvo) || pisoNacional;
+    return pisoNacional;
   }
   const rf = parseValor(dadosPatrimonio.rf);
   const rv = parseValor(dadosPatrimonio.rv);
@@ -277,7 +281,8 @@ function calcularPatrimonioNacionalBruto(dadosPatrimonio) {
     });
   }
 
-  return rf + rv + inter + prev + apt + casa + terr + galp + bens_particulares + bens + totalEmpresas;
+  const somaItens = rf + rv + inter + prev + apt + casa + terr + galp + bens_particulares + bens + totalEmpresas;
+  return Math.max(somaItens, pisoNacional);
 }
 
 
@@ -1003,9 +1008,9 @@ function carregarResumoSidebar() {
   const prev = parseValor(dadosPatrimonio.prev);
   const offshore = obterOffshoreBRL(dadosPatrimonio);
 
-  const patrimonioNacionalAtual = Object.keys(dadosPatrimonio).length > 0
-    ? calcularPatrimonioNacionalBruto(dadosPatrimonio)
-    : Math.max(0, totalAtual - offshore);
+  const pisoNacional = Math.max(0, totalAtual - offshore);
+  const somaItensNacionais = calcularPatrimonioNacionalBruto(dadosPatrimonio);
+  const patrimonioNacionalAtual = Math.max(somaItensNacionais || 0, pisoNacional);
 
   const dadosEvolucao = JSON.parse(sessionStorage.getItem("evolucao_dados")) || { resultados: [], resultadosPrev: [], resultadosNacional: [] };
   const totalProjetado = (dadosEvolucao.resultados && dadosEvolucao.resultados.length > 0)
@@ -1030,6 +1035,10 @@ function carregarResumoSidebar() {
   } else if (Array.isArray(dadosEvolucao.resultadosNacional) && dadosEvolucao.resultadosNacional.length > 0) {
     patrimonioNacionalProjetado = dadosEvolucao.resultadosNacional[dadosEvolucao.resultadosNacional.length - 1];
   }
+
+  // Proteção defensiva: O patrimônio nacional projetado não pode ser menor que o total projetado deduzido do offshore
+  const pisoProjetadoNacional = Math.max(0, totalProjetado - offshore);
+  patrimonioNacionalProjetado = Math.max(patrimonioNacionalProjetado || 0, pisoProjetadoNacional);
 
   const dadosFamilia = JSON.parse(sessionStorage.getItem("familia")) || {};
   const regime = dadosFamilia.regime || "Não informado";
@@ -1065,18 +1074,27 @@ function carregarResumoSidebar() {
 
 function atualizarBlocoOffshoreEstateTaxUI(dadosPatrimonio) {
   const blocoSimulacao = document.getElementById("bloco_simulacao_estate_tax");
-    if (!dadosPatrimonio) return;
+  if (!dadosPatrimonio) return;
 
   const offshoreBRL = obterOffshoreBRL(dadosPatrimonio);
-  const ptax = Number(dadosPatrimonio.offshore_ptax) || Number(cotacaoCache.cotacao) || 5.5;
-  const offshoreUSD = (dadosPatrimonio.offshore_modo === "usd" && dadosPatrimonio.offshore_usd !== undefined && dadosPatrimonio.offshore_usd !== null)
+  const offshoreUSDInput = (dadosPatrimonio.offshore_modo === "usd" && dadosPatrimonio.offshore_usd !== undefined && dadosPatrimonio.offshore_usd !== null)
     ? Number(dadosPatrimonio.offshore_usd) || 0
-    : (offshoreBRL > 0 ? offshoreBRL / ptax : 0);
+    : 0;
 
-  if (offshoreBRL <= 0 && offshoreUSD <= 0) {
+  if (offshoreBRL <= 0 && offshoreUSDInput <= 0) {
     if (blocoSimulacao) blocoSimulacao.style.display = "none";
-        return;
+    return;
   }
+
+  let cotacaoCache = {};
+  try {
+    cotacaoCache = JSON.parse(sessionStorage.getItem("ptax_cotacao_cache") || "{}");
+  } catch (e) { }
+
+  const ptax = Number(dadosPatrimonio.offshore_ptax) || Number(cotacaoCache.cotacao) || 5.5;
+  const offshoreUSD = offshoreUSDInput > 0
+    ? offshoreUSDInput
+    : (offshoreBRL > 0 ? offshoreBRL / ptax : 0);
 
   const ativosIsentos = Array.isArray(dadosPatrimonio.ativos_sem_estate_tax)
     ? dadosPatrimonio.ativos_sem_estate_tax
@@ -1223,8 +1241,14 @@ function calcularPrejuizo() {
   const multiplicadorRegime = (regimeLower.includes("comunhão") || regimeLower.includes("participação final") || regimeLower.includes("aquestos")) ? 0.5 : 1;
 
   // Base de Cálculo: Usa exclusivamente o patrimônio nacional (excluindo 100% de offshore e seus rendimentos) e abate a previdência e a meação
-  const nacAtual = patrimonioNacionalAtual !== undefined ? patrimonioNacionalAtual : Math.max(0, totalAtual - offshore);
-  const nacProj = patrimonioNacionalProjetado !== undefined ? patrimonioNacionalProjetado : Math.max(0, totalProjetado - offshore);
+  const nacAtual = Math.max(
+    patrimonioNacionalAtual !== undefined ? patrimonioNacionalAtual : 0,
+    Math.max(0, totalAtual - offshore)
+  );
+  const nacProj = Math.max(
+    patrimonioNacionalProjetado !== undefined ? patrimonioNacionalProjetado : 0,
+    Math.max(0, totalProjetado - offshore)
+  );
 
   const baseAtual = Math.max(0, nacAtual - prev) * multiplicadorRegime;
   const baseProjetada = Math.max(0, nacProj - prevProjetado) * multiplicadorRegime;
@@ -1362,11 +1386,13 @@ function calcularPrejuizo() {
   const inputAvista = document.getElementById("input_doacao_avista");
   let avistaVal = 0;
   if (inputAvista) {
-    if (inputAvista.value === "" && !inputAvista.dataset.initialized && prejuizoAtual > 0) {
+    const isInitAvista = (inputAvista.dataset && inputAvista.dataset.initialized) || (typeof inputAvista.getAttribute === "function" && inputAvista.getAttribute("data-initialized"));
+    if (inputAvista.value === "" && !isInitAvista && prejuizoAtual > 0) {
       inputAvista.value = Math.round(prejuizoAtual * 100).toString();
       formatarMoeda(inputAvista);
       checkFilled(inputAvista);
-      inputAvista.dataset.initialized = "true";
+      if (inputAvista.dataset) inputAvista.dataset.initialized = "true";
+      if (typeof inputAvista.setAttribute === "function") inputAvista.setAttribute("data-initialized", "true");
     }
     avistaVal = obterValorInput(inputAvista);
   }
@@ -1409,7 +1435,8 @@ function calcularPrejuizo() {
   const inputPrevidencia = document.getElementById("input_previdencia");
   let previdenciaVal = 0;
   if (inputPrevidencia) {
-    if (inputPrevidencia.value === "" && !inputPrevidencia.dataset.initialized) {
+    const isInitPrev = (inputPrevidencia.dataset && inputPrevidencia.dataset.initialized) || (typeof inputPrevidencia.getAttribute === "function" && inputPrevidencia.getAttribute("data-initialized"));
+    if (inputPrevidencia.value === "" && !isInitPrev) {
       const dadosPatrimonio = JSON.parse(sessionStorage.getItem("patrimonio_dados")) || {};
       const prevPatrimonio = parseValor(dadosPatrimonio.prev);
       if (prevPatrimonio > 0) {
@@ -1417,7 +1444,8 @@ function calcularPrejuizo() {
         formatarMoeda(inputPrevidencia);
         checkFilled(inputPrevidencia);
       }
-      inputPrevidencia.dataset.initialized = "true";
+      if (inputPrevidencia.dataset) inputPrevidencia.dataset.initialized = "true";
+      if (typeof inputPrevidencia.setAttribute === "function") inputPrevidencia.setAttribute("data-initialized", "true");
     }
     previdenciaVal = obterValorInput(inputPrevidencia);
   }
@@ -1476,11 +1504,13 @@ function calcularPrejuizo() {
   let seguroCapitalVal = 0;
 
   if (inputSeguroCapital) {
-    if (inputSeguroCapital.value === "" && !inputSeguroCapital.dataset.initialized && prejuizoAtual > 0) {
+    const isInitSeguro = (inputSeguroCapital.dataset && inputSeguroCapital.dataset.initialized) || (typeof inputSeguroCapital.getAttribute === "function" && inputSeguroCapital.getAttribute("data-initialized"));
+    if (inputSeguroCapital.value === "" && !isInitSeguro && prejuizoAtual > 0) {
       inputSeguroCapital.value = Math.round(prejuizoAtual * 100).toString();
       formatarMoeda(inputSeguroCapital);
       checkFilled(inputSeguroCapital);
-      inputSeguroCapital.dataset.initialized = "true";
+      if (inputSeguroCapital.dataset) inputSeguroCapital.dataset.initialized = "true";
+      if (typeof inputSeguroCapital.setAttribute === "function") inputSeguroCapital.setAttribute("data-initialized", "true");
     }
     seguroCapitalVal = obterValorInput(inputSeguroCapital);
   }

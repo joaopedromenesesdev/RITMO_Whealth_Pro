@@ -2,6 +2,8 @@
 
 // Cache em memória dos relatórios para filtragem rápida
 let relatoriosCached = [];
+let relatoriosEquipeCached = [];
+let currentDashboardUserId = "";
 
 document.addEventListener("DOMContentLoaded", () => {
   // Ao entrar no Dashboard, encerra qualquer simulação transitória pendente
@@ -67,6 +69,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Mantém compatibilidade com funções antigas de restauração
 function obterRelatorios() {
+  const filtroAssessor = document.getElementById("filtro_assessor")?.value || "meus";
+  if (filtroAssessor && filtroAssessor !== "meus" && relatoriosEquipeCached.length > 0) {
+    return relatoriosEquipeCached;
+  }
   return relatoriosCached;
 }
 
@@ -78,15 +84,19 @@ async function carregarDashboard() {
     container.innerHTML = `<div style="text-align:center; padding: 2rem; color: var(--text-muted);"><p>Carregando relatórios...</p></div>`;
   }
 
-  relatoriosCached = await dbObterRelatorios();
+  // Por padrão, carrega estritamente os relatórios próprios do usuário logado
+  relatoriosCached = await dbObterRelatorios(false);
+  relatoriosEquipeCached = [...relatoriosCached];
 
   // Verifica se o usuário atual é Master para liberar o filtro por Assessor no Dashboard
   let isMaster = false;
   try {
     const cachedUser = JSON.parse(localStorage.getItem("pace_user_cache") || "{}");
+    if (cachedUser && cachedUser.id) currentDashboardUserId = String(cachedUser.id);
     if (cachedUser && cachedUser.role === "master") isMaster = true;
-    if (!isMaster && typeof authObterUsuario === "function") {
+    if (typeof authObterUsuario === "function") {
       const u = await authObterUsuario();
+      if (u && u.id) currentDashboardUserId = String(u.id);
       if (u && typeof authIsMaster === "function" && authIsMaster(u)) isMaster = true;
     }
   } catch (e) { }
@@ -96,27 +106,40 @@ async function carregarDashboard() {
   if (grupoAssessor && selectAssessor) {
     if (isMaster) {
       grupoAssessor.style.display = "flex";
+      if (typeof window.dbObterTodosRelatoriosEquipe === "function") {
+        try {
+          relatoriosEquipeCached = await window.dbObterTodosRelatoriosEquipe();
+        } catch (_) {
+          relatoriosEquipeCached = [...relatoriosCached];
+        }
+      }
       const assessoresSet = new Set();
-      relatoriosCached.forEach(rep => {
+      relatoriosEquipeCached.forEach(rep => {
         const nome = (rep.nomeAssessor || "").trim();
         if (nome) assessoresSet.add(nome);
       });
-      const valorAtual = selectAssessor.value || "todos";
-      let optionsHtml = `<option value="todos">Todos os Assessores (${relatoriosCached.length})</option>`;
+      const valorAnterior = selectAssessor.dataset.initialized === "true"
+        ? (selectAssessor.value || "meus")
+        : "meus";
+      selectAssessor.dataset.initialized = "true";
+
+      let optionsHtml = `<option value="meus">Meus Relatórios (${relatoriosCached.length})</option>`;
+      optionsHtml += `<option value="todos">Todos os Assessores (${relatoriosEquipeCached.length})</option>`;
       Array.from(assessoresSet).sort((a, b) => a.localeCompare(b, "pt-BR")).forEach(nome => {
-        const qtd = relatoriosCached.filter(r => (r.nomeAssessor || "").trim() === nome).length;
+        const qtd = relatoriosEquipeCached.filter(r => (r.nomeAssessor || "").trim() === nome).length;
         optionsHtml += `<option value="${escapeHTML(nome)}">${escapeHTML(nome)} (${qtd})</option>`;
       });
       selectAssessor.innerHTML = optionsHtml;
-      if (Array.from(assessoresSet).includes(valorAtual)) {
-        selectAssessor.value = valorAtual;
+      if (valorAnterior === "meus" || valorAnterior === "todos" || Array.from(assessoresSet).includes(valorAnterior)) {
+        selectAssessor.value = valorAnterior;
+      } else {
+        selectAssessor.value = "meus";
       }
     } else {
       grupoAssessor.style.display = "none";
     }
   }
 
-  calcularEExibirMetricas(relatoriosCached);
   filtrarERenderizar();
 }
 
@@ -124,7 +147,10 @@ async function carregarDashboard() {
 window.filtrarDashboardPorAssessor = function (nomeAssessor, userId = "") {
   const selectAssessor = document.getElementById("filtro_assessor");
   const inputBusca = document.getElementById("filtro_busca");
-  if (selectAssessor && Array.from(selectAssessor.options).some(o => o.value === nomeAssessor)) {
+  if (!nomeAssessor || nomeAssessor === "meus") {
+    if (selectAssessor) selectAssessor.value = "meus";
+    if (inputBusca) inputBusca.value = "";
+  } else if (selectAssessor && Array.from(selectAssessor.options).some(o => o.value === nomeAssessor)) {
     selectAssessor.value = nomeAssessor;
     if (inputBusca) inputBusca.value = "";
   } else if (inputBusca) {
@@ -161,7 +187,7 @@ function calcularEExibirMetricas(relatorios) {
 function filtrarERenderizar() {
   const relatorios = obterRelatorios();
   const busca = document.getElementById("filtro_busca")?.value.toLowerCase().trim() || "";
-  const filtroAssessor = document.getElementById("filtro_assessor")?.value || "todos";
+  const filtroAssessor = document.getElementById("filtro_assessor")?.value || "meus";
   const faixaPatrimonio = document.getElementById("filtro_patrimonio")?.value || "todos";
   const ordenacao = document.getElementById("filtro_ordenacao")?.value || "recentes";
 
@@ -173,7 +199,11 @@ function filtrarERenderizar() {
 
     // Filtro específico por assessor (Exclusivo Master)
     let matchAssessor = true;
-    if (filtroAssessor && filtroAssessor !== "todos") {
+    if (filtroAssessor === "meus") {
+      if (currentDashboardUserId && rep.userId) {
+        matchAssessor = String(rep.userId) === String(currentDashboardUserId);
+      }
+    } else if (filtroAssessor && filtroAssessor !== "todos") {
       matchAssessor = (rep.nomeAssessor || "").trim().toLowerCase() === filtroAssessor.trim().toLowerCase() ||
         String(rep.userId || "") === String(filtroAssessor);
     }
@@ -242,12 +272,12 @@ function renderizarRelatorios(relatorios) {
     const totalPrej = Number(rep.prejuizoTributario) || 0;
 
     // Risco de liquidez: Se prejuízo tributável ultrapassar liquidez (RF + Prev + Fundos + Offshore)
-    // Usamos os dados internos salvos da simulação para calcular
-    const dados = rep.dadosSessao?.patrimonio_dados || {};
+    // Usamos os dados internos salvos da simulação para calcular (compatível com Formato A e Formato B)
+    const dados = rep.dadosSessao?.patrimonio?.dados || rep.dadosSessao?.patrimonio_dados || {};
     const rf = parseValor(dados.rf);
     const prev = parseValor(dados.prev);
     const inter = parseValor(dados.inter);
-    const offshore = parseValor(dados.offshore);
+    const offshore = parseValor(dados.offshore || dados.offshore_brl);
     const liquidezTotal = rf + prev + inter + offshore;
     const isRiscoLiquidez = totalPrej > liquidezTotal && totalPat > 0;
 
@@ -374,6 +404,10 @@ function normalizarSessao(dadosSessao, totalPatrimonioFallback) {
     const totalPat = dadosSessao.patrimonio.total ?? totalPatrimonioFallback ?? 0;
     sessionStorage.setItem("total_patrimonio", totalPat);
 
+    const offshoreBrl = Number(dadosPatrimonio.offshore_brl) || Number(dadosPatrimonio.offshore) || 0;
+    const totalNac = dadosSessao.patrimonio.totalNacional ?? Math.max(0, totalPat - offshoreBrl);
+    sessionStorage.setItem("total_patrimonio_nacional", totalNac);
+
     // Família
     if (dadosSessao.familia) {
       sessionStorage.setItem("familia", JSON.stringify(dadosSessao.familia));
@@ -425,6 +459,16 @@ function normalizarSessao(dadosSessao, totalPatrimonioFallback) {
     if (!dadosSessao.total_patrimonio && totalPatrimonioFallback) {
       sessionStorage.setItem("total_patrimonio", totalPatrimonioFallback);
     }
+
+    if (!sessionStorage.getItem("total_patrimonio_nacional")) {
+      const tot = Number(sessionStorage.getItem("total_patrimonio")) || 0;
+      let off = 0;
+      try {
+        const dp = JSON.parse(sessionStorage.getItem("patrimonio_dados") || "{}");
+        off = Number(dp.offshore_brl) || Number(dp.offshore) || 0;
+      } catch (_) {}
+      sessionStorage.setItem("total_patrimonio_nacional", Math.max(0, tot - off));
+    }
   }
 
   console.log("[normalizarSessao] sessionStorage após restauração:", {
@@ -437,7 +481,10 @@ function normalizarSessao(dadosSessao, totalPatrimonioFallback) {
 // Restaurar sessão no sessionStorage para visualizar o PDF
 function restaurarSessao(id) {
   const relatorios = obterRelatorios();
-  const rep = relatorios.find(r => String(r.id) === String(id));
+  let rep = relatorios.find(r => String(r.id) === String(id));
+  if (!rep && Array.isArray(relatoriosEquipeCached)) {
+    rep = relatoriosEquipeCached.find(r => String(r.id) === String(id));
+  }
 
   console.log("[restaurarSessao] Procurando id:", id);
   console.log("[restaurarSessao] Relatório encontrado:", rep ? "SIM" : "NÃO");
@@ -472,6 +519,10 @@ function restaurarSessao(id) {
   sessionStorage.setItem("current_report_id", id);
   if (rep.userId) {
     sessionStorage.setItem("current_report_owner_id", rep.userId);
+    if (currentDashboardUserId && String(rep.userId) !== String(currentDashboardUserId)) {
+      sessionStorage.setItem("modo_auditoria_master", "true");
+      sessionStorage.setItem("auditoria_assessor_nome", rep.nomeAssessor || "Assessor");
+    }
   }
   if (rep.nomeAssessor && !sessionStorage.getItem("nome_assessor")) {
     sessionStorage.setItem("nome_assessor", rep.nomeAssessor);
