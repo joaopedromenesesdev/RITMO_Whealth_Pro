@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="style/style.css?v=4">
 
   <!-- CSS SOMENTE DESSA PÁGINA -->
-  <link rel="stylesheet" href="style/tributario.css?v=4">
+  <link rel="stylesheet" href="style/tributario.css?v=20261109m">
   <link rel="icon" type="image/png" href="img/RITMO.png">
 
   <!-- PDF -->
@@ -253,6 +253,67 @@
               • <strong>Compensação:</strong> Prejuízos podem ser compensados com rendimentos futuros e lucros de controladas offshore.
             </div>
             <div id="estimativa_lei_14754_valores" style="margin-top: 8px; font-weight: 600; color: #1e3a8a; padding-top: 6px; border-top: 1px dashed #cbd5e1;"></div>
+          </div>
+        </div>
+
+        <!-- BOTAO DE ACIONAMENTO EXECUTIVO: VER CORROSAO PATRIMONIAL -->
+        <div class="wrapper-btn-ver-corrosao">
+          <button type="button" class="btn-ver-corrosao" id="btn_ver_corrosao" onclick="window.alternarVisualizacaoCorrosao()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-corrosao-icon">
+              <path d="M3 3v18h18"></path>
+              <path d="M18 17V9"></path>
+              <path d="M13 17V5"></path>
+              <path d="M8 17v-3"></path>
+            </svg>
+            <span id="btn_ver_corrosao_texto">Ver Corrosão Patrimonial</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="btn-corrosao-chevron">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+        </div>
+
+        <!-- SECAO UNICA: CORROSAO PATRIMONIAL COM BOTAO DE TROCAR DE GRAFICO -->
+        <div class="card-erosao-patrimonial reveal active corrosao-oculta" id="bloco_grafico_erosao" style="display: none;">
+          <div class="erosao-header">
+            <div class="erosao-header-left">
+              <span class="erosao-tag tag-alerta" id="erosao_badge_tag">Risco de Asfixia Financeira</span>
+              <h3 class="erosao-title" id="erosao_card_title">Canibalização da Liquidez: O Golpe do Inventário no Caixa</h3>
+              <p class="erosao-subtitle" id="erosao_card_subtitle">O imposto e as custas exigem dinheiro vivo em até 60 dias. Compare a liquidez real da família contra o valor que será drenado imediatamente para liberar o espólio.</p>
+            </div>
+            <div class="erosao-controls-group">
+              <button type="button" class="btn-trocar-grafico" id="btn_trocar_grafico" onclick="window.alternarGraficoCorrosao()" title="Alternar entre Canibalização de Caixa e Materialização em Bens e Tempo">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m16 3 4 4-4 4"></path>
+                  <path d="M20 7H4"></path>
+                  <path d="m8 21-4-4 4-4"></path>
+                  <path d="M4 17h16"></path>
+                </svg>
+                <span id="btn_trocar_grafico_txt">Trocar Gráfico</span>
+              </button>
+              <div class="erosao-toggle-group">
+                <button type="button" class="btn-toggle-erosao ativo" id="btn_toggle_caixa" onclick="window.selecionarModoCorrosao('caixa')">
+                  Canibalização de Caixa
+                </button>
+                <button type="button" class="btn-toggle-erosao" id="btn_toggle_bens" onclick="window.selecionarModoCorrosao('bens')">
+                  Bens e Tempo
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- LEGENDA EXECUTIVA DINAMICA -->
+          <div class="erosao-legenda" id="erosao_legenda_container">
+            <!-- Injetada dinamicamente via JS de acordo com o modo ativo -->
+          </div>
+
+          <!-- CANVAS DO GRAFICO (Chart.js) -->
+          <div class="erosao-chart-wrapper" id="erosao_canvas_wrapper" style="display: block; height: 280px;">
+            <canvas id="grafico_erosao_patrimonial"></canvas>
+          </div>
+
+          <!-- CARDS DE METRICAS (KPIS) DINAMICOS -->
+          <div class="erosao-kpis-grid" id="erosao_kpis_grid_container">
+            <!-- Injetados dinamicamente via JS de acordo com o modo ativo -->
           </div>
         </div>
 
@@ -868,10 +929,10 @@
     </div>
   </div>
 
-  <script src="script/state.js?v=20261109c"></script>
-  <script src="script/tributario_engine.js?v=20261109c"></script>
-  <script src="script/tributario_charts.js?v=20261109c"></script>
-  <script src="script/tributario.js?v=20261109c"></script>
+  <script src="script/state.js?v=20261109j"></script>
+  <script src="script/tributario_engine.js?v=20261109j"></script>
+  <script src="script/tributario_charts.js?v=20261109m"></script>
+  <script src="script/tributario.js?v=20261109m"></script>
 </body>
 
 </html>

@@ -983,7 +983,22 @@ function initPrejuizo() {
   document.getElementById("taxa_honorarios")?.addEventListener("input", salvarInputsTributario);
   document.getElementById("taxa_custas")?.addEventListener("input", salvarInputsTributario);
 
+  // Garante que o bloco de corrosão patrimonial inicia oculto até o clique do usuário
+  const blocoCorrosaoInit = document.getElementById("bloco_grafico_erosao");
+  if (blocoCorrosaoInit) {
+    blocoCorrosaoInit.style.display = "none";
+    blocoCorrosaoInit.classList.add("corrosao-oculta");
+  }
+  const btnCorrosaoInit = document.getElementById("btn_ver_corrosao");
+  if (btnCorrosaoInit) btnCorrosaoInit.classList.remove("ativo");
+  const btnCorrosaoTxtInit = document.getElementById("btn_ver_corrosao_texto");
+  if (btnCorrosaoTxtInit) btnCorrosaoTxtInit.textContent = "Ver Corrosão Patrimonial";
+
   calcularPrejuizo();
+}
+
+function sincronizarModoGraficoErosaoUI() {
+  // Mantido para compatibilidade com eventuais chamadores legados
 }
 
 function salvarInputsTributario() {
@@ -999,6 +1014,8 @@ function salvarInputsTributario() {
   const seguro_capital = obterValorInput(document.getElementById("input_seguro_capital"));
 
   sessionStorage.setItem("tributario_inputs", JSON.stringify({ uf, itcmd, honorarios, custas, doacao, doacao_avista, previdencia, seguro_idade, seguro_capital }));
+
+  sincronizarModoGraficoErosaoUI();
   calcularPrejuizo();
 }
 
@@ -1298,10 +1315,17 @@ function calcularPrejuizo() {
     }
   }
 
-  // Salva para o PDF
+  // Salva para o PDF e para o bloco de corrosão patrimonial
   sessionStorage.setItem("prejuizo_final", JSON.stringify({
     prejuizoAtual, prejuizoProjetado, pctAtual, pctProjetado, baseAtual, baseProjetada, taxaTotal
   }));
+
+  // Se a section única de corrosão patrimonial estiver visível, atualiza o gráfico
+  const blocoCorrosao = document.getElementById("bloco_grafico_erosao");
+  const isVisivel = blocoCorrosao && blocoCorrosao.style.display !== "none" && !blocoCorrosao.classList.contains("corrosao-oculta");
+  if (isVisivel && typeof window.renderizarGraficoCorrosaoUnico === "function") {
+    window.renderizarGraficoCorrosaoUnico();
+  }
 
   // Atualiza elementos no relatório PDF (se existirem na página)
   const elPdfAtual = document.getElementById("prejuizo_atual_pdf");
@@ -2796,4 +2820,158 @@ function copiarPitchWhatsApp() {
     alert(textoPitch);
   }
 }
+
+// ==========================================
+// SEÇÃO ÚNICA: CORROSÃO PATRIMONIAL COM BOTÃO DE TROCAR DE GRÁFICO
+// ==========================================
+window.selecionarModoCorrosao = function (modo) {
+  const modoAtivo = (modo === "bens" || modo === "opcao4") ? "bens" : "caixa";
+  sessionStorage.setItem("modo_corrosao_selecionado", modoAtivo);
+
+  const btnCaixa = document.getElementById("btn_toggle_caixa");
+  const btnBens = document.getElementById("btn_toggle_bens");
+  const tag = document.getElementById("erosao_badge_tag");
+  const title = document.getElementById("erosao_card_title");
+  const subtitle = document.getElementById("erosao_card_subtitle");
+  const btnTrocarTxt = document.getElementById("btn_trocar_grafico_txt");
+
+  if (modoAtivo === "caixa") {
+    btnCaixa?.classList.add("ativo");
+    btnBens?.classList.remove("ativo");
+    if (tag) {
+      tag.innerText = "Risco de Asfixia Financeira";
+      tag.className = "erosao-tag tag-alerta";
+    }
+    if (title) title.innerText = "Canibalização da Liquidez: O Golpe do Inventário no Caixa";
+    if (subtitle) subtitle.innerText = "O imposto e as custas exigem dinheiro vivo em até 60 dias. Compare a liquidez real da família contra o valor que será drenado imediatamente para liberar o espólio.";
+    if (btnTrocarTxt) btnTrocarTxt.innerText = "Ver Bens e Tempo";
+  } else {
+    btnBens?.classList.add("ativo");
+    btnCaixa?.classList.remove("ativo");
+    if (tag) {
+      tag.innerText = "Materialização do Prejuízo";
+      tag.className = "erosao-tag tag-alerta";
+    }
+    if (title) title.innerText = "Materialização em Bens e Tempo: O Prejuízo Palpável";
+    if (subtitle) subtitle.innerText = "A perda financeira não é uma porcentagem abstrata: veja o valor de quais bens concretos ela consome e quantos meses de rentabilidade são queimados.";
+    if (btnTrocarTxt) btnTrocarTxt.innerText = "Ver Canibalização de Caixa";
+  }
+
+  if (typeof window.renderizarGraficoCorrosaoUnico === "function") {
+    window.renderizarGraficoCorrosaoUnico();
+  }
+};
+
+window.alternarGraficoCorrosao = function () {
+  const modoAtual = sessionStorage.getItem("modo_corrosao_selecionado") || "caixa";
+  const proximoModo = modoAtual === "caixa" ? "bens" : "caixa";
+  window.selecionarModoCorrosao(proximoModo);
+};
+
+window.renderizarGraficoCorrosaoUnico = function () {
+  if (!window.TributarioCharts) return;
+
+  const totalAtual = Number(sessionStorage.getItem("total_patrimonio")) || 0;
+  const dadosPatrimonio = JSON.parse(sessionStorage.getItem("patrimonio_dados")) || {};
+  const rf = parseValor(dadosPatrimonio.rf);
+  const rv = parseValor(dadosPatrimonio.rv);
+  const inter = parseValor(dadosPatrimonio.inter);
+  const prev = parseValor(dadosPatrimonio.prev);
+  const liquidez = rf + rv + inter;
+  const liquidezCalculada = Math.max(liquidez, 1);
+
+  const dadosEvolucao = JSON.parse(sessionStorage.getItem("evolucao_dados")) || { resultados: [], resultadosPrev: [] };
+  const totalProjetado = (dadosEvolucao.resultados && dadosEvolucao.resultados.length > 0)
+    ? dadosEvolucao.resultados[dadosEvolucao.resultados.length - 1]
+    : totalAtual;
+  const prevProjetado = (dadosEvolucao.resultadosPrev && dadosEvolucao.resultadosPrev.length > 0)
+    ? dadosEvolucao.resultadosPrev[dadosEvolucao.resultadosPrev.length - 1]
+    : prev;
+  const anosProj = Number(dadosEvolucao.tempo) || (Array.isArray(dadosEvolucao.resultados) && dadosEvolucao.resultados.length > 1 ? dadosEvolucao.resultados.length - 1 : 10);
+
+  const fatorCrescimento = totalAtual > 0 ? (totalProjetado / totalAtual) : 1;
+  const liqProjetadaCalculada = Math.max(prevProjetado || 0, Math.round(liquidezCalculada * (fatorCrescimento > 1 ? fatorCrescimento : 1)));
+
+  const prejuizoFinalObj = JSON.parse(sessionStorage.getItem("prejuizo_final")) || {};
+  const prejuizoAtual = Number(prejuizoFinalObj.prejuizoAtual) || 0;
+  const prejuizoProjetado = Number(prejuizoFinalObj.prejuizoProjetado) || 0;
+
+  const modoAtivo = sessionStorage.getItem("modo_corrosao_selecionado") || "caixa";
+
+  if (modoAtivo === "caixa") {
+    if (typeof window.TributarioCharts.renderizarGraficoCanibalizacaoLiquidez === "function") {
+      try {
+        window.TributarioCharts.renderizarGraficoCanibalizacaoLiquidez("grafico_erosao_patrimonial", {
+          liquidezAtual: liquidezCalculada,
+          prejuizoAtual,
+          liquidezProjetada: Math.max(liqProjetadaCalculada, 1),
+          prejuizoProjetado,
+          rf,
+          rv,
+          prev,
+          prevProjetado,
+          legendaContainerId: "erosao_legenda_container",
+          kpisContainerId: "erosao_kpis_grid_container"
+        });
+      } catch (e1) {
+        console.warn("[CorrosaoUnica] Erro ao renderizar Canibalização de Caixa:", e1);
+      }
+    }
+  } else {
+    if (typeof window.TributarioCharts.renderizarGraficoMaterializacaoBens === "function") {
+      try {
+        window.TributarioCharts.renderizarGraficoMaterializacaoBens("grafico_erosao_patrimonial", {
+          totalAtual,
+          prejuizoAtual,
+          totalProjetado,
+          prejuizoProjetado,
+          anosProjecao: anosProj,
+          legendaContainerId: "erosao_legenda_container",
+          kpisContainerId: "erosao_kpis_grid_container"
+        });
+      } catch (e2) {
+        console.warn("[CorrosaoUnica] Erro ao renderizar Materialização em Bens:", e2);
+      }
+    }
+  }
+};
+
+window.alternarVisualizacaoCorrosao = function () {
+  const bloco = document.getElementById("bloco_grafico_erosao");
+  const btn = document.getElementById("btn_ver_corrosao");
+  const btnTxt = document.getElementById("btn_ver_corrosao_texto");
+  if (!bloco) return;
+
+  const estaOculto = bloco.style.display === "none" || bloco.classList.contains("corrosao-oculta");
+  if (estaOculto) {
+    bloco.style.display = "block";
+    bloco.classList.remove("corrosao-oculta");
+    if (btn) btn.classList.add("ativo");
+    if (btnTxt) btnTxt.textContent = "Ocultar Corrosão Patrimonial";
+    sessionStorage.setItem("corrosao_patrimonial_visivel", "true");
+
+    const modoSalvo = sessionStorage.getItem("modo_corrosao_selecionado") || "caixa";
+    if (typeof window.selecionarModoCorrosao === "function") {
+      window.selecionarModoCorrosao(modoSalvo);
+    }
+  } else {
+    bloco.style.display = "none";
+    bloco.classList.add("corrosao-oculta");
+    if (btn) btn.classList.remove("ativo");
+    if (btnTxt) btnTxt.textContent = "Ver Corrosão Patrimonial";
+    sessionStorage.setItem("corrosao_patrimonial_visivel", "false");
+  }
+};
+
+window.renderizarGraficosCorrosaoDual = function () {
+  if (typeof window.renderizarGraficoCorrosaoUnico === "function") {
+    window.renderizarGraficoCorrosaoUnico();
+  }
+};
+
+window.alternarModoErosao = function (modo) {
+  if (typeof window.selecionarModoCorrosao === "function") {
+    window.selecionarModoCorrosao(modo);
+  }
+};
 
