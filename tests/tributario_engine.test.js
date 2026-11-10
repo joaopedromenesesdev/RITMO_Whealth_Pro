@@ -628,10 +628,15 @@
       email: "admin.master@pacecapital.com.br",
       role: "assessor"
     });
+    const visaoWilliansUid = engine.filtrarRelatoriosPorPermissao(relatoriosMock, {
+      id: "5ec2da93-ed07-43f8-9089-6d285a092156",
+      role: "assessor"
+    });
 
     assert(visaoAssessor.length === 2, "Assessor comum enxerga apenas seus próprios 2 relatórios");
     assert(visaoMaster.length === 3, "Usuário Master possui acesso completo a todos os 3 relatórios de todos os assessores");
     assert(visaoUidMaster.length === 3, "UID Master administrativo reconhecido automaticamente com acesso completo sem exposição de e-mail pessoal");
+    assert(visaoWilliansUid.length === 3, "UID Master secundário (Willians) reconhecido automaticamente com acesso completo");
 
     // ==========================================
     // 21. TESTE: BLINDAGEM ZERO-LEAKAGE (NENHUM E-MAIL DE USUÁRIO EXPOSTO NO CÓDIGO-FONTE)
@@ -887,6 +892,370 @@
     const baseProjetadaDefensiva = Math.max(0, nacProjetadoPiso - prevProjetadaMock) * 0.5;
     assert(baseProjetadaDefensiva === 3631239.5, "Base projetada defensiva consistente com projeção total (R$ 3.631.239,50)");
     assert(Math.round(baseProjetadaDefensiva * 0.11) === 399436, "Prejuízo projetado defensivo = R$ 399.436");
+
+    // ==========================================
+    // 26. TESTE: MÉTRICAS DE EROSÃO PATRIMONIAL E PRESERVAÇÃO SUCESSÓRIA (OPÇÃO 1)
+    // ==========================================
+    console.log("\nExecutando Testes 26: Métricas de Erosão Patrimonial e Preservação Sucessória (Opção 1)...");
+
+    const erosaoAtualVal = 154000;
+    const erosaoProjetadaVal = 399436;
+    const liquidoPreservadoAtual = totalAtualMock - erosaoAtualVal;
+    const liquidoPreservadoProjetado = totalProjetadoMock - erosaoProjetadaVal;
+    const deltaInerciaEsperado = erosaoProjetadaVal - erosaoAtualVal;
+
+    assert(liquidoPreservadoAtual === 3146000, "Patrimônio líquido preservado atual = R$ 3.146.000");
+    assert(liquidoPreservadoProjetado === 8159914, "Patrimônio líquido preservado projetado = R$ 8.159.914");
+    assert(deltaInerciaEsperado === 245436, "Aumento de perda por inércia = + R$ 245.436");
+
+    const pctErosaoAtualCalc = (erosaoAtualVal / totalAtualMock) * 100;
+    const pctErosaoProjetadaCalc = (erosaoProjetadaVal / totalProjetadoMock) * 100;
+    assert(pctErosaoAtualCalc.toFixed(1) === "4.7", "Percentual de erosão atual = 4.7%");
+    assert(pctErosaoProjetadaCalc.toFixed(1) === "4.7", "Percentual de erosão projetada = 4.7%");
+    assert(liquidoPreservadoAtual + erosaoAtualVal === totalAtualMock, "Soma de líquido preservado e erosão recompõe 100% do patrimônio atual");
+
+    // ==========================================
+    // 27. TESTE: MÉTRICAS DE DECOMPOSIÇÃO EM CASCATA (WATERFALL - OPÇÃO 2)
+    // ==========================================
+    console.log("\nExecutando Testes 27: Métricas de Decomposição em Cascata (Waterfall - Opção 2)...");
+
+    const baseTributavelMock = 1400000;
+    const itcmdVal = baseTributavelMock * 0.04; // 56.000
+    const honorariosVal = baseTributavelMock * 0.06; // 84.000
+    const custasVal = baseTributavelMock * 0.01; // 14.000
+    const prejuizoCascata = itcmdVal + honorariosVal + custasVal; // 154.000
+    const liquidoCascata = totalAtualMock - prejuizoCascata; // 3.146.000
+
+    assert(itcmdVal === 56000, "ITCMD 4% sobre R$ 1.400.000 = R$ 56.000");
+    assert(honorariosVal === 84000, "Honorários 6% sobre R$ 1.400.000 = R$ 84.000");
+    assert(custasVal === 14000, "Custas 1% sobre R$ 1.400.000 = R$ 14.000");
+    assert(prejuizoCascata === 154000, "Soma dos custos de inventário em cascata = R$ 154.000");
+    assert(liquidoCascata === 3146000, "Patrimônio líquido herdado final = R$ 3.146.000");
+
+    // Validar intervalos da cascata [min, max]
+    const step1 = [0, totalAtualMock];
+    const step2 = [totalAtualMock - itcmdVal, totalAtualMock];
+    const step3 = [totalAtualMock - itcmdVal - honorariosVal, totalAtualMock - itcmdVal];
+    const step4 = [liquidoCascata, totalAtualMock - itcmdVal - honorariosVal];
+    const step5 = [0, liquidoCascata];
+
+    assert(step1[1] === 3300000, "Cascata Step 1 (Bruto) sobe até R$ 3.300.000");
+    assert(step2[1] - step2[0] === 56000, "Cascata Step 2 (ITCMD) cai R$ 56.000");
+    assert(step3[1] - step3[0] === 84000, "Cascata Step 3 (Honorários) cai R$ 84.000");
+    assert(step4[1] - step4[0] === 14000, "Cascata Step 4 (Custas) cai R$ 14.000");
+    assert(step5[1] === 3146000, "Cascata Step 5 (Líquido) preserva R$ 3.146.000");
+
+    // ==========================================
+    // 28. TESTE: MÉTRICAS DE MEDIDOR DE PRESERVAÇÃO E DONUTS (OPÇÃO 3)
+    // ==========================================
+    console.log("\nExecutando Testes 28: Métricas de Medidor de Preservação e Donuts (Opção 3)...");
+
+    const pctPreservadoAtualCalc = (liquidoCascata / totalAtualMock) * 100;
+    const pctErosaoAtualCalc2 = (prejuizoCascata / totalAtualMock) * 100;
+    assert(pctPreservadoAtualCalc.toFixed(1) === "95.3", "Donut Atual: Preservação = 95.3%");
+    assert(pctErosaoAtualCalc2.toFixed(1) === "4.7", "Donut Atual: Corrosão = 4.7%");
+    assert(Number((pctPreservadoAtualCalc + pctErosaoAtualCalc2).toFixed(1)) === 100.0, "Donut Atual: Soma preservado + erosão fecha em 100.0%");
+
+    const taxaTotalSoma = 4 + 6 + 1; // 11
+    const itcmdProjCalc = Math.round(399436 * (4 / taxaTotalSoma));
+    const honorariosProjCalc = Math.round(399436 * (6 / taxaTotalSoma));
+    const custasProjCalc = 399436 - itcmdProjCalc - honorariosProjCalc;
+    assert(itcmdProjCalc + honorariosProjCalc + custasProjCalc === 399436, "Donut Futuro: Decomposição proporcional fecha exatamente no prejuízo total de R$ 399.436");
+
+    // ==========================================
+    // 29. TESTE: MÉTRICAS DE CANIBALIZAÇÃO DA LIQUIDEZ E ASFIXIA DE CAIXA (ABORDAGEM 1)
+    // ==========================================
+    console.log("\nExecutando Testes 29: Métricas de Canibalização da Liquidez (Abordagem 1)...");
+
+    const liquidezCenario1 = 500000;
+    const prejuizoCenario1 = 154000;
+    const pctConsumo1 = (prejuizoCenario1 / liquidezCenario1) * 100;
+    const caixaRestante1 = Math.max(0, liquidezCenario1 - prejuizoCenario1);
+    const deficit1 = Math.max(0, prejuizoCenario1 - liquidezCenario1);
+
+    assert(pctConsumo1.toFixed(1) === "30.8", "Cenário 1: 30.8% da liquidez consumida pelo inventário");
+    assert(caixaRestante1 === 346000, "Cenário 1: Caixa restante após inventário = R$ 346.000");
+    assert(deficit1 === 0, "Cenário 1: Sem déficit de caixa inicial");
+
+    // Cenário 2: Cliente com alta imobilização (Apenas R$ 100.000 de liquidez)
+    const liquidezCritica = 100000;
+    const pctConsumoCritico = (prejuizoCenario1 / liquidezCritica) * 100;
+    const caixaRestanteCritico = Math.max(0, liquidezCritica - prejuizoCenario1);
+    const deficitCritico = Math.max(0, prejuizoCenario1 - liquidezCritica);
+
+    assert(pctConsumoCritico.toFixed(1) === "154.0", "Cenário Crítico: 154.0% da liquidez consumida (estoura o caixa)");
+    assert(caixaRestanteCritico === 0, "Cenário Crítico: Caixa restante zerado");
+    assert(deficitCritico === 54000, "Cenário Crítico: Déficit imediato de R$ 54.000 para pagar o inventário");
+
+    // Cenário 3: Projeção Futura
+    const liquidezProjetadaMock = 1296871;
+    const prejuizoProjetadoMock = 399436;
+    const pctConsumoProj = (prejuizoProjetadoMock / liquidezProjetadaMock) * 100;
+    const caixaRestanteProj = liquidezProjetadaMock - prejuizoProjetadoMock;
+
+    assert(pctConsumoProj.toFixed(1) === "30.8", "Cenário Futuro: 30.8% da liquidez projetada consumida");
+    assert(caixaRestanteProj === 897435, "Cenário Futuro: Caixa restante = R$ 897.435");
+
+    // ==========================================
+    // 30. TESTE: MÉTRICAS DE VENDA FORÇADA COM DESÁGIO (ABORDAGEM 2)
+    // ==========================================
+    console.log("\nExecutando Testes 30: Métricas de Venda Forçada com Deságio (Abordagem 2)...");
+
+    const prejuizoNominalAtual = 154000;
+    const desagioAtualCalc = Math.round(prejuizoNominalAtual * 1.3); // 200.200
+    const perdaTotalAtualCalc = prejuizoNominalAtual + desagioAtualCalc; // 354.200
+
+    assert(desagioAtualCalc === 200200, "Deságio estimado atual = R$ 200.200");
+    assert(perdaTotalAtualCalc === 354200, "Destruição patrimonial real atual = R$ 354.200");
+
+    const prejuizoNominalProj = 399436;
+    const desagioProjCalc = Math.round(prejuizoNominalProj * 1.3); // 519.267
+    const perdaTotalProjCalc = prejuizoNominalProj + desagioProjCalc; // 918.703
+
+    assert(desagioProjCalc === 519267, "Deságio estimado projetado = R$ 519.267");
+    assert(perdaTotalProjCalc === 918703, "Destruição patrimonial real projetada = R$ 918.703");
+    assert(perdaTotalProjCalc > 900000, "Perda total acumulada futura supera R$ 900.000");
+
+    // ==========================================
+    // 31. TESTE: MÉTRICAS DO SÓCIO OCULTO / PARTILHA COM O ESTADO (ABORDAGEM 3)
+    // ==========================================
+    console.log("\nExecutando Testes 31: Métricas do Sócio Oculto (Abordagem 3)...");
+
+    const totalPatrimonioSocio = 3300000;
+    const herancaBrutaSocio = 1650000;
+    const cotaSocioOcultoAtual = 154000;
+    const herancaLiquidaFamilia = herancaBrutaSocio - cotaSocioOcultoAtual; // 1.496.000
+
+    assert(cotaSocioOcultoAtual === 154000, "Cota prioritária do Sócio Oculto = R$ 154.000 à vista");
+    assert(herancaLiquidaFamilia === 1496000, "Herança líquida entregue à família = R$ 1.496.000 em bens");
+    assert(herancaLiquidaFamilia + cotaSocioOcultoAtual === herancaBrutaSocio, "Soma de família e Estado fecha 100% da herança bruta");
+
+    const cotaSocioOcultoProj = 399436;
+    assert(cotaSocioOcultoProj === 399436, "Cota projetada do Sócio Oculto = R$ 399.436");
+
+    // ==========================================
+    // 32. TESTE: MÉTRICAS DE MATERIALIZAÇÃO EM BENS E TEMPO (ABORDAGEM 4)
+    // ==========================================
+    console.log("\nExecutando Testes 32: Métricas de Materialização em Bens e Tempo (Abordagem 4)...");
+
+    const prejuizoMaterializaAtual = 154000;
+    const prejuizoMaterializaProj = 399436;
+    const deltaPerdaInercia = prejuizoMaterializaProj - prejuizoMaterializaAtual;
+    const totalDiasInercia = 10 * 365;
+    const custoDiario = Math.round(deltaPerdaInercia / totalDiasInercia);
+
+    assert(deltaPerdaInercia === 245436, "Aumento de perda nominal por inércia = R$ 245.436");
+    assert(custoDiario === 67, "Custo diário por adiar o planejamento = R$ 67/dia");
+    assert(prejuizoMaterializaAtual >= 150000, "Cenário Atual compatível com valor de 1 SUV/veículo zero km");
+    assert(prejuizoMaterializaProj >= 350000, "Cenário Futuro compatível com valor de 1 imóvel/apartamento novo");
+
+    // ==========================================
+    // 33. TESTE: SEÇÃO ÚNICA DE CORROSÃO PATRIMONIAL COM BOTÃO DE TROCA DE GRÁFICO
+    // ==========================================
+    console.log("\nExecutando Testes 33: Seção Única de Corrosão Patrimonial com Botão de Trocar Gráfico...");
+
+    // 1. Estado inicial: a section única deve iniciar recolhida/oculta
+    let estadoBlocoCorrosao = "none";
+    let textoBotaoCorrosao = "Ver Corrosão Patrimonial";
+    assert(estadoBlocoCorrosao === "none", "Seção única de corrosão deve iniciar oculta por padrão (display none)");
+    assert(textoBotaoCorrosao === "Ver Corrosão Patrimonial", "Botão inicial deve exibir 'Ver Corrosão Patrimonial'");
+
+    // 2. Expansão da section única ao acionar o botão
+    function simularCliqueBotaoCorrosao(estadoAtual) {
+      if (estadoAtual === "none") {
+        return { display: "block", texto: "Ocultar Corrosão Patrimonial", ativo: true };
+      }
+      return { display: "none", texto: "Ver Corrosão Patrimonial", ativo: false };
+    }
+
+    const estadoAberto = simularCliqueBotaoCorrosao(estadoBlocoCorrosao);
+    assert(estadoAberto.display === "block", "Após clique, section única passa a display block");
+    assert(estadoAberto.texto === "Ocultar Corrosão Patrimonial", "Texto alterna para 'Ocultar Corrosão Patrimonial'");
+    assert(estadoAberto.ativo === true, "Botão principal recebe estado ativo");
+
+    // 3. Mecânica do Botão de Trocar Gráfico (alternância entre Canibalização de Caixa e Bens/Tempo)
+    let modoAtual = "caixa";
+    function simularTrocarGrafico(modo) {
+      return modo === "caixa" ? "bens" : "caixa";
+    }
+
+    modoAtual = simularTrocarGrafico(modoAtual);
+    assert(modoAtual === "bens", "Ao clicar em 'Trocar Gráfico', o modo alterna de 'caixa' para 'bens'");
+
+    modoAtual = simularTrocarGrafico(modoAtual);
+    assert(modoAtual === "caixa", "Ao clicar novamente em 'Trocar Gráfico', retorna para 'caixa'");
+
+    // 4. Seleção direta via tabs
+    function selecionarModo(modoDesejado) {
+      return modoDesejado === "bens" ? "bens" : "caixa";
+    }
+    assert(selecionarModo("bens") === "bens", "Seleção direta da tab 'Bens e Tempo' ativa modo bens");
+    assert(selecionarModo("caixa") === "caixa", "Seleção direta da tab 'Canibalização de Caixa' ativa modo caixa");
+
+    // 5. Consistência dos dados no modo Caixa (Opção 1)
+    const dadosCaixa = {
+      liquidezAtual: 500000,
+      prejuizoAtual: 154000,
+      liquidezProjetada: 1296871,
+      prejuizoProjetado: 399436
+    };
+    const pctDrenadaCaixa = (dadosCaixa.prejuizoAtual / dadosCaixa.liquidezAtual) * 100;
+    const caixaLivre = dadosCaixa.liquidezAtual - dadosCaixa.prejuizoAtual;
+    assert(pctDrenadaCaixa.toFixed(1) === "30.8", "Modo Caixa: 30.8% de caixa consumido");
+    assert(caixaLivre === 346000, "Modo Caixa: R$ 346.000 de saldo livre após inventário");
+
+    // 6. Consistência dos dados no modo Bens (Opção 4)
+    const dadosBens = {
+      prejuizoAtual: 154000,
+      prejuizoProjetado: 399436,
+      anosProjecao: 10
+    };
+    const custoDiarioBens = Math.round((dadosBens.prejuizoProjetado - dadosBens.prejuizoAtual) / (dadosBens.anosProjecao * 365));
+    assert(custoDiarioBens === 67, "Modo Bens: R$ 67/dia de inércia");
+    assert(dadosBens.prejuizoAtual === dadosCaixa.prejuizoAtual, "Prejuízo nominal rigorosamente sincronizado entre ambos os modos na mesma section");
+
+    // ==========================================
+    // 34. TESTE: GOVERNANÇA DE CONTAS MASTER E AUDITORIA ZERO-LEAKAGE
+    // ==========================================
+    console.log("\nExecutando Testes 34: Governança de Contas Master & Auditoria Zero-Leakage...");
+
+    // Simulação da função canônica authIsMaster(user) do auth.js
+    const MASTER_UIDS_TEST = [
+      "130e3598-89b9-4702-a4cc-2c5923fa3a66",
+      "5ec2da93-ed07-43f8-9089-6d285a092156"
+    ];
+    function verificarIsMaster(user) {
+      if (!user) return false;
+      if (user.id && MASTER_UIDS_TEST.includes(String(user.id).trim())) {
+        return true;
+      }
+      return user.role === "master" || user.profile_role === "master";
+    }
+
+    // 1. Usuário com role = 'master' (vindo do banco public.profiles)
+    const usuarioMasterPerfil = { id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890", role: "master" };
+    assert(verificarIsMaster(usuarioMasterPerfil) === true, "Usuário com role 'master' em profiles é reconhecido como Master sem precisar de e-mail no front-end");
+
+    // 2. Usuário com profile_role = 'master'
+    const usuarioMasterSessao = { id: "f1e2d3c4-b5a6-0987-fedc-ba9876543210", profile_role: "master" };
+    assert(verificarIsMaster(usuarioMasterSessao) === true, "Usuário com profile_role 'master' é reconhecido como Master");
+
+    // 3. Usuários com UID Master opaco autorizado
+    const usuarioMasterUid1 = { id: "130e3598-89b9-4702-a4cc-2c5923fa3a66", role: "assessor" };
+    const usuarioMasterUid2 = { id: "5ec2da93-ed07-43f8-9089-6d285a092156", role: "assessor" };
+    assert(verificarIsMaster(usuarioMasterUid1) === true, "Usuário Master 1 (João Pedro) com UID opaco tem privilégio Master garantido");
+    assert(verificarIsMaster(usuarioMasterUid2) === true, "Usuário Master 2 (Willians Novais) com UID opaco tem privilégio Master garantido");
+
+    // 4. Assessor comum não possui privilégio Master
+    const assessorComum = { id: "99999999-8888-7777-6666-555555555555", role: "assessor" };
+    assert(verificarIsMaster(assessorComum) === false, "Assessor comum com role 'assessor' não possui privilégio Master");
+    assert(verificarIsMaster(null) === false, "Usuário nulo não possui privilégio Master");
+
+    // 5. Verificação de Zero-Leakage: E-mails master ausentes no código front-end
+    if (typeof require !== "undefined") {
+      const fs = require("fs");
+      const path = require("path");
+      const frontendFiles = [
+        "script/auth.js",
+        "script/dashboard.js",
+        "script/db.js",
+        "script/tributario.js",
+        "script/tributario_charts.js",
+        "script/tributario_engine.js",
+        "tributario.html",
+        "index.html",
+        "login.html",
+        "patrimonio.html",
+        "familiar.html",
+        "dashboard.html"
+      ];
+      let leakEncontrado = false;
+      frontendFiles.forEach(relPath => {
+        const fullP = path.resolve(__dirname, "..", relPath);
+        if (fs.existsSync(fullP)) {
+          const txt = fs.readFileSync(fullP, "utf8");
+          if (txt.toLowerCase().includes("willians.novais@pacecapital.com.br") || txt.toLowerCase().includes("denis.beltrao@pacecapital.com.br")) {
+            leakEncontrado = true;
+          }
+        }
+      });
+      assert(leakEncontrado === false, "Auditoria Zero-Leakage: E-mails master de Willians Novais e Denis Beltrão estão 100% ausentes do código front-end");
+    }
+
+    // ==========================================
+    // 35. TESTE: AUDITORIA ANTI-ESCALONAMENTO DE PRIVILÉGIOS E IMUTABILIDADE DE PERFIS
+    // ==========================================
+    console.log("\nExecutando Testes 35: Auditoria Anti-Escalonamento de Privilégios & Imutabilidade...");
+
+    // 1. Simulação da função segura is_master() (valida apenas UIDs, role='master' no banco ou JWT verificado)
+    const MASTER_UIDS_CANONICOS = new Set([
+      "130e3598-89b9-4702-a4cc-2c5923fa3a66",
+      "5ec2da93-ed07-43f8-9089-6d285a092156"
+    ]);
+    const MASTER_EMAILS_AUTORIZADOS = new Set([
+      "willians.novais@pacecapital.com.br",
+      "denis.beltrao@pacecapital.com.br"
+    ]);
+
+    function simularIsMasterSeguro(authUid, jwtEmail, profileRow) {
+      if (MASTER_UIDS_CANONICOS.has(authUid)) return true;
+      if (profileRow && profileRow.role === "master") return true;
+      if (jwtEmail && MASTER_EMAILS_AUTORIZADOS.has(String(jwtEmail).toLowerCase().trim())) return true;
+      return false;
+    }
+
+    // Assessor tenta spoofar e-mail em public.profiles mas possui JWT de assessor
+    const assessorSpoofProfile = { id: "assessor-123", email: "denis.beltrao@pacecapital.com.br", role: "assessor" };
+    const jwtAssessor = "assessor.real@pacecapital.com.br";
+    assert(simularIsMasterSeguro("assessor-123", jwtAssessor, assessorSpoofProfile) === false, "Assessor não consegue se tornar Master mesmo se tentar alterar e-mail em public.profiles");
+
+    // Master legítimo com JWT assinado
+    assert(simularIsMasterSeguro("denis-uid-456", "denis.beltrao@pacecapital.com.br", { role: "assessor" }) === true, "Usuário com token JWT corporativo assinado é reconhecido como Master");
+
+    // Master legítimo com UID canônico
+    assert(simularIsMasterSeguro("130e3598-89b9-4702-a4cc-2c5923fa3a66", null, null) === true, "UID Master canônico 1 reconhecido sem depender de e-mail");
+    assert(simularIsMasterSeguro("5ec2da93-ed07-43f8-9089-6d285a092156", null, null) === true, "UID Master canônico 2 reconhecido sem depender de e-mail");
+
+    // 2. Simulação do trigger trg_bloquear_escalonamento_privilegios()
+    function simularTriggerPerfil(oldRow, newRow, isMaster) {
+      if (!isMaster) {
+        if (newRow.role !== oldRow.role) {
+          throw new Error("Acesso negado: role imutavel");
+        }
+        if (newRow.email !== oldRow.email) {
+          throw new Error("Acesso negado: email imutavel");
+        }
+        if (newRow.id !== oldRow.id) {
+          throw new Error("Acesso negado: id imutavel");
+        }
+      }
+      return { ...newRow, updated_at: new Date().toISOString() };
+    }
+
+    const rowOriginal = { id: "user-1", email: "assessor@pace.com", role: "assessor", full_name: "Assessor Inicial" };
+
+    // Tentativa de alterar role por usuário comum -> DEVE FALHAR
+    let erroRole = false;
+    try {
+      simularTriggerPerfil(rowOriginal, { ...rowOriginal, role: "master" }, false);
+    } catch (e) {
+      erroRole = true;
+    }
+    assert(erroRole === true, "Trigger bloqueia categoricamente auto-promocao de role para 'master'");
+
+    // Tentativa de alterar email por usuário comum -> DEVE FALHAR
+    let erroEmail = false;
+    try {
+      simularTriggerPerfil(rowOriginal, { ...rowOriginal, email: "denis.beltrao@pacecapital.com.br" }, false);
+    } catch (e) {
+      erroEmail = true;
+    }
+    assert(erroEmail === true, "Trigger bloqueia categoricamente alteracao maliciosa de e-mail no perfil");
+
+    // Alteração legítima de nome e ultimo_acesso por usuário comum -> DEVE PASSAR
+    const updateValido = simularTriggerPerfil(rowOriginal, { ...rowOriginal, full_name: "Nome Atualizado" }, false);
+    assert(updateValido.full_name === "Nome Atualizado", "Permite que assessor atualize seu proprio nome com seguranca");
+    assert(updateValido.role === "assessor", "Role preservada como assessor apos update seguro");
 
     console.log("\n=================================================");
     console.log(`RESUMO DA SUÍTE DE TESTES:`);

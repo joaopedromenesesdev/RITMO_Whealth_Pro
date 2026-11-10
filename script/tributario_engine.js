@@ -813,11 +813,13 @@
      */
     consolidarUsabilidadeMaster(perfis = [], relatorios = []) {
       const mapa = new Map();
-      const masterUid = "130e3598-89b9-4702-a4cc-2c5923fa3a66";
+      const masterUids = Array.isArray(global.MASTER_UIDS_AUTORIZADOS)
+        ? global.MASTER_UIDS_AUTORIZADOS
+        : ["130e3598-89b9-4702-a4cc-2c5923fa3a66", "5ec2da93-ed07-43f8-9089-6d285a092156"];
 
       (Array.isArray(perfis) ? perfis : []).forEach(p => {
         if (!p || !p.id) return;
-        const roleFinal = (p.id === masterUid || String(p.role || "").toLowerCase() === "master")
+        const roleFinal = (masterUids.includes(p.id) || String(p.role || "").toLowerCase() === "master")
           ? "master"
           : (p.role || "assessor").toLowerCase();
         mapa.set(p.id, {
@@ -851,10 +853,12 @@
      */
     filtrarRelatoriosPorPermissao(relatorios = [], usuario = null) {
       if (!usuario || !Array.isArray(relatorios)) return [];
-      const masterUid = "130e3598-89b9-4702-a4cc-2c5923fa3a66";
+      const masterUids = Array.isArray(global.MASTER_UIDS_AUTORIZADOS)
+        ? global.MASTER_UIDS_AUTORIZADOS
+        : ["130e3598-89b9-4702-a4cc-2c5923fa3a66", "5ec2da93-ed07-43f8-9089-6d285a092156"];
       const isMaster = usuario.role === "master" ||
         usuario.profile_role === "master" ||
-        usuario.id === masterUid;
+        masterUids.includes(usuario.id);
       if (isMaster) return [...relatorios];
       return relatorios.filter(r => r.userId === usuario.id);
     }

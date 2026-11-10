@@ -2,7 +2,8 @@
 
 // Lista de UIDs opacos com privilégio Master garantido (Zero-Leakage: sem exposição de e-mails no código)
 const MASTER_UIDS_AUTORIZADOS = [
-  "130e3598-89b9-4702-a4cc-2c5923fa3a66"
+  "130e3598-89b9-4702-a4cc-2c5923fa3a66",
+  "5ec2da93-ed07-43f8-9089-6d285a092156"
 ];
 window.MASTER_UIDS_AUTORIZADOS = MASTER_UIDS_AUTORIZADOS;
 
