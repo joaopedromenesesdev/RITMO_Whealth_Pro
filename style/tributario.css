@@ -225,13 +225,17 @@ body {
 
 .comparativo-cards {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 20px;
   margin-bottom: 30px;
 }
 
 .card-impacto {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
   padding: 30px;
   border-radius: 20px;
   position: relative;
@@ -309,6 +313,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+  align-self: center;
   font-size: 24px;
   color: var(--primary);
   opacity: 0.3;
@@ -1225,6 +1230,11 @@ body.pdf-exporting .capa {
 
   .comparativo-cards {
     flex-direction: column;
+  }
+
+  .card-impacto {
+    flex: 0 0 auto;
+    width: 100%;
   }
 }
 

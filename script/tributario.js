@@ -1366,8 +1366,8 @@ function calcularPrejuizo() {
   const elBAtual = document.getElementById("base_atual");
   const elBProj = document.getElementById("base_projetada");
 
-  if (elBAtual) elBAtual.innerText = "R$ " + baseAtual.toLocaleString("pt-BR");
-  if (elBProj) elBProj.innerText = "R$ " + baseProjetada.toLocaleString("pt-BR");
+  if (elBAtual) elBAtual.innerText = "R$ " + baseAtual.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+  if (elBProj) elBProj.innerText = "R$ " + baseProjetada.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
 
   // Alarme de Liquidez
   const dadosPatrimonio = JSON.parse(sessionStorage.getItem("patrimonio_dados")) || {};
