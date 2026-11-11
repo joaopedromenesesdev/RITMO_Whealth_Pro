@@ -1010,16 +1010,20 @@ window.alternarAbaPainelMaster = function(aba) {
 window.filtrarRelatoriosDoUsuarioNoPainelMaster = function(nomeAssessor, userId) {
     const select = document.getElementById("master_select_assessor_relatorio");
     const buscaInput = document.getElementById("master_input_busca_relatorio");
+    if (buscaInput) buscaInput.value = "";
     if (select) {
+        const targetId = String(userId || "").trim();
+        const targetNome = String(nomeAssessor || "").toLowerCase().trim();
         const matchOption = Array.from(select.options).find(opt =>
-            opt.value === userId || opt.value.toLowerCase() === (nomeAssessor || "").toLowerCase()
+            (targetId && opt.value === targetId) ||
+            (targetNome && opt.value.toLowerCase() === `nome:${targetNome}`) ||
+            (targetNome && opt.textContent.toLowerCase().trim() === targetNome)
         );
         if (matchOption) {
             select.value = matchOption.value;
-            if (buscaInput) buscaInput.value = "";
         } else {
             select.value = "todos";
-            if (buscaInput) buscaInput.value = nomeAssessor || "";
+            if (buscaInput && nomeAssessor) buscaInput.value = nomeAssessor;
         }
     }
     window.alternarAbaPainelMaster("relatorios");
@@ -1106,21 +1110,19 @@ window.renderizarTabelaRelatoriosMaster = function() {
     const tbody = document.getElementById("master_tbody_relatorios");
     if (!tbody) return;
 
+    const usuarios = window.__masterUsabilidadeCache.usuarios || [];
     const relatorios = window.__masterUsabilidadeCache.relatorios || [];
-    const busca = (document.getElementById("master_input_busca_relatorio")?.value || "").toLowerCase().trim();
+    const busca = document.getElementById("master_input_busca_relatorio")?.value || "";
     const filtroAssessor = document.getElementById("master_select_assessor_relatorio")?.value || "todos";
 
-    const filtrados = relatorios.filter(rep => {
-        const cliente = (rep.nomeCliente || "").toLowerCase();
-        const assessor = (rep.nomeAssessor || "").toLowerCase();
-        const matchBusca = !busca || cliente.includes(busca) || assessor.includes(busca);
-        let matchAssessor = true;
-        if (filtroAssessor !== "todos") {
-            matchAssessor = String(rep.userId || "") === filtroAssessor ||
-                assessor.trim() === filtroAssessor.toLowerCase().trim();
-        }
-        return matchBusca && matchAssessor;
-    });
+    const filtrados = (typeof window.filtrarRelatoriosPainelMaster === "function")
+        ? window.filtrarRelatoriosPainelMaster(relatorios, usuarios, { filtroAssessor, busca })
+        : relatorios.filter(rep => {
+            if (!rep) return false;
+            if (filtroAssessor === "todos") return true;
+            return String(rep.userId || "") === filtroAssessor ||
+                String(rep.nomeAssessor || "").toLowerCase().trim() === filtroAssessor.toLowerCase().trim();
+        });
 
     if (filtrados.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" class="master-empty-cell">Nenhum relatório encontrado para os critérios selecionados.</td></tr>`;
@@ -1129,11 +1131,19 @@ window.renderizarTabelaRelatoriosMaster = function() {
 
     const esc = window.escapeHTML;
     let html = "";
+    const usuariosById = new Map();
+    usuarios.forEach(u => {
+        if (u && u.id) usuariosById.set(String(u.id), u);
+    });
 
     filtrados.forEach(rep => {
         const safeId = String(rep.id || "").replace(/[^a-zA-Z0-9_-]/g, "");
         const nomeCliente = rep.nomeCliente || "Cliente";
-        const nomeAssessor = rep.nomeAssessor || "Assessor";
+        const donoUsuario = rep.userId ? usuariosById.get(String(rep.userId)) : null;
+        const nomeRaw = String(rep.nomeAssessor || "").trim();
+        const nomeAssessor = (nomeRaw && nomeRaw.toLowerCase() !== "assessor")
+            ? nomeRaw
+            : (donoUsuario?.full_name || "Assessor");
         const pat = "R$ " + (Number(rep.totalPatrimonio) || 0).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
         const prej = "R$ " + (Number(rep.prejuizoTributario) || 0).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
 
@@ -1286,24 +1296,42 @@ window.recarregarDadosUsabilidadeMaster = async function() {
         if (elTotalR) elTotalR.textContent = String(totalRelatorios);
         if (elPatTotal) elPatTotal.textContent = "R$ " + patrimonioTotal.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
 
-        // Popula select de assessores na aba de relatórios
+        // Popula select de assessores na aba de relatórios usando userId canonico (com fallback por nome para legados sem user_id)
         const selectAssessor = document.getElementById("master_select_assessor_relatorio");
         if (selectAssessor) {
             const valorAnterior = selectAssessor.value || "todos";
-            const assessoresMap = new Map();
-            usuarios.forEach(u => {
-                if (u.full_name) assessoresMap.set(u.full_name, u.full_name);
-            });
+            const opcoesSelect = [];
+            const idsMapeados = new Set();
+
+            usuarios
+                .slice()
+                .sort((a, b) => String(a.full_name || "").localeCompare(String(b.full_name || ""), "pt-BR"))
+                .forEach(u => {
+                    if (!u || !u.id) return;
+                    const idStr = String(u.id);
+                    idsMapeados.add(idStr);
+                    opcoesSelect.push({ value: idStr, label: u.full_name || "Assessor" });
+                });
+
+            const nomesOrfaos = new Set();
             relatorios.forEach(r => {
-                if (r.nomeAssessor) assessoresMap.set(r.nomeAssessor, r.nomeAssessor);
+                if (!r) return;
+                const uidStr = r.userId ? String(r.userId) : "";
+                if (!uidStr || !idsMapeados.has(uidStr)) {
+                    const nomeR = String(r.nomeAssessor || "").trim();
+                    if (nomeR && !nomesOrfaos.has(nomeR.toLowerCase())) {
+                        nomesOrfaos.add(nomeR.toLowerCase());
+                        opcoesSelect.push({ value: `nome:${nomeR}`, label: nomeR });
+                    }
+                }
             });
 
             let opts = `<option value="todos">Todos os Assessores (${relatorios.length})</option>`;
-            Array.from(assessoresMap.keys()).sort((a, b) => a.localeCompare(b, "pt-BR")).forEach(nome => {
-                opts += `<option value="${window.escapeHTML(nome)}">${window.escapeHTML(nome)}</option>`;
+            opcoesSelect.forEach(opt => {
+                opts += `<option value="${window.escapeHTML(opt.value)}">${window.escapeHTML(opt.label)}</option>`;
             });
             selectAssessor.innerHTML = opts;
-            if (Array.from(assessoresMap.keys()).includes(valorAnterior)) {
+            if (opcoesSelect.some(o => o.value === valorAnterior)) {
                 selectAssessor.value = valorAnterior;
             }
         }

@@ -1501,6 +1501,34 @@
       assert(!sqlLower.includes("gisele.hora") && !sqlLower.includes("lucas.sertori") && !sqlLower.includes("wilson.carvalho"), "Zero-Leakage: nenhum e-mail de assessor exposto na migration SQL");
     }
 
+    // ── TESTE 39: Filtro de Relatorios no Painel Master por userId Canonico ──
+    console.log("\n-> Teste 39: Filtro de Relatorios do Painel Master por userId e Nome Divergente");
+    if (typeof require === "function") {
+      const dbMod = require("../script/db.js");
+      const usuariosMock = [
+        { id: "uid-assessor-1", full_name: "Ana Paula", email: "ana.paula@pacecapital.com.br" },
+        { id: "uid-assessor-2", full_name: "Marcos Ribeiro", email: "marcos.ribeiro@pacecapital.com.br" }
+      ];
+      const relatoriosMock = [
+        { id: "r1", userId: "uid-assessor-1", nomeAssessor: "ANA P. SANTOS", nomeCliente: "Cliente Alfa" },
+        { id: "r2", userId: "uid-assessor-1", nomeAssessor: "Ana", nomeCliente: "Cliente Beta" },
+        { id: "r3", userId: "uid-assessor-2", nomeAssessor: "Assessor", nomeCliente: "Cliente Gama" },
+        { id: "r4", userId: null, nomeAssessor: "Assessor Legado", nomeCliente: "Cliente Delta" }
+      ];
+
+      const resUid1 = dbMod.filtrarRelatoriosPainelMaster(relatoriosMock, usuariosMock, { filtroAssessor: "uid-assessor-1" });
+      assert(resUid1.length === 2 && resUid1.every(r => r.userId === "uid-assessor-1"), "Filtro por userId retorna todos os relatorios do assessor mesmo quando nomeAssessor diverge do full_name");
+
+      const resUid2 = dbMod.filtrarRelatoriosPainelMaster(relatoriosMock, usuariosMock, { filtroAssessor: "uid-assessor-2" });
+      assert(resUid2.length === 1 && resUid2[0].id === "r3", "Filtro por userId encontra relatorio salvo com nomeAssessor generico");
+
+      const resLegado = dbMod.filtrarRelatoriosPainelMaster(relatoriosMock, usuariosMock, { filtroAssessor: "nome:Assessor Legado" });
+      assert(resLegado.length === 1 && resLegado[0].id === "r4", "Filtro por nome: encontra relatorio legado sem user_id");
+
+      const resBuscaDono = dbMod.filtrarRelatoriosPainelMaster(relatoriosMock, usuariosMock, { filtroAssessor: "todos", busca: "marcos ribeiro" });
+      assert(resBuscaDono.length === 1 && resBuscaDono[0].id === "r3", "Busca textual tambem encontra relatorios pelo full_name do proprietario");
+    }
+
     console.log("\n=================================================");
     console.log(`RESUMO DA SUÍTE DE TESTES:`);
     console.log(`   Total: ${totalTestes} | Passados: ${testesPassados} | Falhas: ${testesFalhados}`);

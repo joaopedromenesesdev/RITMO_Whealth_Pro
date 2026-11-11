@@ -350,7 +350,9 @@ async function dbObterRelatorios(incluirTodosEquipe = false) {
 async function dbObterTodosRelatoriosEquipe() {
   return await dbObterRelatorios(true);
 }
-window.dbObterTodosRelatoriosEquipe = dbObterTodosRelatoriosEquipe;
+if (typeof window !== "undefined") {
+  window.dbObterTodosRelatoriosEquipe = dbObterTodosRelatoriosEquipe;
+}
 
 // Salvar/Atualizar um relatório no Supabase (com sincronização local)
 async function dbSalvarRelatorio(relatorioEntrada) {
@@ -726,7 +728,9 @@ async function dbRegistrarChamadoSuporte(dados) {
   return { success: true, id: "local-" + Date.now() };
 }
 
-window.dbRegistrarChamadoSuporte = dbRegistrarChamadoSuporte;
+if (typeof window !== "undefined") {
+  window.dbRegistrarChamadoSuporte = dbRegistrarChamadoSuporte;
+}
 
 // ─── Sistema de Usuários Master: Consolidação de Usabilidade & Relatórios ─────
 
@@ -1036,10 +1040,80 @@ async function dbObterUsabilidadeUsuarios() {
   return { usuarios: usuariosFallback, relatorios };
 }
 
-window.DIRETORIO_USUARIOS_SISTEMA = DIRETORIO_USUARIOS_SISTEMA;
-window.calcularMetricasUsabilidadeEquipe = calcularMetricasUsabilidadeEquipe;
-window.dbObterUsabilidadeUsuarios = dbObterUsabilidadeUsuarios;
-window.dbObterRelatorios = dbObterRelatorios;
+// Filtra relatórios da aba Master usando userId como chave primária (imune a divergência entre nomeAssessor e full_name)
+function filtrarRelatoriosPainelMaster(relatorios = [], usuarios = [], opcoes = {}) {
+  const lista = Array.isArray(relatorios) ? relatorios : [];
+  const listaUsuarios = Array.isArray(usuarios) ? usuarios : [];
+  const buscaRaw = opcoes && typeof opcoes.busca === "string" ? opcoes.busca : "";
+  const filtroAssessor = opcoes && opcoes.filtroAssessor ? String(opcoes.filtroAssessor).trim() : "todos";
+
+  const norm = (s) => String(s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+  const buscaNorm = norm(buscaRaw);
+  const usuariosById = new Map();
+  listaUsuarios.forEach(u => {
+    if (u && u.id) usuariosById.set(String(u.id), u);
+  });
+
+  const usuarioSelecionado = (filtroAssessor !== "todos" && !filtroAssessor.startsWith("nome:"))
+    ? usuariosById.get(filtroAssessor) || null
+    : null;
+
+  return lista.filter(rep => {
+    if (!rep) return false;
+    const cliente = norm(rep.nomeCliente);
+    const assessor = norm(rep.nomeAssessor);
+    const donoUsuario = rep.userId ? (usuariosById.get(String(rep.userId)) || null) : null;
+    const nomeDono = norm(donoUsuario?.full_name || "");
+
+    const matchBusca = !buscaNorm || cliente.includes(buscaNorm) || assessor.includes(buscaNorm) || nomeDono.includes(buscaNorm);
+    if (!matchBusca) return false;
+
+    if (filtroAssessor === "todos") return true;
+
+    if (filtroAssessor.startsWith("nome:")) {
+      const alvoNome = norm(filtroAssessor.slice(5));
+      return assessor === alvoNome;
+    }
+
+    if (rep.userId) {
+      return String(rep.userId) === filtroAssessor;
+    }
+
+    if (usuarioSelecionado) {
+      const alvoFullName = norm(usuarioSelecionado.full_name);
+      const alvoEmail = norm(usuarioSelecionado.email);
+      const alvoAlias = alvoEmail.split("@")[0].replace(/[._-]/g, " ").trim();
+      return Boolean(assessor && (
+        assessor === alvoFullName ||
+        assessor === alvoEmail ||
+        (alvoAlias && assessor === alvoAlias)
+      ));
+    }
+
+    return assessor === norm(filtroAssessor);
+  });
+}
+
+if (typeof window !== "undefined") {
+  window.DIRETORIO_USUARIOS_SISTEMA = DIRETORIO_USUARIOS_SISTEMA;
+  window.calcularMetricasUsabilidadeEquipe = calcularMetricasUsabilidadeEquipe;
+  window.filtrarRelatoriosPainelMaster = filtrarRelatoriosPainelMaster;
+  window.dbObterUsabilidadeUsuarios = dbObterUsabilidadeUsuarios;
+  window.dbObterRelatorios = dbObterRelatorios;
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    calcularMetricasUsabilidadeEquipe,
+    filtrarRelatoriosPainelMaster,
+    sanitizarNumero
+  };
+}
 
 // Captura global de exceções assíncronas para não travar a aplicação
 if (typeof window !== "undefined") {
