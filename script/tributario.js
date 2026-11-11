@@ -221,29 +221,40 @@ function renderizarEstruturaFamiliar() {
 // PARSE MAIS ROBUSTO (corrigido)
 // =========================
 function parseValor(v) {
-  if (!v) return 0;
-
-  return Number(
-    String(v)
-      .replace(/\s/g, "")
-      .replace("R$", "")
-      .replace(/\./g, "")
-      .replace(",", ".")
-  ) || 0;
+  if (window.AppState && typeof window.AppState.parseValorMonetario === "function") {
+    return window.AppState.parseValorMonetario(v);
+  }
+  if (v === null || v === undefined || v === "") return 0;
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  const str = String(v).replace(/R\$\s?/gi, "").replace(/\s/g, "").trim();
+  if (!str) return 0;
+  if (!str.includes(",")) {
+    if (/^-?\d{1,3}(\.\d{3})+$/.test(str)) {
+      return Number(str.replace(/\./g, "")) || 0;
+    }
+    if (/^-?\d+(\.\d+)?$/.test(str)) {
+      return Number(str) || 0;
+    }
+  }
+  return Number(str.replace(/\./g, "").replace(",", ".")) || 0;
 }
 
 function obterOffshoreBRL(dadosPatrimonio) {
-  if (!dadosPatrimonio) return 0;
-  if (dadosPatrimonio.offshore_brl !== undefined && dadosPatrimonio.offshore_brl !== null) {
-    return Number(dadosPatrimonio.offshore_brl) || 0;
+  if (window.AppState && typeof window.AppState.obterOffshoreBRL === "function") {
+    return window.AppState.obterOffshoreBRL(dadosPatrimonio);
   }
+  if (!dadosPatrimonio) return 0;
   const raw = parseValor(dadosPatrimonio.offshore);
+  if (dadosPatrimonio.offshore_brl !== undefined && dadosPatrimonio.offshore_brl !== null && dadosPatrimonio.offshore_brl !== "") {
+    const salvoBrl = parseValor(dadosPatrimonio.offshore_brl);
+    if (salvoBrl > 0 || raw === 0) return salvoBrl;
+  }
   if (dadosPatrimonio.offshore_modo === "usd") {
     let cotacaoCache = {};
     try {
       cotacaoCache = JSON.parse(sessionStorage.getItem("ptax_cotacao_cache") || "{}");
     } catch (e) { }
-    const ptax = Number(dadosPatrimonio.offshore_ptax) || Number(cotacaoCache.cotacao) || 1;
+    const ptax = Number(dadosPatrimonio.offshore_ptax) || Number(cotacaoCache.valor ?? cotacaoCache.cotacao) || 1;
     return raw * ptax;
   }
   return raw;
@@ -1024,6 +1035,7 @@ function carregarResumoSidebar() {
   const dadosPatrimonio = JSON.parse(sessionStorage.getItem("patrimonio_dados")) || {};
   const prev = parseValor(dadosPatrimonio.prev);
   const offshore = obterOffshoreBRL(dadosPatrimonio);
+  const bensParticulares = parseValor(dadosPatrimonio.bens_particulares);
 
   const pisoNacional = Math.max(0, totalAtual - offshore);
   const somaItensNacionais = calcularPatrimonioNacionalBruto(dadosPatrimonio);
@@ -1041,8 +1053,10 @@ function carregarResumoSidebar() {
   // Calcula o patrimônio nacional projetado de forma 100% determinística e imune a offshore
   let patrimonioNacionalProjetado = patrimonioNacionalAtual;
   const anosProj = Number(dadosEvolucao.tempo) || (Array.isArray(dadosEvolucao.resultados) && dadosEvolucao.resultados.length > 1 ? dadosEvolucao.resultados.length - 1 : 0);
+  let taxaAnualProjecao = 0;
   if (anosProj > 0 && dadosEvolucao.taxa !== undefined) {
     const taxaNum = parseValor(dadosEvolucao.taxa) / 100;
+    taxaAnualProjecao = taxaNum;
     const aporteAnual = Number(dadosEvolucao.aporteAnual) || 0;
     let nacAcum = patrimonioNacionalAtual;
     for (let i = 0; i < anosProj; i++) {
@@ -1058,7 +1072,12 @@ function carregarResumoSidebar() {
   patrimonioNacionalProjetado = Math.max(patrimonioNacionalProjetado || 0, pisoProjetadoNacional);
 
   const dadosFamilia = JSON.parse(sessionStorage.getItem("familia")) || {};
-  const regime = dadosFamilia.regime || "Não informado";
+  const estadoCivil = dadosFamilia.estadoCivil !== undefined && dadosFamilia.estadoCivil !== null
+    ? String(dadosFamilia.estadoCivil).toLowerCase().trim()
+    : undefined;
+  const regime = (estadoCivil && estadoCivil !== "casado")
+    ? "Não aplicável (Sem Meação)"
+    : (dadosFamilia.regime || "Não informado");
 
   const elAtual = document.getElementById("resumo_atual");
   const elPrevAtual = document.getElementById("resumo_prev_atual");
@@ -1083,7 +1102,11 @@ function carregarResumoSidebar() {
     prev,
     prevProjetado,
     offshore,
-    regime
+    bensParticulares,
+    estadoCivil,
+    regime,
+    taxaAnualProjecao,
+    anosProjecao: anosProj
   };
 
   atualizarBlocoOffshoreEstateTaxUI(dadosPatrimonio);
@@ -1108,7 +1131,7 @@ function atualizarBlocoOffshoreEstateTaxUI(dadosPatrimonio) {
     cotacaoCache = JSON.parse(sessionStorage.getItem("ptax_cotacao_cache") || "{}");
   } catch (e) { }
 
-  const ptax = Number(dadosPatrimonio.offshore_ptax) || Number(cotacaoCache.cotacao) || 5.5;
+  const ptax = Number(dadosPatrimonio.offshore_ptax) || Number(cotacaoCache.valor ?? cotacaoCache.cotacao) || 5.5;
   const offshoreUSD = offshoreUSDInput > 0
     ? offshoreUSDInput
     : (offshoreBRL > 0 ? offshoreBRL / ptax : 0);
@@ -1244,7 +1267,11 @@ function calcularPrejuizo() {
     prev,
     prevProjetado,
     offshore = 0,
-    regime
+    bensParticulares = 0,
+    estadoCivil,
+    regime,
+    taxaAnualProjecao = 0,
+    anosProjecao = 0
   } = window.dadosCalculo;
 
   const itcmd = Number(document.getElementById("taxa_itcmd")?.value) || 0;
@@ -1252,10 +1279,6 @@ function calcularPrejuizo() {
   const custas = Number(document.getElementById("taxa_custas")?.value) || 0;
 
   const taxaTotal = itcmd + honorarios + custas;
-
-  // Regra do Regime: Se for Comunhão (Parcial ou Universal) ou Participação Final nos Aquestos, incide sobre 50%
-  const regimeLower = regime.toLowerCase();
-  const multiplicadorRegime = (regimeLower.includes("comunhão") || regimeLower.includes("participação final") || regimeLower.includes("aquestos")) ? 0.5 : 1;
 
   // Base de Cálculo: Usa exclusivamente o patrimônio nacional (excluindo 100% de offshore e seus rendimentos) e abate a previdência e a meação
   const nacAtual = Math.max(
@@ -1267,8 +1290,59 @@ function calcularPrejuizo() {
     Math.max(0, totalProjetado - offshore)
   );
 
-  const baseAtual = Math.max(0, nacAtual - prev) * multiplicadorRegime;
-  const baseProjetada = Math.max(0, nacProj - prevProjetado) * multiplicadorRegime;
+  const bensParticularesProj = (anosProjecao > 0 && taxaAnualProjecao > 0)
+    ? Math.round(bensParticulares * Math.pow(1 + taxaAnualProjecao, anosProjecao))
+    : bensParticulares;
+
+  let baseAtual = 0;
+  let baseProjetada = 0;
+
+  if (window.TributarioEngine && typeof window.TributarioEngine.calcularMemoriaPrejuizo === "function") {
+    const memAtual = window.TributarioEngine.calcularMemoriaPrejuizo({
+      totalPatrimonio: nacAtual,
+      valorPrevidencia: prev,
+      valorOffshore: 0,
+      bensParticulares,
+      estadoCivil,
+      regime,
+      itcmd,
+      honorarios,
+      custas
+    });
+    const memProj = window.TributarioEngine.calcularMemoriaPrejuizo({
+      totalPatrimonio: nacProj,
+      valorPrevidencia: prevProjetado,
+      valorOffshore: 0,
+      bensParticulares: bensParticularesProj,
+      estadoCivil,
+      regime,
+      itcmd,
+      honorarios,
+      custas
+    });
+    baseAtual = memAtual.baseTributavel;
+    baseProjetada = memProj.baseTributavel;
+  } else {
+    const casadoOuOmitido = (estadoCivil === undefined || estadoCivil === null)
+      ? true
+      : String(estadoCivil).toLowerCase().trim() === "casado";
+    const regimeNorm = String(regime || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/_/g, " ");
+    const ehUniversal = regimeNorm.includes("comunhao universal");
+    const ehParcial = regimeNorm.includes("comunhao parcial") || regimeNorm.includes("participacao final") || regimeNorm.includes("aquestos");
+    const ehGenerica = !ehUniversal && !ehParcial && regimeNorm.includes("comunhao");
+    const temMeacao = casadoOuOmitido && (ehUniversal || ehParcial || ehGenerica);
+    const separaPart = casadoOuOmitido && (ehParcial || ehGenerica);
+
+    const subAtual = Math.max(0, nacAtual - prev);
+    const partAtual = separaPart ? Math.min(subAtual, Math.max(0, bensParticulares)) : 0;
+    const comunsAtual = separaPart ? Math.max(0, subAtual - partAtual) : subAtual;
+    baseAtual = temMeacao ? (comunsAtual * 0.5) + partAtual : subAtual;
+
+    const subProj = Math.max(0, nacProj - prevProjetado);
+    const partProj = separaPart ? Math.min(subProj, Math.max(0, bensParticularesProj)) : 0;
+    const comunsProj = separaPart ? Math.max(0, subProj - partProj) : subProj;
+    baseProjetada = temMeacao ? (comunsProj * 0.5) + partProj : subProj;
+  }
 
   const prejuizoAtual = baseAtual * (taxaTotal / 100);
   const prejuizoProjetado = baseProjetada * (taxaTotal / 100);
@@ -1354,7 +1428,7 @@ function calcularPrejuizo() {
   const elEmpresas = document.getElementById("impacto_venda_empresas");
 
   const temImoveis = (parseValor(dadosPatrimonio.apt) + parseValor(dadosPatrimonio.casa) + parseValor(dadosPatrimonio.terr) + parseValor(dadosPatrimonio.galp)) > 0;
-  const temInvestimentos = (parseValor(dadosPatrimonio.rf) + parseValor(dadosPatrimonio.rv) + parseValor(dadosPatrimonio.inter) + parseValor(dadosPatrimonio.offshore)) > 0;
+  const temInvestimentos = (parseValor(dadosPatrimonio.rf) + parseValor(dadosPatrimonio.rv) + parseValor(dadosPatrimonio.inter) + obterOffshoreBRL(dadosPatrimonio)) > 0;
   let temEmpresas = false;
   if (dadosPatrimonio.empresas && dadosPatrimonio.empresas.length > 0) {
     temEmpresas = dadosPatrimonio.empresas.some(e => parseValor(e.valor) > 0);
@@ -1768,7 +1842,7 @@ function calcularPartilha(total, regime) {
   const familia = JSON.parse(sessionStorage.getItem("familia")) || {};
   const dadosPatrimonio = JSON.parse(sessionStorage.getItem("patrimonio_dados")) || {};
   const prev = parseValor(dadosPatrimonio.prev);
-  const offshore = parseValor(dadosPatrimonio.offshore);
+  const offshore = obterOffshoreBRL(dadosPatrimonio);
   const bensParticulares = parseValor(dadosPatrimonio.bens_particulares);
 
   // 2. Chamada ao Model Puro (TributarioEngine)

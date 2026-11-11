@@ -20,14 +20,26 @@ window.onload = async function () {
 
   // Função de parse ultra-robusta
   const parseV = (v) => {
-    if (!v) return 0;
-    let limpo = String(v).replace(/\s/g, "").replace("R$", "").replace(/\./g, "").replace(",", ".");
+    if (window.AppState && typeof window.AppState.parseValorMonetario === "function") {
+      return window.AppState.parseValorMonetario(v);
+    }
+    if (v === null || v === undefined || v === "") return 0;
+    if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+    const str = String(v).replace(/\s/g, "").replace(/R\$/gi, "").trim();
+    if (!str) return 0;
+    if (!str.includes(",")) {
+      if (/^-?\d{1,3}(\.\d{3})+$/.test(str)) return parseFloat(str.replace(/\./g, "")) || 0;
+      if (/^-?\d+(\.\d+)?$/.test(str)) return parseFloat(str) || 0;
+    }
+    let limpo = str.replace(/\./g, "").replace(",", ".");
     return parseFloat(limpo) || 0;
   };
 
   // Extrai o valor de offshore em BRL
   let offshoreBrl = 0;
-  if (dadosPatrimonio.offshore_brl !== undefined && dadosPatrimonio.offshore_brl !== null) {
+  if (window.AppState && typeof window.AppState.obterOffshoreBRL === "function") {
+    offshoreBrl = window.AppState.obterOffshoreBRL(dadosPatrimonio);
+  } else if (dadosPatrimonio.offshore_brl !== undefined && dadosPatrimonio.offshore_brl !== null) {
     offshoreBrl = Number(dadosPatrimonio.offshore_brl) || 0;
   } else if (dadosPatrimonio.offshore) {
     const rawOff = parseV(dadosPatrimonio.offshore);
@@ -36,7 +48,7 @@ window.onload = async function () {
       try {
         cotacaoCache = JSON.parse(sessionStorage.getItem("ptax_cotacao_cache") || "{}");
       } catch (e) { }
-      const ptax = Number(dadosPatrimonio.offshore_ptax) || Number(cotacaoCache.cotacao) || 1;
+      const ptax = Number(dadosPatrimonio.offshore_ptax) || Number(cotacaoCache.valor ?? cotacaoCache.cotacao) || 1;
       offshoreBrl = rawOff * ptax;
     } else {
       offshoreBrl = rawOff;

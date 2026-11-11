@@ -452,16 +452,42 @@
       // Subtotal líquido excluindo ativos isentos de inventário e ativos offshore
       const subtotalLiquido = Math.max(0, patrimonioBruto - valorPrevidencia - valorOffshore);
 
-      // Avaliação do regime matrimonial
-      const regimeStr = String(p.regime || "").toLowerCase();
-      const temMeacao = regimeStr.includes("comunhão") || regimeStr.includes("comunhao") ||
-                        regimeStr.includes("participação final") || regimeStr.includes("participacao final") ||
-                        regimeStr.includes("aquestos");
-      const multiplicadorRegime = temMeacao ? 0.5 : 1.0;
-      const regimeDescricao = temMeacao ? "50% (Meação do Cônjuge)" : "100% (Sem Meação)";
+      // Avaliação do estado civil (compatível com chamadas legadas que omitem estadoCivil)
+      const casadoOuOmitido = (p.estadoCivil === undefined || p.estadoCivil === null)
+        ? true
+        : String(p.estadoCivil).toLowerCase().trim() === "casado";
 
-      // Base tributável final
-      const baseTributavel = subtotalLiquido * multiplicadorRegime;
+      // Avaliação do regime matrimonial normalizado
+      const regimeNorm = String(p.regime || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/_/g, " ");
+
+      const ehComunhaoUniversal = regimeNorm.includes("comunhao universal");
+      const ehComunhaoParcial = regimeNorm.includes("comunhao parcial") ||
+                                regimeNorm.includes("participacao final") ||
+                                regimeNorm.includes("aquestos");
+      const ehComunhaoGenerica = !ehComunhaoUniversal && !ehComunhaoParcial && regimeNorm.includes("comunhao");
+
+      const temMeacao = casadoOuOmitido && (ehComunhaoUniversal || ehComunhaoParcial || ehComunhaoGenerica);
+      const separaParticulares = casadoOuOmitido && (ehComunhaoParcial || ehComunhaoGenerica);
+
+      const bensParticulares = separaParticulares
+        ? Math.min(subtotalLiquido, Math.max(0, Number(p.bensParticulares) || 0))
+        : 0;
+      const bensComuns = separaParticulares
+        ? Math.max(0, subtotalLiquido - bensParticulares)
+        : (temMeacao ? subtotalLiquido : 0);
+      const meacao = temMeacao ? bensComuns * 0.5 : 0;
+
+      const multiplicadorRegime = temMeacao ? 0.5 : 1.0;
+      const regimeDescricao = temMeacao
+        ? (bensParticulares > 0 ? "50% Bens Comuns + 100% Bens Particulares" : "50% (Meação do Cônjuge)")
+        : "100% (Sem Meação)";
+
+      // Base tributável final: 50% dos bens comuns + 100% dos bens particulares (quando há meação)
+      const baseTributavel = temMeacao ? (bensComuns * 0.5) + bensParticulares : subtotalLiquido;
 
       // Taxas e encargos incidentes
       const taxaITCMD = Math.max(0, Number(p.itcmd) || 0);
@@ -482,6 +508,9 @@
         valorPrevidencia,
         valorOffshore,
         subtotalLiquido,
+        bensComuns,
+        bensParticulares,
+        meacao,
         multiplicadorRegime,
         temMeacao,
         regimeDescricao,

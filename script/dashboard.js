@@ -348,14 +348,18 @@ function renderizarRelatorios(relatorios) {
 
 // Auxiliar para parser
 function parseValor(v) {
-  if (!v) return 0;
-  return Number(
-    String(v)
-      .replace(/\s/g, "")
-      .replace("R$", "")
-      .replace(/\./g, "")
-      .replace(",", ".")
-  ) || 0;
+  if (window.AppState && typeof window.AppState.parseValorMonetario === "function") {
+    return window.AppState.parseValorMonetario(v);
+  }
+  if (v === null || v === undefined || v === "") return 0;
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  const str = String(v).replace(/\s/g, "").replace(/R\$/gi, "").trim();
+  if (!str) return 0;
+  if (!str.includes(",")) {
+    if (/^-?\d{1,3}(\.\d{3})+$/.test(str)) return Number(str.replace(/\./g, "")) || 0;
+    if (/^-?\d+(\.\d+)?$/.test(str)) return Number(str) || 0;
+  }
+  return Number(str.replace(/\./g, "").replace(",", ".")) || 0;
 }
 
 // XSS Prevention
@@ -404,7 +408,9 @@ function normalizarSessao(dadosSessao, totalPatrimonioFallback) {
     const totalPat = dadosSessao.patrimonio.total ?? totalPatrimonioFallback ?? 0;
     sessionStorage.setItem("total_patrimonio", totalPat);
 
-    const offshoreBrl = Number(dadosPatrimonio.offshore_brl) || Number(dadosPatrimonio.offshore) || 0;
+    const offshoreBrl = (window.AppState && typeof window.AppState.obterOffshoreBRL === "function")
+      ? window.AppState.obterOffshoreBRL(dadosPatrimonio)
+      : (Number(dadosPatrimonio.offshore_brl) || (dadosPatrimonio.offshore_modo === "usd" ? (parseValor(dadosPatrimonio.offshore) * (Number(dadosPatrimonio.offshore_ptax) || 1)) : parseValor(dadosPatrimonio.offshore)) || 0);
     const totalNac = dadosSessao.patrimonio.totalNacional ?? Math.max(0, totalPat - offshoreBrl);
     sessionStorage.setItem("total_patrimonio_nacional", totalNac);
 
@@ -465,7 +471,9 @@ function normalizarSessao(dadosSessao, totalPatrimonioFallback) {
       let off = 0;
       try {
         const dp = JSON.parse(sessionStorage.getItem("patrimonio_dados") || "{}");
-        off = Number(dp.offshore_brl) || Number(dp.offshore) || 0;
+        off = (window.AppState && typeof window.AppState.obterOffshoreBRL === "function")
+          ? window.AppState.obterOffshoreBRL(dp)
+          : (Number(dp.offshore_brl) || (dp.offshore_modo === "usd" ? (parseValor(dp.offshore) * (Number(dp.offshore_ptax) || 1)) : parseValor(dp.offshore)) || 0);
       } catch (_) {}
       sessionStorage.setItem("total_patrimonio_nacional", Math.max(0, tot - off));
     }

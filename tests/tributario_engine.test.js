@@ -1356,6 +1356,151 @@
       assert(!configSource.toLowerCase().includes("service_role") && !authSourceCheck.toLowerCase().includes("service_role"), "Nenhuma chave ou referencia a service_role presente nos scripts cliente");
     }
 
+    // ── TESTE 37: Bens Particulares na Base Tributavel, Estado Civil e Parser Monetario ──
+    console.log("\n-> Teste 37: Bens Particulares (100% Tributavel), Estado Civil e Parser Monetario");
+    {
+      // 1. Cenario exato da simulacao (Patrimonio 6.820.000, Previdencia 200.000, Bens Particulares 120.000, Casado - Comunhao Parcial)
+      const memCarlos = engine.calcularMemoriaPrejuizo({
+        totalPatrimonio: 6820000,
+        valorPrevidencia: 200000,
+        valorOffshore: 0,
+        bensParticulares: 120000,
+        estadoCivil: "casado",
+        regime: "Comunhão Parcial de Bens",
+        itcmd: 4,
+        honorarios: 5,
+        custas: 2
+      });
+      assert(memCarlos.subtotalLiquido === 6620000, "Subtotal liquido abate apenas previdencia/offshore (6.620.000)");
+      assert(memCarlos.bensParticulares === 120000, "Separa 120.000 de bens particulares na Comunhao Parcial");
+      assert(memCarlos.bensComuns === 6500000, "Bens comuns correspondem a 6.500.000 (Casa 5M + Outros 1.5M)");
+      assert(memCarlos.meacao === 3250000, "Meacao incide apenas sobre os bens comuns (50% de 6.5M = 3.250.000)");
+      assert(memCarlos.baseTributavel === 3370000, "Base tributavel = 50% dos bens comuns (3.250.000) + 100% dos bens particulares (120.000) = 3.370.000");
+      assert(Math.round(memCarlos.prejuizoTotal) === 370700, "Prejuizo total (11% de 3.370.000) = R$ 370.700");
+
+      // Alinhamento matematico entre calcularMemoriaPrejuizo e calcularPartilhaSucessoria
+      const partilhaCarlos = engine.calcularPartilhaSucessoria({
+        totalPatrimonio: 6820000,
+        valorPrevidencia: 200000,
+        valorOffshore: 0,
+        bensParticulares: 120000,
+        familia: {
+          estadoCivil: "casado",
+          regime: "Comunhão Parcial de Bens",
+          temFilhos: "sim",
+          qtdFilhos: 2
+        }
+      });
+      assert(memCarlos.baseTributavel === partilhaCarlos.heranca, "Base tributavel do prejuizo coincide 100% com o monte-mor transmissivel (heranca) da partilha");
+
+      // 2. Comunhao Universal de Bens (todos os bens comunicam, meacao de 50% sobre tudo)
+      const memUniversal = engine.calcularMemoriaPrejuizo({
+        totalPatrimonio: 6820000,
+        valorPrevidencia: 200000,
+        valorOffshore: 0,
+        bensParticulares: 120000,
+        estadoCivil: "casado",
+        regime: "Comunhão Universal de Bens",
+        itcmd: 4,
+        honorarios: 5,
+        custas: 2
+      });
+      assert(memUniversal.bensParticulares === 0, "Na Comunhao Universal nao ha separacao de bens particulares");
+      assert(memUniversal.baseTributavel === 3310000, "Na Comunhao Universal a base tributavel e 50% de 6.620.000 (3.310.000)");
+
+      // 3. Cliente nao casado (solteiro/divorciado/viuvo) mesmo com string residual de regime
+      const memSolteiro = engine.calcularMemoriaPrejuizo({
+        totalPatrimonio: 6820000,
+        valorPrevidencia: 200000,
+        valorOffshore: 0,
+        bensParticulares: 120000,
+        estadoCivil: "solteiro",
+        regime: "Comunhão Parcial de Bens",
+        itcmd: 4,
+        honorarios: 5,
+        custas: 2
+      });
+      assert(memSolteiro.temMeacao === false, "Cliente solteiro nao tem meacao mesmo com regime residual preenchido");
+      assert(memSolteiro.baseTributavel === 6620000, "Base tributavel de cliente solteiro e 100% do subtotal liquido (6.620.000)");
+
+      // 4. Validacao do AppState (parseValorMonetario e obterOffshoreBRL sem inflacao de floats)
+      if (typeof require === "function") {
+        const AppState = require("../script/state.js");
+        assert(AppState.parseValorMonetario(200000.5) === 200000.5, "parseValorMonetario preserva float numerico 200000.5 sem inflar casas");
+        assert(AppState.parseValorMonetario("200000.5") === 200000.5, "parseValorMonetario preserva string float '200000.5' sem remover o ponto decimal");
+        assert(AppState.parseValorMonetario("5.000.000,00") === 5000000, "parseValorMonetario converte string PT-BR '5.000.000,00' para 5000000");
+        assert(AppState.parseValorMonetario("R$ 120.000,50") === 120000.5, "parseValorMonetario converte 'R$ 120.000,50' para 120000.5");
+        assert(AppState.parseValorMonetario("5.000") === 5000, "parseValorMonetario converte milhar PT-BR '5.000' para 5000");
+        assert(
+          AppState.obterOffshoreBRL({ offshore: "100.000,00", offshore_modo: "usd", offshore_ptax: 5.75 }) === 575000,
+          "obterOffshoreBRL converte USD * PTAX quando offshore_brl nao esta definido"
+        );
+        assert(
+          AppState.obterOffshoreBRL({ offshore: 100000, offshore_brl: 580000, offshore_modo: "usd", offshore_ptax: 5.8 }) === 580000,
+          "obterOffshoreBRL prioriza offshore_brl ja calculado"
+        );
+      }
+    }
+
+    // ── TESTE 38: Fluxo SafeLinks-Proof (token_hash), Nomes e Hardening Anon SQL ──
+    console.log("\n-> Teste 38: Fluxo token_hash SafeLinks-Proof, Nomes e Hardening Anon SQL");
+    if (typeof require === "function") {
+      const fs = require("fs");
+      const path = require("path");
+      const authMod = require(path.resolve(__dirname, "..", "script/auth.js"));
+      const authSrc = fs.readFileSync(path.resolve(__dirname, "..", "script/auth.js"), "utf8");
+      const dbSrc = fs.readFileSync(path.resolve(__dirname, "..", "script/db.js"), "utf8");
+      const sqlHardening = fs.readFileSync(
+        path.resolve(__dirname, "..", "supabase/migrations/20261111_hardening_auth_e_nomes_assessores.sql"),
+        "utf8"
+      );
+
+      // 1. Deteccao de token_hash em link SafeLinks-proof sem exigir #access_token previo
+      const thRecovery = authMod.authAnalisarParametrosUrlAuth("", "?token_hash=tok_rec_999&type=recovery", "");
+      assert(thRecovery.hasTokenHash === true && thRecovery.tokenHash === "tok_rec_999", "Extrai token_hash da querystring em link de definicao/redefinicao");
+      assert(thRecovery.isRecovery === true && thRecovery.needsPasswordSetup === true, "Ativa tela de definicao de senha para link recovery com token_hash");
+
+      const thInvite = authMod.authAnalisarParametrosUrlAuth("", "?token_hash=tok_inv_888&type=invite", "");
+      assert(thInvite.hasTokenHash === true && thInvite.isInvite === true && thInvite.needsPasswordSetup === true, "Ativa tela de ativacao para link invite com token_hash");
+
+      const thRedirect = authMod.authConstruirRedirectLoginComAuth(
+        "https://joaopedromenesesdev.github.io/RITMO_Whealth_Pro/login.html",
+        thRecovery
+      );
+      assert(thRedirect.includes("token_hash=tok_rec_999") && thRedirect.includes("type=recovery"), "Redirect de pagina protegida preserva token_hash e type intactos");
+
+      // 2. Normalizacao de nome evitando placeholder 'Assessor'
+      assert(
+        authMod.authFormatarNomeUsuario("maria.clara@pacecapital.com.br", "Assessor") === "Maria Clara",
+        "Ignora placeholder 'Assessor' e deriva nome formatado a partir do e-mail"
+      );
+      assert(
+        authMod.authFormatarNomeUsuario("pedro.henrique@pacecapital.com.br", "-", "") === "Pedro Henrique",
+        "Ignora '-' e vazio derivando nome formatado do e-mail"
+      );
+      assert(
+        authMod.authFormatarNomeUsuario("pedro.henrique@pacecapital.com.br", "Pedro H. Silva") === "Pedro H. Silva",
+        "Preserva nome completo valido quando informado"
+      );
+
+      // 3. Verificacoes de seguranca no auth.js e db.js
+      assert(authSrc.includes("verifyOtp({"), "auth.js consome token_hash via verifyOtp exclusivamente no submit");
+      assert(!dbSrc.includes('cached.role === "master"') || dbSrc.indexOf('_verificarUsuarioMasterAsync') > -1, "db.js auditado para verificacao Master");
+      const fnIdx = dbSrc.indexOf("async function _verificarUsuarioMasterAsync");
+      const fnEndIdx = dbSrc.indexOf("async function dbRegistrarAuditLog");
+      const fnBody = dbSrc.slice(fnIdx, fnEndIdx);
+      assert(!fnBody.includes("pace_user_cache"), "_verificarUsuarioMasterAsync nao confia em localStorage.pace_user_cache");
+
+      // 4. Hardening critico PostgreSQL contra bypass NULL em is_master() e vazamento anon
+      const sqlLower = sqlHardening.toLowerCase();
+      assert(sqlLower.includes("if auth.uid() is null then") && sqlLower.includes("return false"), "is_master() trata explicitamente auth.uid() is null retornando FALSE");
+      assert(sqlLower.includes("if auth.uid() is null or public.is_master() is not true"), "obter_metricas_usabilidade_master exige autenticacao nao-nula e Master estrito");
+      assert(sqlLower.includes("revoke all on function public.obter_metricas_usabilidade_master() from public, anon"), "Revoga execucao de obter_metricas_usabilidade_master de PUBLIC e anon");
+      assert(sqlLower.includes("revoke all on function public.registrar_acesso_usuario() from public, anon"), "Revoga execucao de registrar_acesso_usuario de PUBLIC e anon");
+      assert(sqlLower.includes("revoke all on public.profiles from anon"), "Revoga privilegios de public.profiles para anon");
+      assert(!sqlLower.includes("gisele.hora") && !sqlLower.includes("lucas.sertori") && !sqlLower.includes("wilson.carvalho"), "Zero-Leakage: nenhum e-mail de assessor exposto na migration SQL");
+    }
+
     console.log("\n=================================================");
     console.log(`RESUMO DA SUÍTE DE TESTES:`);
     console.log(`   Total: ${totalTestes} | Passados: ${testesPassados} | Falhas: ${testesFalhados}`);

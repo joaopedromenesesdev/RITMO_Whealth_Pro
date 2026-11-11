@@ -740,7 +740,7 @@ function calcular() {
   try {
     cotacaoCache = JSON.parse(sessionStorage.getItem("ptax_cotacao_cache") || "{}");
   } catch (e) { }
-  let taxaPtax = ptaxCotacao || Number(cotacaoCache.cotacao) || 1;
+  let taxaPtax = ptaxCotacao || Number(cotacaoCache.valor ?? cotacaoCache.cotacao) || 1;
   let offshore = offshoreEmUSD
     ? offshoreRaw * taxaPtax
     : offshoreRaw;
@@ -929,7 +929,7 @@ function salvarPatrimonio() {
   try {
     cotacaoCache = JSON.parse(sessionStorage.getItem("ptax_cotacao_cache") || "{}");
   } catch (e) { }
-  const taxaPtax = ptaxCotacao || Number(cotacaoCache.cotacao) || 1;
+  const taxaPtax = ptaxCotacao || Number(cotacaoCache.valor ?? cotacaoCache.cotacao) || 1;
   const offshoreRaw = pegar("offshore");
   const offshoreBrl = offshoreEmUSD ? offshoreRaw * taxaPtax : offshoreRaw;
 
@@ -986,10 +986,16 @@ function salvarPatrimonio() {
 // que os inputs de patrimônio esperam: "1.000.000,00"
 function formatarValorRestaurado(val) {
   if (val === null || val === undefined || val === "") return "";
+  if (typeof val === "number") {
+    if (!Number.isFinite(val) || val === 0) return "";
+    return val.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
   // Já é uma string formatada no padrão PT-BR (ex: "1.000.000,00") → retorna direto
   if (typeof val === "string" && val.includes(",")) return val;
-  // É um número (inteiro ou float) vindo do AppState
-  const num = parseFloat(String(val).replace(/\./g, "").replace(",", "."));
+  const str = String(val).trim();
+  const num = (!/^-?\d{1,3}(\.\d{3})+$/.test(str) && /^-?\d+(\.\d+)?$/.test(str))
+    ? parseFloat(str)
+    : parseFloat(str.replace(/\./g, "").replace(",", "."));
   if (isNaN(num) || num === 0) return "";
   return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -1487,9 +1493,13 @@ function atualizarDiagnosticoEstateTaxUI() {
   const inputQtd = document.getElementById("qtd_ativos_sem_estate_tax");
   const qtd = parseInt(inputQtd ? inputQtd.value : "0", 10) || 0;
 
+  let cachePtaxObj = {};
+  try {
+    cachePtaxObj = JSON.parse(sessionStorage.getItem("ptax_cotacao_cache") || "{}");
+  } catch (e) { }
   const cotacao = ptaxCotacao && ptaxCotacao > 0
     ? ptaxCotacao
-    : (typeof cotacaoCache !== "undefined" && cotacaoCache && cotacaoCache.cotacao ? Number(cotacaoCache.cotacao) : 5.5);
+    : (Number(cachePtaxObj.valor ?? cachePtaxObj.cotacao) || 5.5);
 
   let valorOffshoreUSD = 0;
   const inputOff = document.getElementById("offshore");
@@ -1773,7 +1783,7 @@ function processarColagem() {
 
   if (dadosImportados > 0) {
     alert(`${dadosImportados} campos preenchidos via Excel!`);
-    calcular();
+    salvarPatrimonio();
     fecharModalColar();
   } else {
     alert("Não foi possível identificar dados compatíveis. Verifique se copiou as colunas ID e Valor.");
@@ -1816,7 +1826,7 @@ function processarCSV(event) {
 
     if (dadosImportados > 0) {
       alert(`${dadosImportados} campos preenchidos com sucesso!`);
-      calcular(); // Dispara o cálculo automático
+      salvarPatrimonio(); // Persiste no sessionStorage/Supabase e dispara o cálculo automático
     } else {
       alert("Nenhum dado compatível encontrado no arquivo. Use o formato: id;valor");
     }

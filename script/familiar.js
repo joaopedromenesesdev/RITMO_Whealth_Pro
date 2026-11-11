@@ -30,6 +30,13 @@ document.getElementById("estado_civil").addEventListener("change", function () {
   } else {
     div.style.display = "none";
     divSucessao.style.display = "none";
+    const elRegime = document.getElementById("regime");
+    if (elRegime) {
+      elRegime.value = "";
+      elRegime.classList.remove("filled");
+    }
+    const avisoRegime = document.getElementById("aviso_regime");
+    if (avisoRegime) avisoRegime.remove();
   }
 
   salvarDados();
@@ -233,11 +240,13 @@ function salvarDados() {
     idades.push(val === "" ? "" : (Number(val) || 0));
   });
 
+  const estadoCivilAtual = document.getElementById("estado_civil").value;
+
   const dados = {
     nome: document.getElementById("nome_cliente").value,
-    estadoCivil: document.getElementById("estado_civil").value,
-    conjuge: document.getElementById("nome_conjuge").value,
-    regime: document.getElementById("regime").value,
+    estadoCivil: estadoCivilAtual,
+    conjuge: estadoCivilAtual === "casado" ? document.getElementById("nome_conjuge").value : "",
+    regime: estadoCivilAtual === "casado" ? document.getElementById("regime").value : "",
 
     temFilhos: document.getElementById("tem_filhos").value,
     qtdFilhos: document.getElementById("qtd_filhos").value,
@@ -286,8 +295,8 @@ window.onload = function () {
     document.getElementById("sucessao_conjuge").style.display = "block";
   }
 
-  document.getElementById("nome_conjuge").value = dados.conjuge || "";
-  document.getElementById("regime").value = dados.regime || "";
+  document.getElementById("nome_conjuge").value = dados.estadoCivil === "casado" ? (dados.conjuge || "") : "";
+  document.getElementById("regime").value = dados.estadoCivil === "casado" ? (dados.regime || "") : "";
 
   // ===== FILHOS =====
   document.getElementById("tem_filhos").value = dados.temFilhos || "";

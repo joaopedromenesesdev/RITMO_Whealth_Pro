@@ -1184,7 +1184,10 @@ window.abrirRelatorioPeloPainelMaster = function(repId, modo = "editar") {
             sessionStorage.setItem("patrimonio_dados", JSON.stringify(ds.patrimonio.dados));
             const tot = ds.patrimonio.total ?? rep.totalPatrimonio ?? 0;
             sessionStorage.setItem("total_patrimonio", tot);
-            const off = Number(ds.patrimonio.dados.offshore_brl) || Number(ds.patrimonio.dados.offshore) || 0;
+            const dp = ds.patrimonio.dados;
+            const off = (window.AppState && typeof window.AppState.obterOffshoreBRL === "function")
+                ? window.AppState.obterOffshoreBRL(dp)
+                : (Number(dp.offshore_brl) || (dp.offshore_modo === "usd" ? ((Number(dp.offshore) || 0) * (Number(dp.offshore_ptax) || 1)) : (Number(dp.offshore) || 0)));
             sessionStorage.setItem("total_patrimonio_nacional", ds.patrimonio.totalNacional ?? Math.max(0, tot - off));
             if (ds.familia) sessionStorage.setItem("familia", JSON.stringify(ds.familia));
             if (ds.evolucao?.inputs) sessionStorage.setItem("evolucao_inputs", JSON.stringify(ds.evolucao.inputs));
@@ -1207,7 +1210,9 @@ window.abrirRelatorioPeloPainelMaster = function(repId, modo = "editar") {
                 let off = 0;
                 try {
                     const dp = JSON.parse(sessionStorage.getItem("patrimonio_dados") || "{}");
-                    off = Number(dp.offshore_brl) || Number(dp.offshore) || 0;
+                    off = (window.AppState && typeof window.AppState.obterOffshoreBRL === "function")
+                        ? window.AppState.obterOffshoreBRL(dp)
+                        : (Number(dp.offshore_brl) || (dp.offshore_modo === "usd" ? ((Number(dp.offshore) || 0) * (Number(dp.offshore_ptax) || 1)) : (Number(dp.offshore) || 0)));
                 } catch (_) {}
                 sessionStorage.setItem("total_patrimonio_nacional", Math.max(0, tot - off));
             }

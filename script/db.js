@@ -202,12 +202,6 @@ async function _verificarUsuarioMasterAsync(session) {
   const uid = String(session.user.id || "").toLowerCase().trim();
   if (Array.isArray(window.MASTER_UIDS_AUTORIZADOS) && window.MASTER_UIDS_AUTORIZADOS.includes(uid)) return true;
   if (session.user.role === "master" || session.user.profile_role === "master") return true;
-  try {
-    const cached = JSON.parse(localStorage.getItem("pace_user_cache") || "{}");
-    if (cached && cached.email === session.user.email && cached.role === "master") {
-      return true;
-    }
-  } catch (e) { }
   if (window.supabaseClient) {
     try {
       const { data: profile } = await window.supabaseClient
@@ -544,13 +538,25 @@ async function dbAutoSalvarExecutar() {
         const dadosCorrigidos = {};
         campos.forEach(c => { dadosCorrigidos[c] = sanitizarNumero(rawParsed[c], 0); });
         dadosCorrigidos.empresas = Array.isArray(rawParsed.empresas) ? rawParsed.empresas : [];
+        dadosCorrigidos.temEmpresas = rawParsed.temEmpresas || "nao";
+        dadosCorrigidos.qtdEmpresas = rawParsed.qtdEmpresas || "";
         dadosCorrigidos.offshore_modo = rawParsed.offshore_modo || "brl";
+        dadosCorrigidos.offshore_ptax = sanitizarNumero(rawParsed.offshore_ptax, 1) || 1;
+        dadosCorrigidos.offshore_brl = (rawParsed.offshore_brl !== undefined && rawParsed.offshore_brl !== null && rawParsed.offshore_brl !== "")
+          ? sanitizarNumero(rawParsed.offshore_brl, 0)
+          : (dadosCorrigidos.offshore_modo === "usd" ? dadosCorrigidos.offshore * dadosCorrigidos.offshore_ptax : dadosCorrigidos.offshore);
+        dadosCorrigidos.tipo_conta_exterior = rawParsed.tipo_conta_exterior || "individual";
+        dadosCorrigidos.cota_falecido_tic = rawParsed.cota_falecido_tic !== undefined ? rawParsed.cota_falecido_tic : "50";
+        dadosCorrigidos.percentual_us_situs = rawParsed.percentual_us_situs !== undefined ? rawParsed.percentual_us_situs : "100";
+        dadosCorrigidos.qtd_ativos_sem_estate_tax = Number(rawParsed.qtd_ativos_sem_estate_tax) || 0;
+        dadosCorrigidos.ativos_sem_estate_tax = Array.isArray(rawParsed.ativos_sem_estate_tax) ? rawParsed.ativos_sem_estate_tax : [];
 
         if (sessionData.patrimonio) {
           sessionData.patrimonio.dados = dadosCorrigidos;
           // Também atualiza o total com o valor direto do sessionStorage (já é número)
           const totalRaw = Number(sessionStorage.getItem("total_patrimonio")) || 0;
           sessionData.patrimonio.total = totalRaw;
+          sessionData.patrimonio.totalNacional = Number(sessionStorage.getItem("total_patrimonio_nacional")) || Math.max(0, totalRaw - (dadosCorrigidos.offshore_brl || 0));
         }
       } catch (e) {
         console.warn("[dbAutoSalvarExecutar] Não foi possível corrigir patrimônio_dados:", e);

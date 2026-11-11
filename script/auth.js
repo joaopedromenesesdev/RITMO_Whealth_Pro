@@ -312,6 +312,27 @@ function getSupabase() {
   return null;
 }
 
+// Normaliza o nome de exibicao sem sobrescrever por placeholder "Assessor"
+function authFormatarNomeUsuario(email, ...candidatos) {
+  for (const cand of candidatos) {
+    const val = String(cand || "").trim();
+    if (val && val !== "-" && val.toLowerCase() !== "assessor") {
+      return val;
+    }
+  }
+  const cleanEmail = String(email || "").trim();
+  if (cleanEmail && cleanEmail.includes("@")) {
+    const alias = cleanEmail.split("@")[0];
+    const partes = alias
+      .split(/[._-]/)
+      .filter(Boolean)
+      .map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase());
+    if (partes.length > 0) return partes.join(" ");
+    return alias || "Assessor";
+  }
+  return "Assessor";
+}
+
 // Verifica se o usuário atual está logado (retorna promessa com dados do user e sua role oficial)
 async function authObterUsuario() {
   const client = getSupabase();
@@ -333,10 +354,16 @@ async function authObterUsuario() {
       if (profile) {
         session.user.role = profile.role;
         session.user.profile_role = profile.role;
-        if (profile.full_name && !session.user.user_metadata?.full_name) {
-          session.user.user_metadata = session.user.user_metadata || {};
-          session.user.user_metadata.full_name = profile.full_name;
-        }
+      }
+
+      const nomeNormalizado = authFormatarNomeUsuario(
+        session.user.email,
+        session.user.user_metadata?.full_name,
+        profile?.full_name
+      );
+      if (nomeNormalizado && nomeNormalizado !== "Assessor") {
+        session.user.user_metadata = session.user.user_metadata || {};
+        session.user.user_metadata.full_name = nomeNormalizado;
       }
 
       // Garante promoção imediata para contas Master autorizadas via perfil ou UID opaco
@@ -374,6 +401,7 @@ async function authEntrar(email, password) {
   if (error) throw error;
   try {
     sessionStorage.removeItem("pace_auth_action_pending");
+    localStorage.removeItem("pace_user_cache");
   } catch (e) { }
   if (data && data.user) {
     authRegistrarUltimoAcesso(data.user, true);
@@ -505,13 +533,15 @@ function authAnalisarParametrosUrlAuth(hashOverride, searchOverride, pendingOver
   const error = hashParams.get("error") || searchParams.get("error") || "";
   const errorDescription = hashParams.get("error_description") || searchParams.get("error_description") || "";
   const type = (hashParams.get("type") || searchParams.get("type") || searchParams.get("auth_flow") || "").toLowerCase();
+  const tokenHash = (hashParams.get("token_hash") || searchParams.get("token_hash") || "").trim();
+  const hasTokenHash = Boolean(tokenHash);
   const hasAccessToken = hashParams.has("access_token") || searchParams.has("access_token");
   const hasCode = searchParams.has("code");
 
   const hasError = Boolean(error || errorCode || errorDescription);
   const isInvite = !hasError && (type === "invite" || pending === "invite");
   const isRecovery = !hasError && (type === "recovery" || pending === "recovery");
-  const needsPasswordSetup = !hasError && (isInvite || isRecovery || hasAccessToken);
+  const needsPasswordSetup = !hasError && (isInvite || isRecovery || hasAccessToken || hasTokenHash);
 
   return {
     rawHash,
@@ -520,6 +550,8 @@ function authAnalisarParametrosUrlAuth(hashOverride, searchOverride, pendingOver
     errorCode,
     errorDescription,
     type,
+    tokenHash,
+    hasTokenHash,
     hasAccessToken,
     hasCode,
     hasError,
@@ -586,6 +618,7 @@ async function authRedefinirSenha(novaSenha) {
 
 // Expor globalmente
 if (typeof window !== "undefined") {
+  window.authFormatarNomeUsuario = authFormatarNomeUsuario;
   window.authTraduzirMensagemErro = authTraduzirMensagemErro;
   window.authAnalisarParametrosUrlAuth = authAnalisarParametrosUrlAuth;
   window.authFormatarMensagemErroUrl = authFormatarMensagemErroUrl;
@@ -650,13 +683,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   let isSignUp = false;
   let activeInvite = null;
   let inviteToken = null;
+  let pendingTokenHash = "";
+  let pendingTokenType = "recovery";
 
   // Funções de alteração de modo de UI
   function setModeLogin() {
     isForgotPass = false;
     isResetMode = false;
+    pendingTokenHash = "";
     authLimparPendenciaAtivacao();
-    if (window.history && window.history.replaceState && window.location && (window.location.search.includes("auth_flow=") || window.location.hash)) {
+    if (window.history && window.history.replaceState && window.location && (
+      window.location.search.includes("auth_flow=") ||
+      window.location.search.includes("token_hash=") ||
+      window.location.search.includes("type=") ||
+      window.location.hash
+    )) {
       window.history.replaceState(null, null, window.location.pathname);
     }
     if (title) title.textContent = "Bem-vindo de volta";
@@ -783,6 +824,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       alertDiv.classList.remove("hidden");
     }
   } else if (urlInfo.needsPasswordSetup) {
+    if (urlInfo.hasTokenHash) {
+      const validTypes = ["invite", "recovery", "email", "magiclink"];
+      pendingTokenHash = urlInfo.tokenHash;
+      pendingTokenType = validTypes.includes(urlInfo.type)
+        ? urlInfo.type
+        : (urlInfo.isInvite ? "invite" : "recovery");
+    }
     setModeReset(urlInfo.isInvite);
   }
 
@@ -837,32 +885,61 @@ document.addEventListener("DOMContentLoaded", async () => {
           throw new Error("As senhas digitadas não coincidem. Por favor, confirme a nova senha exatamente igual.");
         }
 
-        const userSession = await authObterUsuario();
-        if (!userSession) {
-          throw new Error("Auth session missing!");
+        const clientAuth = getSupabase();
+        if (!clientAuth) {
+          throw new Error("Cliente Supabase não configurado.");
+        }
+
+        // Consome token_hash apenas no submit explicito do usuario (imune a scanners de e-mail)
+        if (pendingTokenHash) {
+          const validTypes = ["invite", "recovery", "email", "magiclink"];
+          const otpType = validTypes.includes(pendingTokenType) ? pendingTokenType : "recovery";
+          const { data: otpData, error: otpError } = await clientAuth.auth.verifyOtp({
+            token_hash: pendingTokenHash,
+            type: otpType
+          });
+          if (otpError) throw otpError;
+          pendingTokenHash = "";
+          if (window.history && window.history.replaceState) {
+            window.history.replaceState(null, null, window.location.pathname);
+          }
+          if (!otpData || (!otpData.session && !otpData.user)) {
+            throw new Error("Auth session missing!");
+          }
+        } else {
+          const userSession = await authObterUsuario();
+          if (!userSession) {
+            throw new Error("Auth session missing!");
+          }
         }
 
         await authRedefinirSenha(password);
         authLimparPendenciaAtivacao();
 
+        try {
+          sessionStorage.clear();
+          localStorage.removeItem("pace_user_cache");
+        } catch (e) { }
+
+        const authenticatedUser = await authObterUsuario();
+        if (authenticatedUser) {
+          await authRegistrarUltimoAcesso(authenticatedUser, true);
+        }
+
         alertDiv.className = "auth-alert success";
         alertDiv.textContent = isInviteActivation
           ? "Conta ativada com sucesso! Acessando a plataforma..."
-          : "Senha atualizada com sucesso! Redirecionando para o login...";
+          : "Senha definida com sucesso! Acessando a plataforma...";
         alertDiv.classList.remove("hidden");
 
-        // Limpa hash e query da URL e redireciona
+        // Limpa hash e query da URL e redireciona para a plataforma autenticada
         if (window.history && window.history.replaceState) {
           window.history.replaceState(null, null, window.location.pathname);
         }
 
         setTimeout(() => {
-          if (isInviteActivation) {
-            window.location.href = "index.html";
-          } else {
-            setModeLogin();
-          }
-        }, 2000);
+          window.location.href = "index.html";
+        }, 1500);
 
       } else if (isSignUp) {
         // Validação de e-mail válido
@@ -984,7 +1061,7 @@ function renderizarNavAuth(user) {
 
   const email = user.email || "";
   const shortEmail = email.split("@")[0];
-  const userDisplayName = user.user_metadata?.full_name || user.full_name || shortEmail;
+  const userDisplayName = authFormatarNomeUsuario(email, user.user_metadata?.full_name, user.full_name, shortEmail);
   const isMaster = authIsMaster(user);
 
   // Iniciais para o Avatar
@@ -1059,9 +1136,9 @@ if (typeof window !== "undefined" && typeof document !== "undefined" && window.l
   (function inicializarSessaoPagina() {
     if (authEhPaginaLogin(window.location.pathname)) return;
 
-    // Se o link de convite, recuperacao ou erro do Supabase caiu na raiz (index.html), encaminha para login.html
+    // Se o link de convite, recuperacao, token_hash ou erro do Supabase caiu na raiz (index.html), encaminha para login.html
     const urlInfo = authAnalisarParametrosUrlAuth();
-    if (urlInfo.hasError || urlInfo.isInvite || urlInfo.isRecovery) {
+    if (urlInfo.hasError || urlInfo.isInvite || urlInfo.isRecovery || urlInfo.hasTokenHash) {
       const destinoLogin = authConstruirRedirectLoginComAuth(authObterBaseUrlLogin(), urlInfo);
       window.location.replace(destinoLogin);
       return;
@@ -1100,6 +1177,7 @@ if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     authIsMaster,
     authEhPaginaLogin,
+    authFormatarNomeUsuario,
     authTraduzirMensagemErro,
     authAnalisarParametrosUrlAuth,
     authFormatarMensagemErroUrl,

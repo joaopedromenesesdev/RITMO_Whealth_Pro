@@ -5,6 +5,52 @@
   'use strict';
 
   const AppState = {
+    // ── UTILITÁRIOS MONETÁRIOS E COTAÇÃO PTAX ───────────────────────────────
+    parseValorMonetario(v) {
+      if (v === null || v === undefined || v === "") return 0;
+      if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+      const str = String(v).replace(/R\$\s?/gi, "").replace(/\s/g, "").trim();
+      if (!str) return 0;
+      if (!str.includes(",")) {
+        if (/^-?\d{1,3}(\.\d{3})+$/.test(str)) {
+          return parseFloat(str.replace(/\./g, "")) || 0;
+        }
+        if (/^-?\d+(\.\d+)?$/.test(str)) {
+          return parseFloat(str) || 0;
+        }
+      }
+      const clean = str.replace(/\./g, "").replace(",", ".");
+      return parseFloat(clean) || 0;
+    },
+
+    lerCotacaoPTAXCache() {
+      try {
+        if (typeof sessionStorage === "undefined") return 0;
+        const raw = sessionStorage.getItem("ptax_cotacao_cache");
+        if (!raw) return 0;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== "object") return 0;
+        return Number(parsed.valor ?? parsed.cotacao) || 0;
+      } catch (e) {
+        return 0;
+      }
+    },
+
+    obterOffshoreBRL(dadosPatrimonio) {
+      if (!dadosPatrimonio || typeof dadosPatrimonio !== "object") return 0;
+      const modo = String(dadosPatrimonio.offshore_modo || "brl").toLowerCase();
+      const rawOffshore = this.parseValorMonetario(dadosPatrimonio.offshore);
+      if (dadosPatrimonio.offshore_brl !== undefined && dadosPatrimonio.offshore_brl !== null && dadosPatrimonio.offshore_brl !== "") {
+        const salvoBrl = this.parseValorMonetario(dadosPatrimonio.offshore_brl);
+        if (salvoBrl > 0 || rawOffshore === 0) return salvoBrl;
+      }
+      if (modo === "usd") {
+        const ptax = Number(dadosPatrimonio.offshore_ptax) || this.lerCotacaoPTAXCache() || 1;
+        return rawOffshore * ptax;
+      }
+      return rawOffshore;
+    },
+
     // ── GESTÃO DE PATRIMÔNIO ────────────────────────────────────────────────
     getPatrimonioDados() {
       try {
@@ -12,28 +58,36 @@
         if (!raw) return this.getDefaultPatrimonioDados();
         const parsed = JSON.parse(raw);
 
-        // Converte valores salvos pelo patrimônio.js que estão em formato PT-BR
-        // Ex: "100.000,00" → 100000  |  Já número: 100000 → 100000
-        const parseVal = (v) => {
-          if (!v && v !== 0) return 0;
-          if (typeof v === 'number') return isNaN(v) ? 0 : v;
-          // Remove R$, espaços, pontos de milhar e converte vírgula para ponto
-          const clean = String(v).replace(/R\$\s?/gi, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
-          return parseFloat(clean) || 0;
-        };
+        const parseVal = (v) => this.parseValorMonetario(v);
+        const offshoreModo = parsed.offshore_modo || "brl";
+        const offshorePtax = Number(parsed.offshore_ptax) || this.lerCotacaoPTAXCache() || 1;
+        const offshoreVal = parseVal(parsed.offshore);
+        const offshoreBrl = (parsed.offshore_brl !== undefined && parsed.offshore_brl !== null && parsed.offshore_brl !== "")
+          ? parseVal(parsed.offshore_brl)
+          : (offshoreModo === "usd" ? offshoreVal * offshorePtax : offshoreVal);
 
         return {
           rf: parseVal(parsed.rf),
           rv: parseVal(parsed.rv),
           inter: parseVal(parsed.inter),
           prev: parseVal(parsed.prev),
-          offshore: parseVal(parsed.offshore),
+          offshore: offshoreVal,
+          offshore_modo: offshoreModo,
+          offshore_brl: offshoreBrl,
+          offshore_ptax: offshorePtax,
+          tipo_conta_exterior: parsed.tipo_conta_exterior || "individual",
+          cota_falecido_tic: parsed.cota_falecido_tic !== undefined ? parsed.cota_falecido_tic : "50",
+          percentual_us_situs: parsed.percentual_us_situs !== undefined ? parsed.percentual_us_situs : "100",
+          qtd_ativos_sem_estate_tax: Number(parsed.qtd_ativos_sem_estate_tax) || 0,
+          ativos_sem_estate_tax: Array.isArray(parsed.ativos_sem_estate_tax) ? parsed.ativos_sem_estate_tax : [],
           apt: parseVal(parsed.apt),
           casa: parseVal(parsed.casa),
           terr: parseVal(parsed.terr),
           galp: parseVal(parsed.galp),
           bens: parseVal(parsed.bens),
           bens_particulares: parseVal(parsed.bens_particulares),
+          temEmpresas: parsed.temEmpresas || "nao",
+          qtdEmpresas: parsed.qtdEmpresas || "",
           empresas: Array.isArray(parsed.empresas) ? parsed.empresas : []
         };
       } catch (e) {
@@ -50,8 +104,12 @@
     getDefaultPatrimonioDados() {
       return {
         rf: 0, rv: 0, inter: 0, prev: 0, offshore: 0,
+        offshore_modo: "brl", offshore_brl: 0, offshore_ptax: 1,
+        tipo_conta_exterior: "individual", cota_falecido_tic: "50",
+        percentual_us_situs: "100", qtd_ativos_sem_estate_tax: 0,
+        ativos_sem_estate_tax: [],
         apt: 0, casa: 0, terr: 0, galp: 0, bens: 0,
-        bens_particulares: 0, empresas: []
+        bens_particulares: 0, temEmpresas: "nao", qtdEmpresas: "", empresas: []
       };
     },
 
@@ -70,14 +128,26 @@
         const raw = sessionStorage.getItem("familia");
         if (!raw) return this.getDefaultFamilia();
         const parsed = JSON.parse(raw);
+        const estadoCivil = parsed.estadoCivil || "solteiro";
+        const ehCasado = String(estadoCivil).toLowerCase().trim() === "casado";
         return {
           nome: parsed.nome || "Cliente",
-          estadoCivil: parsed.estadoCivil || "solteiro",
+          estadoCivil,
           conjuge: parsed.conjuge || "",
-          regime: parsed.regime || "comunhao_parcial",
+          regime: ehCasado ? (parsed.regime || "comunhao_parcial") : (parsed.regime || ""),
           temFilhos: parsed.temFilhos || "nao",
           qtdFilhos: Number(parsed.qtdFilhos) || 0,
-          idadesFilhos: Array.isArray(parsed.idadesFilhos) ? parsed.idadesFilhos : []
+          idadesFilhos: Array.isArray(parsed.idadesFilhos) ? parsed.idadesFilhos : [],
+          possuiPais: parsed.possuiPais || "",
+          qtdPais: parsed.qtdPais || "",
+          possuiColaterais: parsed.possuiColaterais || "",
+          qtdColaterais: parsed.qtdColaterais || "",
+          tipoColaterais: parsed.tipoColaterais || "",
+          conjugePossuiPais: parsed.conjugePossuiPais || "",
+          conjugeQtdPais: parsed.conjugeQtdPais || "",
+          conjugePossuiColaterais: parsed.conjugePossuiColaterais || "",
+          conjugeQtdColaterais: parsed.conjugeQtdColaterais || "",
+          conjugeTipoColaterais: parsed.conjugeTipoColaterais || ""
         };
       } catch (e) {
         console.error("[AppState] Erro ao ler familia:", e);
@@ -95,10 +165,20 @@
         nome: "Cliente",
         estadoCivil: "solteiro",
         conjuge: "",
-        regime: "comunhao_parcial",
+        regime: "",
         temFilhos: "nao",
         qtdFilhos: 0,
-        idadesFilhos: []
+        idadesFilhos: [],
+        possuiPais: "",
+        qtdPais: "",
+        possuiColaterais: "",
+        qtdColaterais: "",
+        tipoColaterais: "",
+        conjugePossuiPais: "",
+        conjugeQtdPais: "",
+        conjugePossuiColaterais: "",
+        conjugeQtdColaterais: "",
+        conjugeTipoColaterais: ""
       };
     },
 
@@ -347,7 +427,7 @@
         patrimonio: {
           dados: patrimonioDados,
           total: totalPatrimonio,
-          totalNacional: Number(sessionStorage.getItem("total_patrimonio_nacional")) || Math.max(0, totalPatrimonio - (Number(patrimonioDados.offshore) || 0))
+          totalNacional: Number(sessionStorage.getItem("total_patrimonio_nacional")) || Math.max(0, totalPatrimonio - this.obterOffshoreBRL(patrimonioDados))
         },
         familia,
         evolucao: {
@@ -428,5 +508,8 @@
     }
   };
 
-  window.AppState = AppState;
-})(window);
+  if (window) window.AppState = AppState;
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = AppState;
+  }
+})(typeof window !== "undefined" ? window : globalThis);
