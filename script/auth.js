@@ -3,9 +3,21 @@
 // Lista de UIDs opacos com privilégio Master garantido (Zero-Leakage: sem exposição de e-mails no código)
 const MASTER_UIDS_AUTORIZADOS = [
   "130e3598-89b9-4702-a4cc-2c5923fa3a66",
-  "5ec2da93-ed07-43f8-9089-6d285a092156"
+  "5ec2da93-ed07-43f8-9089-6d285a092156",
+  "469dfeab-5fd6-4159-97a2-aa1fee6e7dcb"
 ];
-window.MASTER_UIDS_AUTORIZADOS = MASTER_UIDS_AUTORIZADOS;
+if (typeof window !== "undefined") {
+  window.MASTER_UIDS_AUTORIZADOS = MASTER_UIDS_AUTORIZADOS;
+
+  // Fallback defensivo caso auth.js carregue sem snapshot previo em __PACE_INITIAL_AUTH__
+  if (window.location && !window.__PACE_INITIAL_AUTH__) {
+    window.__PACE_INITIAL_AUTH__ = {
+      hash: window.location.hash || "",
+      search: window.location.search || "",
+      pathname: window.location.pathname || ""
+    };
+  }
+}
 
 // Verifica se o usuário atual é Master.
 // Fonte de verdade: profiles.role (lido do banco em authObterUsuario) ou UID Master autorizado.
@@ -16,7 +28,9 @@ function authIsMaster(user) {
   }
   return user.role === "master" || user.profile_role === "master";
 }
-window.authIsMaster = authIsMaster;
+if (typeof window !== "undefined") {
+  window.authIsMaster = authIsMaster;
+}
 
 // Registra o último acesso do usuário (Supabase RPC + Profiles + LocalStorage Fallback)
 async function authRegistrarUltimoAcesso(user, force = false) {
@@ -61,7 +75,9 @@ async function authRegistrarUltimoAcesso(user, force = false) {
     console.warn("[authRegistrarUltimoAcesso] Aviso ao registrar acesso:", err);
   }
 }
-window.authRegistrarUltimoAcesso = authRegistrarUltimoAcesso;
+if (typeof window !== "undefined") {
+  window.authRegistrarUltimoAcesso = authRegistrarUltimoAcesso;
+}
 
 // Verifica se o e-mail é válido para cadastro (qualquer e-mail com link de convite ativo)
 function authValidarEmailPermitido(email, activeInvite = null) {
@@ -90,18 +106,49 @@ function authSalvarConvites(convites) {
   localStorage.setItem("pace_invite_tokens", JSON.stringify(convites));
 }
 
+const PAGINAS_SISTEMA_EXTENSIONLESS = [
+  "/index",
+  "/login",
+  "/patrimonio",
+  "/familiar",
+  "/evolucao",
+  "/tributario",
+  "/nova_simulacao"
+];
+
+// Verifica se o caminho atual corresponde a pagina de login (com ou sem extensao .html no GitHub Pages)
+function authEhPaginaLogin(pathnameOverride) {
+  const rawPath = typeof pathnameOverride === "string"
+    ? pathnameOverride
+    : (typeof window !== "undefined" && window.location ? (window.location.pathname || "") : "");
+  const cleanPath = rawPath.toLowerCase().replace(/\/+$/, "");
+  return cleanPath.endsWith("/login.html") || cleanPath.endsWith("/login") || cleanPath === "login.html" || cleanPath === "login";
+}
+
 // Helper universal para obter a URL absoluta de login.html em qualquer ambiente (GitHub Pages, localhost, subpastas)
-function authObterBaseUrlLogin() {
+function authObterBaseUrlLogin(hrefOverride) {
   try {
-    const url = new URL(window.location.href);
-    let pathname = url.pathname;
-    const lastSlashIndex = pathname.lastIndexOf("/");
-    if (lastSlashIndex !== -1) {
-      pathname = pathname.substring(0, lastSlashIndex + 1) + "login.html";
+    const rawHref = typeof hrefOverride === "string"
+      ? hrefOverride
+      : (typeof window !== "undefined" && window.location ? window.location.href : "");
+    if (!rawHref) return "login.html";
+    const url = new URL(rawHref);
+    let pathname = url.pathname || "/";
+    const lowerPath = pathname.toLowerCase();
+    const ehPaginaSemExtensao = PAGINAS_SISTEMA_EXTENSIONLESS.some(p => lowerPath.endsWith(p));
+    if (pathname.endsWith(".html") || ehPaginaSemExtensao) {
+      const lastSlashIndex = pathname.lastIndexOf("/");
+      pathname = (lastSlashIndex !== -1 ? pathname.substring(0, lastSlashIndex + 1) : "/") + "login.html";
+    } else if (pathname.endsWith("/")) {
+      pathname = pathname + "login.html";
     } else {
-      pathname = "/login.html";
+      pathname = pathname + "/login.html";
     }
-    return `${url.origin}${pathname}`;
+    const origin = url.origin && url.origin !== "null" ? url.origin : "";
+    if (!origin && rawHref.startsWith("file:")) {
+      return "file://" + pathname;
+    }
+    return `${origin}${pathname}`;
   } catch (e) {
     return "login.html";
   }
@@ -245,15 +292,17 @@ function authConsumirConvite(token, emailUsado) {
 }
 
 // Expor funções de convite globalmente para o global_ui.js
-window.authObterConvites = authObterConvites;
-window.authSalvarConvites = authSalvarConvites;
-window.authGerarConvite = authGerarConvite;
-window.authValidarConvite = authValidarConvite;
-window.authConsumirConvite = authConsumirConvite;
-
+if (typeof window !== "undefined") {
+  window.authObterConvites = authObterConvites;
+  window.authSalvarConvites = authSalvarConvites;
+  window.authGerarConvite = authGerarConvite;
+  window.authValidarConvite = authValidarConvite;
+  window.authConsumirConvite = authConsumirConvite;
+}
 
 // Garante que o cliente do supabase esteja disponível
 function getSupabase() {
+  if (typeof window === "undefined") return null;
   if (window.supabaseClient) return window.supabaseClient;
   if (typeof supabaseClient !== 'undefined' && supabaseClient) return supabaseClient;
   if (window.supabase && typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined') {
@@ -323,6 +372,9 @@ async function authEntrar(email, password) {
 
   const { data, error } = await client.auth.signInWithPassword({ email, password });
   if (error) throw error;
+  try {
+    sessionStorage.removeItem("pace_auth_action_pending");
+  } catch (e) { }
   if (data && data.user) {
     authRegistrarUltimoAcesso(data.user, true);
   }
@@ -363,8 +415,8 @@ async function authSair() {
       .filter(k => k.startsWith("relatorios_backup_"))
       .forEach(k => localStorage.removeItem(k));
   } catch (e) { }
-  sessionStorage.clear();
-  window.location.href = "login.html";
+  if (typeof sessionStorage !== "undefined") sessionStorage.clear();
+  if (typeof window !== "undefined") window.location.href = "login.html";
 }
 
 // Tradutor universal de mensagens de erro do Supabase para Português
@@ -376,7 +428,7 @@ function authTraduzirMensagemErro(rawMsg) {
   const msgLower = rawMsg.toLowerCase().trim();
 
   if (msgLower.includes("auth session missing")) {
-    return "Nenhuma sessão de recuperação de senha foi encontrada. Isso ocorre se você não clicou no link enviado por e-mail ou se o link expirou. Por favor, solicite um novo link de recuperação.";
+    return "Nenhuma sessão de ativação ou recuperação de senha foi encontrada. Isso ocorre se você não acessou pelo link enviado ou se o link já foi consumido/expirou. Por favor, solicite um novo acesso ao administrador.";
   }
   if (msgLower.includes("invalid login credentials")) {
     return "E-mail ou senha inválidos. Por favor, tente novamente.";
@@ -387,17 +439,34 @@ function authTraduzirMensagemErro(rawMsg) {
   if (msgLower.includes("user already registered")) {
     return "Este endereço de e-mail já está cadastrado no sistema.";
   }
-  if (msgLower.includes("token has expired") || msgLower.includes("link is invalid") || msgLower.includes("token is expired")) {
-    return "O link de recuperação de senha é inválido ou expirou. Por favor, solicite um novo link.";
+  const matchCooldown = msgLower.match(/for security purposes,\s*you can only request this after\s*(\d+)\s*seconds?/);
+  if (matchCooldown) {
+    return `Por segurança, aguarde ${matchCooldown[1]} segundos antes de solicitar um novo e-mail.`;
+  }
+  if (
+    msgLower.includes("over_request_rate_limit") ||
+    msgLower.includes("over_email_rate_limit") ||
+    msgLower.includes("over email rate limit") ||
+    msgLower.includes("request rate limit reached") ||
+    msgLower.includes("too many requests") ||
+    msgLower.includes("rate limit")
+  ) {
+    return "Muitas tentativas em pouco tempo. Por favor, aguarde alguns minutos antes de tentar novamente ou peça suporte ao administrador.";
+  }
+  if (
+    msgLower.includes("otp_expired") ||
+    msgLower.includes("token has expired") ||
+    msgLower.includes("link is invalid") ||
+    msgLower.includes("token is expired") ||
+    msgLower.includes("email link is invalid or has expired")
+  ) {
+    return "O link de ativação ou redefinição de senha expirou ou já foi utilizado. Por favor, clique em 'Esqueceu sua senha?' abaixo para gerar um novo link ou contate o administrador.";
   }
   if (msgLower.includes("new password should be different")) {
     return "A nova senha deve ser diferente da senha antiga.";
   }
   if (msgLower.includes("password should be at least")) {
     return "A senha deve conter no mínimo 8 caracteres.";
-  }
-  if (msgLower.includes("rate limit") || msgLower.includes("over email rate limit")) {
-    return "Muitas tentativas em pouco tempo. Por favor, aguarde alguns minutos antes de tentar novamente.";
   }
   if (msgLower.includes("user not found")) {
     return "Se o endereço de e-mail informado estiver cadastrado na plataforma, as instruções serão enviadas em instantes. Verifique também a caixa de spam.";
@@ -409,12 +478,95 @@ function authTraduzirMensagemErro(rawMsg) {
   return rawMsg;
 }
 
+/**
+ * Analisa parametros de autenticacao vindos do hash/query preservados antes do SDK limpar a URL.
+ */
+function authAnalisarParametrosUrlAuth(hashOverride, searchOverride, pendingOverride) {
+  const initial = (typeof window !== "undefined" && window.__PACE_INITIAL_AUTH__) || {};
+  const winHash = (typeof window !== "undefined" && window.location) ? (window.location.hash || "") : "";
+  const winSearch = (typeof window !== "undefined" && window.location) ? (window.location.search || "") : "";
+
+  const rawHash = typeof hashOverride === "string" ? hashOverride : (initial.hash || winHash);
+  const rawSearch = typeof searchOverride === "string" ? searchOverride : (initial.search || winSearch);
+
+  let pending = pendingOverride;
+  if (pending === undefined && typeof sessionStorage !== "undefined") {
+    try {
+      pending = sessionStorage.getItem("pace_auth_action_pending") || "";
+    } catch (e) {
+      pending = "";
+    }
+  }
+
+  const hashParams = new URLSearchParams(rawHash.startsWith("#") ? rawHash.slice(1) : rawHash);
+  const searchParams = new URLSearchParams(rawSearch.startsWith("?") ? rawSearch.slice(1) : rawSearch);
+
+  const errorCode = hashParams.get("error_code") || searchParams.get("error_code") || "";
+  const error = hashParams.get("error") || searchParams.get("error") || "";
+  const errorDescription = hashParams.get("error_description") || searchParams.get("error_description") || "";
+  const type = (hashParams.get("type") || searchParams.get("type") || searchParams.get("auth_flow") || "").toLowerCase();
+  const hasAccessToken = hashParams.has("access_token") || searchParams.has("access_token");
+  const hasCode = searchParams.has("code");
+
+  const hasError = Boolean(error || errorCode || errorDescription);
+  const isInvite = !hasError && (type === "invite" || pending === "invite");
+  const isRecovery = !hasError && (type === "recovery" || pending === "recovery");
+  const needsPasswordSetup = !hasError && (isInvite || isRecovery || hasAccessToken);
+
+  return {
+    rawHash,
+    rawSearch,
+    error,
+    errorCode,
+    errorDescription,
+    type,
+    hasAccessToken,
+    hasCode,
+    hasError,
+    isInvite,
+    isRecovery,
+    needsPasswordSetup
+  };
+}
+
+/**
+ * Converte erros de callback da URL do Supabase em mensagem amigavel e precisa.
+ */
+function authFormatarMensagemErroUrl(urlInfo) {
+  if (!urlInfo || !urlInfo.hasError) return "";
+  const textoCombinado = [urlInfo.errorCode, urlInfo.errorDescription, urlInfo.error]
+    .filter(Boolean)
+    .join(" ");
+  const traduzido = authTraduzirMensagemErro(textoCombinado);
+  if (traduzido !== textoCombinado) {
+    return traduzido;
+  }
+  return "Não foi possível validar o link de ativação/redefinição. Solicite um novo link ao administrador ou use 'Esqueceu sua senha?'.";
+}
+
+/**
+ * Monta URL absoluta de destino para login.html preservando estado de convite, recuperacao ou erro.
+ */
+function authConstruirRedirectLoginComAuth(loginBaseUrl, urlInfo) {
+  const info = urlInfo || authAnalisarParametrosUrlAuth();
+  const base = loginBaseUrl || authObterBaseUrlLogin();
+  const searchParams = new URLSearchParams(info.rawSearch.startsWith("?") ? info.rawSearch.slice(1) : info.rawSearch);
+  if (info.isInvite && !searchParams.has("auth_flow")) {
+    searchParams.set("auth_flow", "invite");
+  } else if (info.isRecovery && !searchParams.has("auth_flow")) {
+    searchParams.set("auth_flow", "recovery");
+  }
+  const queryStr = searchParams.toString() ? `?${searchParams.toString()}` : "";
+  const hashStr = info.rawHash ? (info.rawHash.startsWith("#") ? info.rawHash : `#${info.rawHash}`) : "";
+  return `${base}${queryStr}${hashStr}`;
+}
+
 // Solicitar redefinição de senha (envio de e-mail)
 async function authSolicitarRecuperacaoSenha(email) {
   const client = getSupabase();
   if (!client) throw new Error("Cliente Supabase não configurado.");
 
-  const redirectUrl = window.location.origin + window.location.pathname;
+  const redirectUrl = authObterBaseUrlLogin();
   const { data, error } = await client.auth.resetPasswordForEmail(email, {
     redirectTo: redirectUrl
   });
@@ -433,9 +585,14 @@ async function authRedefinirSenha(novaSenha) {
 }
 
 // Expor globalmente
-window.authTraduzirMensagemErro = authTraduzirMensagemErro;
-window.authSolicitarRecuperacaoSenha = authSolicitarRecuperacaoSenha;
-window.authRedefinirSenha = authRedefinirSenha;
+if (typeof window !== "undefined") {
+  window.authTraduzirMensagemErro = authTraduzirMensagemErro;
+  window.authAnalisarParametrosUrlAuth = authAnalisarParametrosUrlAuth;
+  window.authFormatarMensagemErroUrl = authFormatarMensagemErroUrl;
+  window.authConstruirRedirectLoginComAuth = authConstruirRedirectLoginComAuth;
+  window.authSolicitarRecuperacaoSenha = authSolicitarRecuperacaoSenha;
+  window.authRedefinirSenha = authRedefinirSenha;
+}
 
 // Guarda de Rotas para ser executada no início das páginas protegidas
 async function authProtegerRota() {
@@ -449,7 +606,20 @@ async function authProtegerRota() {
   return user;
 }
 
+function authLimparPendenciaAtivacao() {
+  try {
+    if (typeof sessionStorage !== "undefined") {
+      sessionStorage.removeItem("pace_auth_action_pending");
+    }
+  } catch (e) { }
+  if (typeof window !== "undefined" && window.__PACE_INITIAL_AUTH__) {
+    window.__PACE_INITIAL_AUTH__.hash = "";
+    window.__PACE_INITIAL_AUTH__.search = "";
+  }
+}
+
 // Código específico para a página login.html
+if (typeof document !== "undefined") {
 document.addEventListener("DOMContentLoaded", async () => {
   const authForm = document.getElementById("auth-form");
   if (!authForm) return; // Não está na tela de login
@@ -485,6 +655,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   function setModeLogin() {
     isForgotPass = false;
     isResetMode = false;
+    authLimparPendenciaAtivacao();
+    if (window.history && window.history.replaceState && window.location && (window.location.search.includes("auth_flow=") || window.location.hash)) {
+      window.history.replaceState(null, null, window.location.pathname);
+    }
     if (title) title.textContent = "Bem-vindo de volta";
     if (subtitle) subtitle.textContent = "Entre com suas credenciais para acessar seus planejamentos.";
     if (groupEmail) groupEmail.classList.remove("hidden");
@@ -516,6 +690,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   function setModeForgot() {
     isForgotPass = true;
     isResetMode = false;
+    authLimparPendenciaAtivacao();
     if (title) title.textContent = "Recuperar Senha";
     if (subtitle) subtitle.textContent = "Informe seu e-mail cadastrado para receber o link de redefinição.";
     if (groupEmail) groupEmail.classList.remove("hidden");
@@ -579,30 +754,36 @@ document.addEventListener("DOMContentLoaded", async () => {
     linkBackLogin.addEventListener("click", setModeLogin);
   }
 
-  // Escuta de eventos do Supabase Auth para modo de recuperação
+  // Escuta de eventos do Supabase Auth para ativacao por convite e recuperacao de senha
   const client = getSupabase();
   if (client) {
     client.auth.onAuthStateChange((event) => {
+      if (isResetMode) return;
       if (event === "PASSWORD_RECOVERY") {
-        setModeReset();
+        setModeReset(false);
+      } else if (event === "SIGNED_IN") {
+        const currentInfo = authAnalisarParametrosUrlAuth();
+        if (currentInfo.isInvite) {
+          setModeReset(true);
+        } else if (currentInfo.isRecovery) {
+          setModeReset(false);
+        }
       }
     });
   }
 
-  // Verifica se há hash de recuperação de senha ou convite de usuário na URL
-  const hashStr = window.location.hash || "";
-  const searchStr = window.location.search || "";
-  const fullUrlParams = hashStr + "&" + searchStr;
-  const isInviteUrl = hashStr.includes("type=invite");
+  // Analisa snapshot inicial da URL (preservado antes do SDK limpar o hash)
+  const urlInfo = authAnalisarParametrosUrlAuth();
 
-  if (fullUrlParams.includes("error=") || fullUrlParams.includes("error_code=")) {
+  if (urlInfo.hasError) {
+    authLimparPendenciaAtivacao();
     if (alertDiv) {
       alertDiv.className = "auth-alert error";
-      alertDiv.textContent = "O link de ativação/redefinição de senha expirou ou já foi utilizado. Por favor, clique em 'Esqueceu sua senha?' abaixo para receber um novo link por e-mail ou contate o administrador.";
+      alertDiv.textContent = authFormatarMensagemErroUrl(urlInfo);
       alertDiv.classList.remove("hidden");
     }
-  } else if (hashStr.includes("type=recovery") || hashStr.includes("access_token") || isInviteUrl) {
-    setModeReset(isInviteUrl);
+  } else if (urlInfo.needsPasswordSetup) {
+    setModeReset(urlInfo.isInvite);
   }
 
   // Cadastro direto desativado na interface (administração centralizada de usuários via Supabase)
@@ -662,6 +843,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         await authRedefinirSenha(password);
+        authLimparPendenciaAtivacao();
 
         alertDiv.className = "auth-alert success";
         alertDiv.textContent = isInviteActivation
@@ -669,7 +851,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           : "Senha atualizada com sucesso! Redirecionando para o login...";
         alertDiv.classList.remove("hidden");
 
-        // Limpa hash da URL e redireciona
+        // Limpa hash e query da URL e redireciona
         if (window.history && window.history.replaceState) {
           window.history.replaceState(null, null, window.location.pathname);
         }
@@ -741,10 +923,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // Redireciona se o usuário já estiver logado (e não estiver no modo de redefinição de senha e nem com token de convite)
-  if (!hashStr.includes("type=recovery") && !hashStr.includes("access_token") && !inviteToken) {
+  // Redireciona apenas se já estiver autenticado e NÃO estiver em fluxo de ativação/redefinição/erro
+  if (!urlInfo.needsPasswordSetup && !urlInfo.hasError && !inviteToken) {
     authObterUsuario().then(user => {
-      if (user) {
+      if (user && !isResetMode) {
         window.location.href = "index.html";
       }
     });
@@ -754,37 +936,42 @@ document.addEventListener("DOMContentLoaded", async () => {
     window.lucide.createIcons();
   }
 });
+}
 
 // Toggle e Fechamento do Dropdown de Usuário
-window.toggleUserDropdown = function (e) {
-  if (e) e.stopPropagation();
-  const dropdown = document.getElementById("user-dropdown-menu");
-  const trigger = document.getElementById("user-dropdown-trigger");
-  if (dropdown) {
-    const isShowing = dropdown.classList.contains("show");
-    if (isShowing) {
-      dropdown.classList.remove("show");
-      if (trigger) trigger.classList.remove("active");
-    } else {
-      dropdown.classList.add("show");
-      if (trigger) trigger.classList.add("active");
+if (typeof window !== "undefined") {
+  window.toggleUserDropdown = function (e) {
+    if (e) e.stopPropagation();
+    const dropdown = document.getElementById("user-dropdown-menu");
+    const trigger = document.getElementById("user-dropdown-trigger");
+    if (dropdown) {
+      const isShowing = dropdown.classList.contains("show");
+      if (isShowing) {
+        dropdown.classList.remove("show");
+        if (trigger) trigger.classList.remove("active");
+      } else {
+        dropdown.classList.add("show");
+        if (trigger) trigger.classList.add("active");
+      }
     }
-  }
-};
+  };
 
-window.closeUserDropdown = function () {
-  const dropdown = document.getElementById("user-dropdown-menu");
-  const trigger = document.getElementById("user-dropdown-trigger");
-  if (dropdown) dropdown.classList.remove("show");
-  if (trigger) trigger.classList.remove("active");
-};
+  window.closeUserDropdown = function () {
+    const dropdown = document.getElementById("user-dropdown-menu");
+    const trigger = document.getElementById("user-dropdown-trigger");
+    if (dropdown) dropdown.classList.remove("show");
+    if (trigger) trigger.classList.remove("active");
+  };
+}
 
-document.addEventListener("click", (e) => {
-  const wrap = document.getElementById("user-dropdown-wrap");
-  if (wrap && !wrap.contains(e.target)) {
-    window.closeUserDropdown();
-  }
-});
+if (typeof document !== "undefined") {
+  document.addEventListener("click", (e) => {
+    const wrap = document.getElementById("user-dropdown-wrap");
+    if (wrap && !wrap.contains(e.target) && typeof window !== "undefined" && window.closeUserDropdown) {
+      window.closeUserDropdown();
+    }
+  });
+}
 
 // Renderizar informações do usuário na navbar (Dropdown Unificado)
 function renderizarNavAuth(user) {
@@ -867,31 +1054,57 @@ function renderizarNavAuth(user) {
   }
 }
 
-// Hidratação imediata prévia via cache (0ms)
-if (!window.location.pathname.endsWith("login.html")) {
-  try {
-    const cachedStr = localStorage.getItem("pace_user_cache");
-    if (cachedStr) {
-      const cached = JSON.parse(cachedStr);
-      if (cached && cached.email) {
-        if (document.readyState === "loading") {
-          document.addEventListener("DOMContentLoaded", () => renderizarNavAuth(cached));
-        } else {
-          renderizarNavAuth(cached);
+// Roteamento defensivo para paginas protegidas (fora de login.html)
+if (typeof window !== "undefined" && typeof document !== "undefined" && window.location) {
+  (function inicializarSessaoPagina() {
+    if (authEhPaginaLogin(window.location.pathname)) return;
+
+    // Se o link de convite, recuperacao ou erro do Supabase caiu na raiz (index.html), encaminha para login.html
+    const urlInfo = authAnalisarParametrosUrlAuth();
+    if (urlInfo.hasError || urlInfo.isInvite || urlInfo.isRecovery) {
+      const destinoLogin = authConstruirRedirectLoginComAuth(authObterBaseUrlLogin(), urlInfo);
+      window.location.replace(destinoLogin);
+      return;
+    }
+
+    // Hidratação imediata prévia via cache (0ms)
+    try {
+      const cachedStr = localStorage.getItem("pace_user_cache");
+      if (cachedStr) {
+        const cached = JSON.parse(cachedStr);
+        if (cached && cached.email) {
+          if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", () => renderizarNavAuth(cached));
+          } else {
+            renderizarNavAuth(cached);
+          }
         }
       }
-    }
-  } catch (e) { }
+    } catch (e) { }
 
-  // Executa a validação de segurança e atualização oficial de rota
-  authProtegerRota().then(user => {
-    if (user) {
-      if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", () => renderizarNavAuth(user));
-      } else {
-        renderizarNavAuth(user);
+    // Executa a validação de segurança e atualização oficial de rota
+    authProtegerRota().then(user => {
+      if (user) {
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", () => renderizarNavAuth(user));
+        } else {
+          renderizarNavAuth(user);
+        }
       }
-    }
-  });
+    });
+  })();
+}
+
+// Exportacao para testes unitarios em Node.js
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    authIsMaster,
+    authEhPaginaLogin,
+    authTraduzirMensagemErro,
+    authAnalisarParametrosUrlAuth,
+    authFormatarMensagemErroUrl,
+    authObterBaseUrlLogin,
+    authConstruirRedirectLoginComAuth
+  };
 }
 

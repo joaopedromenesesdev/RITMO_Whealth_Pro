@@ -41,6 +41,7 @@ begin
   return (
     auth.uid() = '130e3598-89b9-4702-a4cc-2c5923fa3a66'::uuid
     or auth.uid() = '5ec2da93-ed07-43f8-9089-6d285a092156'::uuid
+    or auth.uid() = '469dfeab-5fd6-4159-97a2-aa1fee6e7dcb'::uuid
     or exists (
       select 1 from public.profiles
       where id = auth.uid()
@@ -68,7 +69,8 @@ begin
     'denis.beltrao@pacecapital.com.br'
   ) or new.id in (
     '130e3598-89b9-4702-a4cc-2c5923fa3a66'::uuid,
-    '5ec2da93-ed07-43f8-9089-6d285a092156'::uuid
+    '5ec2da93-ed07-43f8-9089-6d285a092156'::uuid,
+    '469dfeab-5fd6-4159-97a2-aa1fee6e7dcb'::uuid
   ) then
     v_role := 'master';
   end if;
@@ -135,7 +137,8 @@ begin
       'role', case
         when coalesce(p.id, u.id) in (
           '130e3598-89b9-4702-a4cc-2c5923fa3a66'::uuid,
-          '5ec2da93-ed07-43f8-9089-6d285a092156'::uuid
+          '5ec2da93-ed07-43f8-9089-6d285a092156'::uuid,
+          '469dfeab-5fd6-4159-97a2-aa1fee6e7dcb'::uuid
         ) then 'master'
         when lower(trim(coalesce(p.email, u.email, ''))) in (
           'willians.novais@pacecapital.com.br',

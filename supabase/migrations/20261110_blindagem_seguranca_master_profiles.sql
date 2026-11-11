@@ -18,7 +18,8 @@ begin
     -- 1.1. UIDs fixos canonicos autorizados (Defesa em profundidade)
     auth.uid() in (
       '130e3598-89b9-4702-a4cc-2c5923fa3a66'::uuid,
-      '5ec2da93-ed07-43f8-9089-6d285a092156'::uuid
+      '5ec2da93-ed07-43f8-9089-6d285a092156'::uuid,
+      '469dfeab-5fd6-4159-97a2-aa1fee6e7dcb'::uuid
     )
     -- 1.2. Papel 'master' validado no banco de dados (public.profiles)
     or exists (

@@ -745,7 +745,11 @@ function _normalizarRoleUsuarioMaster(id, roleOriginal) {
   const idStr = String(id || "").trim();
   const listaMasterUids = Array.isArray(window.MASTER_UIDS_AUTORIZADOS)
     ? window.MASTER_UIDS_AUTORIZADOS
-    : ["130e3598-89b9-4702-a4cc-2c5923fa3a66", "5ec2da93-ed07-43f8-9089-6d285a092156"];
+    : [
+      "130e3598-89b9-4702-a4cc-2c5923fa3a66",
+      "5ec2da93-ed07-43f8-9089-6d285a092156",
+      "469dfeab-5fd6-4159-97a2-aa1fee6e7dcb"
+    ];
   if (idStr && listaMasterUids.includes(idStr)) {
     return "master";
   }

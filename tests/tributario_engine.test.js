@@ -632,11 +632,16 @@
       id: "5ec2da93-ed07-43f8-9089-6d285a092156",
       role: "assessor"
     });
+    const visaoDenisUid = engine.filtrarRelatoriosPorPermissao(relatoriosMock, {
+      id: "469dfeab-5fd6-4159-97a2-aa1fee6e7dcb",
+      role: "assessor"
+    });
 
     assert(visaoAssessor.length === 2, "Assessor comum enxerga apenas seus próprios 2 relatórios");
     assert(visaoMaster.length === 3, "Usuário Master possui acesso completo a todos os 3 relatórios de todos os assessores");
     assert(visaoUidMaster.length === 3, "UID Master administrativo reconhecido automaticamente com acesso completo sem exposição de e-mail pessoal");
     assert(visaoWilliansUid.length === 3, "UID Master secundário (Willians) reconhecido automaticamente com acesso completo");
+    assert(visaoDenisUid.length === 3, "UID Master terciário (Denis) reconhecido automaticamente com acesso completo");
 
     // ==========================================
     // 21. TESTE: BLINDAGEM ZERO-LEAKAGE (NENHUM E-MAIL DE USUÁRIO EXPOSTO NO CÓDIGO-FONTE)
@@ -1122,7 +1127,8 @@
     // Simulação da função canônica authIsMaster(user) do auth.js
     const MASTER_UIDS_TEST = [
       "130e3598-89b9-4702-a4cc-2c5923fa3a66",
-      "5ec2da93-ed07-43f8-9089-6d285a092156"
+      "5ec2da93-ed07-43f8-9089-6d285a092156",
+      "469dfeab-5fd6-4159-97a2-aa1fee6e7dcb"
     ];
     function verificarIsMaster(user) {
       if (!user) return false;
@@ -1143,8 +1149,10 @@
     // 3. Usuários com UID Master opaco autorizado
     const usuarioMasterUid1 = { id: "130e3598-89b9-4702-a4cc-2c5923fa3a66", role: "assessor" };
     const usuarioMasterUid2 = { id: "5ec2da93-ed07-43f8-9089-6d285a092156", role: "assessor" };
+    const usuarioMasterUid3 = { id: "469dfeab-5fd6-4159-97a2-aa1fee6e7dcb", role: "assessor" };
     assert(verificarIsMaster(usuarioMasterUid1) === true, "Usuário Master 1 (João Pedro) com UID opaco tem privilégio Master garantido");
     assert(verificarIsMaster(usuarioMasterUid2) === true, "Usuário Master 2 (Willians Novais) com UID opaco tem privilégio Master garantido");
+    assert(verificarIsMaster(usuarioMasterUid3) === true, "Usuário Master 3 (Denis Beltrão) com UID opaco tem privilégio Master garantido");
 
     // 4. Assessor comum não possui privilégio Master
     const assessorComum = { id: "99999999-8888-7777-6666-555555555555", role: "assessor" };
@@ -1190,7 +1198,8 @@
     // 1. Simulação da função segura is_master() (valida apenas UIDs, role='master' no banco ou JWT verificado)
     const MASTER_UIDS_CANONICOS = new Set([
       "130e3598-89b9-4702-a4cc-2c5923fa3a66",
-      "5ec2da93-ed07-43f8-9089-6d285a092156"
+      "5ec2da93-ed07-43f8-9089-6d285a092156",
+      "469dfeab-5fd6-4159-97a2-aa1fee6e7dcb"
     ]);
     const MASTER_EMAILS_AUTORIZADOS = new Set([
       "willians.novais@pacecapital.com.br",
@@ -1215,6 +1224,7 @@
     // Master legítimo com UID canônico
     assert(simularIsMasterSeguro("130e3598-89b9-4702-a4cc-2c5923fa3a66", null, null) === true, "UID Master canônico 1 reconhecido sem depender de e-mail");
     assert(simularIsMasterSeguro("5ec2da93-ed07-43f8-9089-6d285a092156", null, null) === true, "UID Master canônico 2 reconhecido sem depender de e-mail");
+    assert(simularIsMasterSeguro("469dfeab-5fd6-4159-97a2-aa1fee6e7dcb", null, null) === true, "UID Master canônico 3 reconhecido sem depender de e-mail");
 
     // 2. Simulação do trigger trg_bloquear_escalonamento_privilegios()
     function simularTriggerPerfil(oldRow, newRow, isMaster) {
@@ -1256,6 +1266,95 @@
     const updateValido = simularTriggerPerfil(rowOriginal, { ...rowOriginal, full_name: "Nome Atualizado" }, false);
     assert(updateValido.full_name === "Nome Atualizado", "Permite que assessor atualize seu proprio nome com seguranca");
     assert(updateValido.role === "assessor", "Role preservada como assessor apos update seguro");
+
+    // ==========================================
+    // 36. TESTE: ROTEAMENTO DE CONVITE SUPABASE, CAPTURE DE HASH E RATE LIMIT
+    // ==========================================
+    console.log("\nExecutando Testes 36: Roteamento de Convite Supabase, Captura de Hash e Rate Limit...");
+
+    if (typeof require !== "undefined") {
+      const fs = require("fs");
+      const path = require("path");
+      const authMod = require(path.resolve(__dirname, "..", "script/auth.js"));
+      const configSource = fs.readFileSync(path.resolve(__dirname, "..", "script/supabase_config.js"), "utf8");
+      const authSourceCheck = fs.readFileSync(path.resolve(__dirname, "..", "script/auth.js"), "utf8");
+
+      // 1. Captura sincrona de snapshot de URL em supabase_config.js antes do createClient()
+      const idxCapture = configSource.indexOf("window.__PACE_INITIAL_AUTH__");
+      const idxCreate = configSource.indexOf("window.supabase.createClient(");
+      assert(idxCapture !== -1 && idxCreate !== -1 && idxCapture < idxCreate, "supabase_config.js captura __PACE_INITIAL_AUTH__ antes de inicializar o SDK");
+
+      // 2. Deteccao de link de convite via hash (#access_token=...&type=invite)
+      const inviteHashInfo = authMod.authAnalisarParametrosUrlAuth("#access_token=jwt123&type=invite", "", "");
+      assert(inviteHashInfo.isInvite === true, "Detecta type=invite no hash da URL");
+      assert(inviteHashInfo.needsPasswordSetup === true, "Ativa definicao obrigatoria de senha no convite");
+      assert(inviteHashInfo.hasError === false, "Nao sinaliza erro em link de convite valido");
+
+      // 3. Deteccao de fallback pendente caso SDK tenha limpado o hash antes do DOMContentLoaded
+      const pendingInviteInfo = authMod.authAnalisarParametrosUrlAuth("", "", "invite");
+      assert(pendingInviteInfo.isInvite === true && pendingInviteInfo.needsPasswordSetup === true, "Preserva modo de criacao de senha via flag pendente mesmo com hash limpo");
+
+      // 4. Deteccao via query ?auth_flow=recovery apos redirect de index.html -> login.html
+      const recoveryQueryInfo = authMod.authAnalisarParametrosUrlAuth("", "?auth_flow=recovery", "");
+      assert(recoveryQueryInfo.isRecovery === true && recoveryQueryInfo.needsPasswordSetup === true, "Detecta auth_flow=recovery preservado na querystring");
+
+      // 5. Construcao de URL login.html em diferentes formatos de origem/path
+      assert(
+        authMod.authObterBaseUrlLogin("https://joaopedromenesesdev.github.io/RITMO_Whealth_Pro/") === "https://joaopedromenesesdev.github.io/RITMO_Whealth_Pro/login.html",
+        "Resolve login.html corretamente a partir da raiz com barra final"
+      );
+      assert(
+        authMod.authObterBaseUrlLogin("https://joaopedromenesesdev.github.io/RITMO_Whealth_Pro") === "https://joaopedromenesesdev.github.io/RITMO_Whealth_Pro/login.html",
+        "Resolve login.html corretamente a partir de subpasta sem barra final"
+      );
+      assert(
+        authMod.authObterBaseUrlLogin("https://joaopedromenesesdev.github.io/RITMO_Whealth_Pro/index.html") === "https://joaopedromenesesdev.github.io/RITMO_Whealth_Pro/login.html",
+        "Resolve login.html corretamente a partir de index.html"
+      );
+      assert(
+        authMod.authObterBaseUrlLogin("https://joaopedromenesesdev.github.io/RITMO_Whealth_Pro/login") === "https://joaopedromenesesdev.github.io/RITMO_Whealth_Pro/login.html",
+        "Resolve login.html corretamente quando URL de Site URL vem sem .html (/login)"
+      );
+      assert(authMod.authEhPaginaLogin("/RITMO_Whealth_Pro/login") === true, "Reconhece /login sem .html como pagina de login");
+      assert(authMod.authEhPaginaLogin("/RITMO_Whealth_Pro/login.html") === true, "Reconhece /login.html como pagina de login");
+      assert(authMod.authEhPaginaLogin("/RITMO_Whealth_Pro/index.html") === false, "Nao confunde index.html com pagina de login");
+
+      // 6. Redirecionamento de pagina protegida (index.html) preservando fluxo de convite
+      const redirectInviteUrl = authMod.authConstruirRedirectLoginComAuth(
+        "https://joaopedromenesesdev.github.io/RITMO_Whealth_Pro/login.html",
+        inviteHashInfo
+      );
+      assert(
+        redirectInviteUrl === "https://joaopedromenesesdev.github.io/RITMO_Whealth_Pro/login.html?auth_flow=invite#access_token=jwt123&type=invite",
+        "Redirecionamento para login.html preserva auth_flow=invite e access_token original"
+      );
+
+      // 7. Tratamento preciso de error_code=over_request_rate_limit sem mandar usuario pedir mais emails
+      const rateUrlInfo = authMod.authAnalisarParametrosUrlAuth(
+        "#error=access_denied&error_code=over_request_rate_limit&error_description=Request+rate+limit+reached",
+        "",
+        ""
+      );
+      assert(rateUrlInfo.hasError === true, "Identifica erro de URL no callback de rate limit");
+      const msgRateUrl = authMod.authFormatarMensagemErroUrl(rateUrlInfo);
+      assert(msgRateUrl.toLowerCase().includes("muitas tentativas"), "Traduz over_request_rate_limit para mensagem clara de rate limit");
+      assert(!msgRateUrl.toLowerCase().includes("esqueceu sua senha"), "Nao induz clique em Esqueceu sua senha quando erro ja e de rate limit");
+
+      // 8. Traducao de erro de cooldown e link expirado (otp_expired)
+      const msgCooldown = authMod.authTraduzirMensagemErro("For security purposes, you can only request this after 54 seconds.");
+      assert(msgCooldown.includes("54 segundos"), "Traduz mensagem de cooldown extraindo os segundos corretamente");
+
+      const otpExpiredInfo = authMod.authAnalisarParametrosUrlAuth(
+        "#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired",
+        "",
+        ""
+      );
+      const msgOtpExpired = authMod.authFormatarMensagemErroUrl(otpExpiredInfo);
+      assert(msgOtpExpired.toLowerCase().includes("expirou ou já foi utilizado"), "Traduz otp_expired para mensagem amigavel de link expirado");
+
+      // 9. Auditoria de zero vazamento de service_role no front-end
+      assert(!configSource.toLowerCase().includes("service_role") && !authSourceCheck.toLowerCase().includes("service_role"), "Nenhuma chave ou referencia a service_role presente nos scripts cliente");
+    }
 
     console.log("\n=================================================");
     console.log(`RESUMO DA SUÍTE DE TESTES:`);

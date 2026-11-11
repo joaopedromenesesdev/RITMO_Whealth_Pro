@@ -815,7 +815,11 @@
       const mapa = new Map();
       const masterUids = Array.isArray(global.MASTER_UIDS_AUTORIZADOS)
         ? global.MASTER_UIDS_AUTORIZADOS
-        : ["130e3598-89b9-4702-a4cc-2c5923fa3a66", "5ec2da93-ed07-43f8-9089-6d285a092156"];
+        : [
+          "130e3598-89b9-4702-a4cc-2c5923fa3a66",
+          "5ec2da93-ed07-43f8-9089-6d285a092156",
+          "469dfeab-5fd6-4159-97a2-aa1fee6e7dcb"
+        ];
 
       (Array.isArray(perfis) ? perfis : []).forEach(p => {
         if (!p || !p.id) return;
@@ -855,7 +859,11 @@
       if (!usuario || !Array.isArray(relatorios)) return [];
       const masterUids = Array.isArray(global.MASTER_UIDS_AUTORIZADOS)
         ? global.MASTER_UIDS_AUTORIZADOS
-        : ["130e3598-89b9-4702-a4cc-2c5923fa3a66", "5ec2da93-ed07-43f8-9089-6d285a092156"];
+        : [
+          "130e3598-89b9-4702-a4cc-2c5923fa3a66",
+          "5ec2da93-ed07-43f8-9089-6d285a092156",
+          "469dfeab-5fd6-4159-97a2-aa1fee6e7dcb"
+        ];
       const isMaster = usuario.role === "master" ||
         usuario.profile_role === "master" ||
         masterUids.includes(usuario.id);
