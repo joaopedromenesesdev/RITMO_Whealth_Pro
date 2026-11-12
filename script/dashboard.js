@@ -88,12 +88,11 @@ async function carregarDashboard() {
   relatoriosCached = await dbObterRelatorios(false);
   relatoriosEquipeCached = [...relatoriosCached];
 
-  // Verifica se o usuário atual é Master para liberar o filtro por Assessor no Dashboard
+  // Verifica se o usuário atual é Master estritamente via sessão autenticada (sem confiar em role em localStorage)
   let isMaster = false;
   try {
     const cachedUser = JSON.parse(localStorage.getItem("pace_user_cache") || "{}");
     if (cachedUser && cachedUser.id) currentDashboardUserId = String(cachedUser.id);
-    if (cachedUser && cachedUser.role === "master") isMaster = true;
     if (typeof authObterUsuario === "function") {
       const u = await authObterUsuario();
       if (u && u.id) currentDashboardUserId = String(u.id);

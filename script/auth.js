@@ -392,6 +392,27 @@ async function authObterUsuario() {
   }
 }
 
+// Remove caches locais sensiveis de sessoes anteriores; se userIdPreservado for informado, mantem apenas o backup desse titular
+function authPurgarCachesLocaisUsuario(userIdPreservado = null) {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.removeItem("pace_user_cache");
+    localStorage.removeItem("pace_invite_tokens");
+    const prefixoBackup = "relatorios_backup_";
+    const chavePreservada = userIdPreservado ? (prefixoBackup + String(userIdPreservado)) : null;
+    Object.keys(localStorage)
+      .filter(k => k.startsWith(prefixoBackup) && k !== chavePreservada)
+      .forEach(k => localStorage.removeItem(k));
+    if (!userIdPreservado) {
+      localStorage.removeItem("pace_usabilidade_acessos");
+      localStorage.removeItem("nome_assessor");
+    }
+  } catch (e) { }
+}
+if (typeof window !== "undefined") {
+  window.authPurgarCachesLocaisUsuario = authPurgarCachesLocaisUsuario;
+}
+
 // Efetuar Login
 async function authEntrar(email, password) {
   const client = getSupabase();
@@ -401,8 +422,8 @@ async function authEntrar(email, password) {
   if (error) throw error;
   try {
     sessionStorage.removeItem("pace_auth_action_pending");
-    localStorage.removeItem("pace_user_cache");
   } catch (e) { }
+  authPurgarCachesLocaisUsuario(data?.user?.id || null);
   if (data && data.user) {
     authRegistrarUltimoAcesso(data.user, true);
   }
@@ -435,14 +456,7 @@ async function authSair() {
   if (client) {
     await client.auth.signOut();
   }
-  try {
-    localStorage.removeItem("pace_user_cache");
-    localStorage.removeItem("pace_invite_tokens");
-    // Remove backups locais de relatórios (dados patrimoniais) ao encerrar a sessão
-    Object.keys(localStorage)
-      .filter(k => k.startsWith("relatorios_backup_"))
-      .forEach(k => localStorage.removeItem(k));
-  } catch (e) { }
+  authPurgarCachesLocaisUsuario(null);
   if (typeof sessionStorage !== "undefined") sessionStorage.clear();
   if (typeof window !== "undefined") window.location.href = "login.html";
 }
@@ -918,7 +932,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         try {
           sessionStorage.clear();
-          localStorage.removeItem("pace_user_cache");
+          authPurgarCachesLocaisUsuario(null);
         } catch (e) { }
 
         const authenticatedUser = await authObterUsuario();
@@ -1176,6 +1190,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined" && window.l
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     authIsMaster,
+    authPurgarCachesLocaisUsuario,
     authEhPaginaLogin,
     authFormatarNomeUsuario,
     authTraduzirMensagemErro,

@@ -118,14 +118,41 @@
     assert(estrat.gradual.economiaITCMD === 80000, "Economia ITCMD doação gradual 4% sobre R$ 2M deve ser R$ 80.000");
     assert(estrat.seguro.capitalSeguro === 1050000, "Capital do Seguro deve ser igual ao prejuízo de R$ 1.050.000");
 
+    // Helper para resolver modulos db.js / state.js tanto no navegador quanto no Node.js
+    const _dbModNode = (typeof require === "function") ? (() => {
+      try { return require("../script/db.js"); } catch (_) { return null; }
+    })() : null;
+    const _stateModNode = (typeof require === "function") ? (() => {
+      try {
+        if (typeof globalThis.sessionStorage === "undefined") {
+          const store = new Map();
+          globalThis.sessionStorage = {
+            getItem: k => (store.has(k) ? store.get(k) : null),
+            setItem: (k, v) => store.set(k, String(v)),
+            removeItem: k => store.delete(k),
+            clear: () => store.clear()
+          };
+        }
+        return require("../script/state.js");
+      } catch (_) { return null; }
+    })() : null;
+    if (typeof globalThis.crypto === "undefined" && typeof require === "function") {
+      try {
+        const nodeCrypto = require("crypto");
+        if (nodeCrypto && nodeCrypto.webcrypto) globalThis.crypto = nodeCrypto.webcrypto;
+      } catch (_) {}
+    }
+
     // TESTE 5: Sanitização de Dados (db.js / Data Integrity)
     console.log("\nTeste 5: Sanitização e Integridade de Dados (db.js)");
-    if (typeof sanitizarNumero === 'function' && typeof sanitizarEValidarSimulacao === 'function') {
-      assert(sanitizarNumero("R$ 1.500.000,50") === 1500000.50, "Sanitização de moeda R$ 1.500.000,50 -> 1500000.50");
-      assert(sanitizarNumero("inválido", 100) === 100, "Sanitização de texto inválido -> valor padrão 100");
-      assert(sanitizarNumero(NaN, 0) === 0, "Sanitização de NaN -> 0");
+    const fnSanitizarNumero = (typeof sanitizarNumero === 'function') ? sanitizarNumero : _dbModNode?.sanitizarNumero;
+    const fnSanitizarSimulacao = (typeof sanitizarEValidarSimulacao === 'function') ? sanitizarEValidarSimulacao : _dbModNode?.sanitizarEValidarSimulacao;
+    if (typeof fnSanitizarNumero === 'function' && typeof fnSanitizarSimulacao === 'function') {
+      assert(fnSanitizarNumero("R$ 1.500.000,50") === 1500000.50, "Sanitização de moeda R$ 1.500.000,50 -> 1500000.50");
+      assert(fnSanitizarNumero("inválido", 100) === 100, "Sanitização de texto inválido -> valor padrão 100");
+      assert(fnSanitizarNumero(NaN, 0) === 0, "Sanitização de NaN -> 0");
       
-      const resValida = sanitizarEValidarSimulacao({
+      const resValida = fnSanitizarSimulacao({
         nomeCliente: "  João Silva  ",
         totalPatrimonio: "R$ 5.000.000,00",
         prejuizoTributario: "-100"
@@ -139,16 +166,17 @@
 
     // TESTE 6: Simulation Store (state.js)
     console.log("\nTeste 6: Simulation Store (exportSnapshot & importSnapshot)");
-    if (typeof window !== 'undefined' && window.AppState && typeof window.AppState.exportSnapshot === 'function') {
-      const snapOriginal = window.AppState.exportSnapshot();
+    const appStateRef = (typeof window !== 'undefined' && window.AppState) ? window.AppState : _stateModNode;
+    if (appStateRef && typeof appStateRef.exportSnapshot === 'function') {
+      const snapOriginal = appStateRef.exportSnapshot();
       assert(typeof snapOriginal === 'object' && snapOriginal.meta && snapOriginal.patrimonio, "Snapshot exportado com sucesso contendo metadados e patrimônio");
       
-      const resImport = window.AppState.importSnapshot({
+      const resImport = appStateRef.importSnapshot({
         meta: { nomeCliente: "Cliente Teste" },
         patrimonio: { total: 2000000 }
       });
       assert(resImport === true, "Importação de snapshot retornou sucesso (true)");
-      assert(window.AppState.getTotalPatrimonio() === 2000000, "Importação de snapshot atualizou o total do patrimônio para R$ 2.000.000");
+      assert(appStateRef.getTotalPatrimonio() === 2000000, "Importação de snapshot atualizou o total do patrimônio para R$ 2.000.000");
     } else {
       console.log("  [SKIP] AppState não carregado no escopo global do runner.");
     }
@@ -174,10 +202,12 @@
     const custosNegativos = engine.calcularCustosInventario(-50000, 4, 5, 1.5);
     assert(custosNegativos.totalPrejuizo === 0, "Patrimônio negativo deve ser sanitizado para zero");
 
+    const secRef = (typeof window !== 'undefined' && window.__PACE_SECURITY_TEST__) ? window.__PACE_SECURITY_TEST__ : _dbModNode;
+
     // TESTE 9: Criptografia AES-GCM (Web Crypto) e Retrocompatibilidade (v1 e v2 com pepper)
     console.log("\nTeste 9: Criptografia AES-GCM e Integridade de Dados");
-    if (typeof window !== 'undefined' && window.__PACE_SECURITY_TEST__) {
-      const sec = window.__PACE_SECURITY_TEST__;
+    if (secRef && typeof secRef._criptografarPayload === "function" && typeof crypto !== "undefined" && crypto.subtle) {
+      const sec = secRef;
       const payloadOriginal = { cliente: "João Silva", saldo: 500000, sensivel: true };
       const encResult = await sec._criptografarPayload(payloadOriginal, "user-teste-uuid");
       assert(encResult._encrypted === true, "Payload criptografado marcado com flag _encrypted = true");
@@ -196,8 +226,8 @@
 
     // TESTE 10: Sanitização Contra Injeções e Proteção de Entradas
     console.log("\nTeste 10: Sanitização Contra Injeções e Extremos");
-    if (typeof window !== 'undefined' && window.__PACE_SECURITY_TEST__) {
-      const sec = window.__PACE_SECURITY_TEST__;
+    if (secRef && typeof secRef.sanitizarNumero === "function" && typeof secRef.sanitizarEValidarSimulacao === "function") {
+      const sec = secRef;
       const numLimpo = sec.sanitizarNumero("R$ 1.250.500,75");
       assert(numLimpo === 1250500.75, "Sanitização de moeda brasileira converteu para float 1250500.75");
       const numInvalido = sec.sanitizarNumero("<script>alert(1)</script>", 0);
@@ -217,8 +247,8 @@
 
     // TESTE 11: Resiliência de Rede e Retry Automático com Backoff
     console.log("\nTeste 11: Resiliência de Rede e Retry Automático");
-    if (typeof window !== 'undefined' && window.__PACE_SECURITY_TEST__) {
-      const sec = window.__PACE_SECURITY_TEST__;
+    if (secRef && typeof secRef.executarComRetry === "function") {
+      const sec = secRef;
       let tentativas = 0;
       const operacaoInstavel = async () => {
         tentativas++;
@@ -1527,6 +1557,190 @@
 
       const resBuscaDono = dbMod.filtrarRelatoriosPainelMaster(relatoriosMock, usuariosMock, { filtroAssessor: "todos", busca: "marcos ribeiro" });
       assert(resBuscaDono.length === 1 && resBuscaDono[0].id === "r3", "Busca textual tambem encontra relatorios pelo full_name do proprietario");
+    }
+
+    // ── TESTE 40: Hardening Zero-Regressao (XSS Notas, Cache Purge, SRI/CSP, SQL/Edge) ──
+    console.log("\n-> Teste 40: Hardening Zero-Regressao (XSS Notas, Cache Purge, SRI/CSP, SQL/Edge)");
+    if (typeof require === "function") {
+      const fs = require("fs");
+      const path = require("path");
+      const vm = require("vm");
+      const authMod40 = require("../script/auth.js");
+      const dbMod40 = require("../script/db.js");
+
+      // 1. Executa script/tributario.js em sandbox controlada para validar DOM seguro e anti-XSS em notas
+      const tribCode = fs.readFileSync(path.resolve(__dirname, "..", "script/tributario.js"), "utf8");
+      function criarElStub(tag) {
+        const attrs = {};
+        const listeners = {};
+        const el = {
+          tagName: String(tag).toUpperCase(),
+          className: "",
+          id: "",
+          placeholder: "",
+          value: "",
+          textContent: "",
+          style: {},
+          children: [],
+          _innerHTML: "",
+          classList: { add() {}, remove() {}, contains() { return false; } },
+          setAttribute(k, v) { attrs[k] = String(v); },
+          getAttribute(k) { return attrs[k] !== undefined ? attrs[k] : null; },
+          appendChild(child) { this.children.push(child); return child; },
+          addEventListener(ev, fn) { (listeners[ev] = listeners[ev] || []).push(fn); },
+          querySelectorAll(sel) {
+            if (sel === ".nota-assessor-card") return this.children.filter(c => c.className === "nota-assessor-card");
+            return [];
+          },
+          querySelector(sel) {
+            if (sel === ".nota-conteudo-textarea" || sel === "textarea") {
+              return this.children.find(c => c.tagName === "TEXTAREA") || null;
+            }
+            return null;
+          },
+          _getAttrs: () => attrs,
+          _getListeners: () => listeners
+        };
+        Object.defineProperty(el, "innerHTML", {
+          get() { return this._innerHTML; },
+          set(val) {
+            this._innerHTML = String(val);
+            if (val === "") this.children = [];
+          }
+        });
+        return el;
+      }
+
+      const containerNotasStub = criarElStub("div");
+      containerNotasStub.setAttribute("data-pagina", "1");
+      const notaMaliciosa = {
+        id: "1');alert(1);//",
+        pagina: 1,
+        titulo: "",
+        conteudo: "</textarea><script>alert(1)</script>"
+      };
+      const storeNotas = { relatorio_notas_assessor: JSON.stringify([notaMaliciosa]) };
+      const tribSandbox = {
+        window: { escapeHTML: s => String(s || "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;" }[m])) },
+        Chart: { register() {} },
+        ChartDataLabels: {},
+        sessionStorage: {
+          getItem: k => storeNotas[k] || null,
+          setItem: (k, v) => { storeNotas[k] = String(v); }
+        },
+        document: {
+          createElement: tag => criarElStub(tag),
+          getElementById: () => null,
+          addEventListener() {},
+          querySelectorAll: sel => (sel === ".container-notas-pagina" ? [containerNotasStub] : [])
+        },
+        setTimeout() {},
+        console
+      };
+      vm.createContext(tribSandbox);
+      vm.runInContext(tribCode, tribSandbox);
+
+      const notasNormalizadas = tribSandbox.obterNotasRelatorio();
+      assert(/^[a-zA-Z0-9_-]{1,64}$/.test(notasNormalizadas[0].id), "nota.id malicioso normalizado para identificador seguro");
+      tribSandbox.renderizarNotasRelatorio(tribSandbox.document);
+      const cardRenderizado = containerNotasStub.children[0];
+      assert(cardRenderizado && cardRenderizado.innerHTML === "", "renderizarNotasRelatorio nao injeta card via innerHTML");
+      const txtEl = cardRenderizado.children[0];
+      const btnDelEl = cardRenderizado.children[1].children[0];
+      assert(txtEl.value === "</textarea><script>alert(1)</script>", "Conteudo atribuido via .value seguro sem interpretacao HTML");
+      assert(!txtEl._getAttrs().oninput && !btnDelEl._getAttrs().onclick, "Nenhum handler inline oninput/onclick gerado nos cards de notas");
+      assert(Array.isArray(txtEl._getListeners().input) && Array.isArray(btnDelEl._getListeners().click), "Listeners seguros anexados via addEventListener");
+
+      // Verifica escaping no helper de lista de partilha
+      const htmlPartilhaXss = tribSandbox._montarListaPartilhaHTML(["<img src=x onerror=alert(1)>"], [1000], ["red;\" onclick=alert(1)"], 1000);
+      assert(!htmlPartilhaXss.includes("<img") && !htmlPartilhaXss.includes("onclick="), "_montarListaPartilhaHTML neutraliza HTML e atributos em labels/cores");
+
+      // 2. Purga seletiva de caches em localStorage (sem afetar sessao ativa)
+      const lsMap = new Map([
+        ["pace_user_cache", "{\"role\":\"master\"}"],
+        ["pace_invite_tokens", "[]"],
+        ["relatorios_backup_user-a", "[1]"],
+        ["relatorios_backup_user-b", "[2]"],
+        ["pace_usabilidade_acessos", "{\"x\":1}"],
+        ["nome_assessor", "Fulano"],
+        ["theme", "dark"]
+      ]);
+      const originalLS = globalThis.localStorage;
+      globalThis.localStorage = new Proxy({}, {
+        get(_, prop) {
+          if (prop === "getItem") return k => (lsMap.has(k) ? lsMap.get(k) : null);
+          if (prop === "setItem") return (k, v) => lsMap.set(k, String(v));
+          if (prop === "removeItem") return k => lsMap.delete(k);
+          return undefined;
+        },
+        ownKeys() { return Array.from(lsMap.keys()); },
+        getOwnPropertyDescriptor(_, k) {
+          if (lsMap.has(k)) return { enumerable: true, configurable: true, value: lsMap.get(k) };
+          return undefined;
+        }
+      });
+      try {
+        authMod40.authPurgarCachesLocaisUsuario("user-a");
+        assert(lsMap.has("relatorios_backup_user-a") && !lsMap.has("relatorios_backup_user-b"), "Login de user-a preserva backup proprio e remove backup de user-b");
+        assert(!lsMap.has("pace_user_cache") && lsMap.get("theme") === "dark", "Purga seletiva limpa pace_user_cache mantendo preferencias de tema");
+        authMod40.authPurgarCachesLocaisUsuario(null);
+        assert(!lsMap.has("relatorios_backup_user-a") && !lsMap.has("pace_usabilidade_acessos") && !lsMap.has("nome_assessor"), "Logout purga todos os backups, usabilidade local e nome_assessor");
+      } finally {
+        if (originalLS === undefined) delete globalThis.localStorage;
+        else globalThis.localStorage = originalLS;
+      }
+
+      // 3. _criptografarPayload nao faz fallback silencioso para texto puro quando crypto falha
+      const cryptoOriginal = globalThis.crypto;
+      let falhouCriptoSeguro = false;
+      try {
+        Object.defineProperty(globalThis, "crypto", {
+          configurable: true,
+          value: {
+            subtle: {
+              async digest() { throw new Error("Falha simulada WebCrypto"); },
+              async importKey() { throw new Error("Falha simulada WebCrypto"); },
+              async encrypt() { throw new Error("Falha simulada WebCrypto"); }
+            },
+            getRandomValues: arr => arr
+          }
+        });
+        await dbMod40._criptografarPayload({ segredo: 123 }, "uid-teste");
+      } catch (errCripto) {
+        falhouCriptoSeguro = String(errCripto.message || "").includes("Salvamento bloqueado");
+      } finally {
+        Object.defineProperty(globalThis, "crypto", { configurable: true, value: cryptoOriginal });
+      }
+      assert(falhouCriptoSeguro, "_criptografarPayload recusa fallback silencioso em texto puro quando crypto.subtle falha");
+
+      // 4. UI Master nao confia em pace_user_cache.role
+      const dashSrc40 = fs.readFileSync(path.resolve(__dirname, "..", "script/dashboard.js"), "utf8");
+      const globalUiSrc40 = fs.readFileSync(path.resolve(__dirname, "..", "script/global_ui.js"), "utf8");
+      assert(!dashSrc40.includes('cachedUser.role === "master"'), "dashboard.js nao promove Master via localStorage.pace_user_cache");
+      const fnMasterPanel = globalUiSrc40.slice(globalUiSrc40.indexOf("window.abrirPainelUsabilidadeMaster"));
+      assert(!fnMasterPanel.includes("pace_user_cache"), "abrirPainelUsabilidadeMaster nao confia em localStorage.pace_user_cache");
+
+      // 5. HTMLs: SRI + versoes pinadas + img-src sem wildcard https: + connect-src com CDNs para sourcemaps
+      const htmlFiles = ["index.html", "login.html", "patrimonio.html", "familiar.html", "evolucao.html", "nova_simulacao.html", "tributario.html", "termos_privacidade.html"];
+      htmlFiles.forEach(file => {
+        const htmlContent = fs.readFileSync(path.resolve(__dirname, "..", file), "utf8");
+        assert(!htmlContent.includes("img-src 'self' https:"), `${file} remove wildcard img-src https:`);
+        assert(htmlContent.includes("https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; object-src"), `${file} autoriza CDNs de sourcemaps no connect-src sem erros F12`);
+        assert(!htmlContent.includes("@supabase/supabase-js@2\""), `${file} fixa versao exata do Supabase SDK`);
+        assert(!htmlContent.includes("npm/chart.js\""), `${file} fixa versao exata do Chart.js`);
+        const externalScripts = htmlContent.match(/<script\s+[^>]*src="https:\/\/[^"]+"[^>]*>/g) || [];
+        externalScripts.forEach(tag => {
+          assert(tag.includes('integrity="sha384-') && tag.includes('crossorigin="anonymous"'), `${file} aplica SRI sha384 e crossorigin em CDN: ${tag.slice(0, 70)}`);
+        });
+      });
+
+      // 6. SQL Hardening & Edge Function CORS/RateLimit
+      const sqlZeroReg = fs.readFileSync(path.resolve(__dirname, "..", "supabase/migrations/20261111_hardening_audit_constraints_zero_regressao.sql"), "utf8");
+      assert(sqlZeroReg.includes("create table if not exists public.audit_logs") && sqlZeroReg.includes("fn_relatorios_audit_trigger") && sqlZeroReg.includes("chk_relatorios_dados_completos_size") && sqlZeroReg.includes("fn_suporte_chamados_blindagem"), "Migration 20261111 contem audit_logs, trigger de auditoria, check size e blindagem suporte_chamados");
+      assert(!sqlZeroReg.toLowerCase().includes("@pacecapital.com.br"), "Migration 20261111 nao expoe e-mails pessoais ou corporativos");
+
+      const edgeSrc = fs.readFileSync(path.resolve(__dirname, "..", "supabase/functions/suporte-email/index.ts"), "utf8");
+      assert(!edgeSrc.includes('ALLOWED_ORIGIN || "*"') && edgeSrc.includes("SUPORTE_EMAIL_DISPATCH"), "Edge Function suporte-email usa CORS fail-closed e rate limit atomico anti-bypass");
     }
 
     console.log("\n=================================================");

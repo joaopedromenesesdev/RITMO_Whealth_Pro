@@ -549,6 +549,43 @@ function formatarPercentual(v) {
 }
 
 // =========================
+function _escHTML(str) {
+  if (typeof window !== "undefined" && typeof window.escapeHTML === "function") {
+    return window.escapeHTML(str);
+  }
+  return String(str ?? "").replace(/[&<>"']/g, m => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#039;"
+  }[m]));
+}
+
+function _sanitizarCorCss(cor, padrao = "#2563EB") {
+  const s = String(cor ?? "").trim();
+  if (/^#[0-9a-fA-F]{3,8}$/.test(s) || /^rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)$/.test(s)) {
+    return s;
+  }
+  return padrao;
+}
+
+function _montarListaPartilhaHTML(labels, fatias, cores, totalDivisor) {
+  let html = '<ul style="list-style: none; padding: 0;">';
+  const denom = totalDivisor > 0 ? totalDivisor : 1;
+  labels.forEach((label, i) => {
+    const valor = Number(fatias[i]) || 0;
+    const pct = totalDivisor > 0 ? (valor / denom) * 100 : 0;
+    const corItem = _sanitizarCorCss(cores[i % cores.length]);
+    html += `<li style="margin-bottom: 10px; padding-left: 15px; border-left: 3px solid ${corItem}">
+      <strong>${_escHTML(label)}:</strong> R$ ${valor.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} 
+      <span style="opacity: 0.6; font-size: 12px;">(${pct.toFixed(1)}%)</span>
+    </li>`;
+  });
+  html += "</ul>";
+  return html;
+}
+
 // Helper de Renderização de Legenda em HTML para o Relatório PDF
 function renderizarLegendaPDF(scope, containerId, labels, data, colors, isPercent) {
   if (scope === document) return;
@@ -569,7 +606,7 @@ function renderizarLegendaPDF(scope, containerId, labels, data, colors, isPercen
   labels.forEach((label, i) => {
     const val = data[i] || 0;
     if (val <= 0) return; // Oculta itens zerados no relatório
-    const color = colors[i] || colors[0];
+    const color = _sanitizarCorCss(colors[i] || colors[0]);
     let pctStr = isPercent
       ? val.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "%"
       : "R$ " + val.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -577,7 +614,7 @@ function renderizarLegendaPDF(scope, containerId, labels, data, colors, isPercen
     html += `
       <li>
         <span class="pdf-legend-dot" style="background-color: ${color};"></span>
-        <span class="pdf-legend-text">${label} <strong class="pdf-legend-pct">(${pctStr})</strong></span>
+        <span class="pdf-legend-text">${_escHTML(label)} <strong class="pdf-legend-pct">(${_escHTML(pctStr)})</strong></span>
       </li>
     `;
   });
@@ -1777,18 +1814,7 @@ function renderizarViewPartilha(resultadoPartilha, total, containerId = "lista_p
   // Renderizar lista textual no DOM
   const lista = document.getElementById(containerId);
   if (lista) {
-    let html = '<ul style="list-style: none; padding: 0;">';
-    labels.forEach((label, i) => {
-      const valor = fatias[i] || 0;
-      const pct = total > 0 ? (valor / total) * 100 : 0;
-      const corItem = cores[i % cores.length];
-      html += `<li style="margin-bottom: 10px; padding-left: 15px; border-left: 3px solid ${corItem}">
-        <strong>${label}:</strong> R$ ${valor.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} 
-        <span style="opacity: 0.6; font-size: 12px;">(${pct.toFixed(1)}%)</span>
-      </li>`;
-    });
-    html += "</ul>";
-    lista.innerHTML = html;
+    lista.innerHTML = _montarListaPartilhaHTML(labels, fatias, cores, total);
   }
 
   // Preenchimento da Previdência Sucessória (removido do relatório)
@@ -2095,17 +2121,7 @@ function calcularPartilha(total, regime) {
   // 3. RENDERIZAR LISTA TEXTUAL
   const lista = document.getElementById("lista_partilha");
   if (lista) {
-    let html = '<ul style="list-style: none; padding: 0;">';
-    labels.forEach((label, i) => {
-      let pct = (fatias[i] / total) * 100;
-      html += `<li style="margin-bottom: 10px; padding-left: 15px; border-left: 3px solid ${cores[i % cores.length]}">
-        <strong>${label}:</strong> R$ ${fatias[i].toLocaleString("pt-BR", { maximumFractionDigits: 0 })} 
-        <span style="opacity: 0.6; font-size: 12px;">(${pct.toFixed(1)}%)</span>
-      </li>`;
-    });
-
-    html += "</ul>";
-    lista.innerHTML = html;
+    lista.innerHTML = _montarListaPartilhaHTML(labels, fatias, cores, total);
   }
 
   // Preenchimento da Previdência Sucessória (removido do relatório)
@@ -2281,16 +2297,7 @@ function calcularSegundaMorte(totalOriginal, herancaPrimeira, meacaoPrimeira, va
   // Lista Segunda Morte
   const lista = document.getElementById("lista_segunda_morte");
   if (lista) {
-    let html = '<ul style="list-style: none; padding: 0;">';
-    labelsSegunda.forEach((label, i) => {
-      let pct = (fatiasSegunda[i] / totalSegunda) * 100;
-      html += `<li style="margin-bottom: 10px; padding-left: 15px; border-left: 3px solid ${coresSegunda[i % coresSegunda.length]}">
-        <strong>${label}:</strong> R$ ${fatiasSegunda[i].toLocaleString("pt-BR", { maximumFractionDigits: 0 })} 
-        <span style="opacity: 0.6; font-size: 12px;">(${pct.toFixed(1)}%)</span>
-      </li>`;
-    });
-    html += "</ul>";
-    lista.innerHTML = html;
+    lista.innerHTML = _montarListaPartilhaHTML(labelsSegunda, fatiasSegunda, coresSegunda, totalSegunda);
   }
 
   // Alerta de Destino removido conforme solicitação
@@ -2420,16 +2427,27 @@ async function abrirPreview() {
 // GESTÃO DE NOTAS E OBSERVAÇÕES DO ASSESSOR
 // ==========================================
 
+function _normalizarNotaId(rawId, fallbackIdx = 0) {
+  const str = String(rawId ?? "").trim();
+  if (/^[a-zA-Z0-9_-]{1,64}$/.test(str)) {
+    return str;
+  }
+  return `nota_sanitizada_${fallbackIdx}`;
+}
+
 function obterNotasRelatorio() {
   try {
     const raw = sessionStorage.getItem("relatorio_notas_assessor");
     const notas = raw ? JSON.parse(raw) : [];
-    notas.forEach(n => {
-      if (n.titulo && n.titulo.startsWith("Observação do Assessor")) {
-        n.titulo = "";
-      }
-    });
-    return notas;
+    if (!Array.isArray(notas)) return [];
+    return notas
+      .filter(n => n && typeof n === "object")
+      .map((n, idx) => ({
+        ...n,
+        id: _normalizarNotaId(n.id, idx),
+        titulo: (n.titulo && String(n.titulo).startsWith("Observação do Assessor")) ? "" : (n.titulo || ""),
+        conteudo: typeof n.conteudo === "string" ? n.conteudo : String(n.conteudo ?? "")
+      }));
   } catch (e) {
     console.error("Erro ao carregar notas do relatório:", e);
     return [];
@@ -2516,8 +2534,9 @@ function removerObservacaoPagina(notaId) {
 }
 
 function atualizarNotaTexto(notaId, campo, valor) {
+  const notaIdSeguro = _normalizarNotaId(notaId);
   const notas = obterNotasRelatorio();
-  const nota = notas.find(n => n.id === notaId);
+  const nota = notas.find(n => n.id === notaIdSeguro);
   if (nota) {
     nota[campo] = valor;
     salvarNotasRelatorio(notas);
@@ -2527,7 +2546,8 @@ function atualizarNotaTexto(notaId, campo, valor) {
     if (clone) alvos.push(clone);
 
     alvos.forEach(scope => {
-      const card = scope.querySelector(`[data-nota-id="${notaId}"]`);
+      const card = Array.from(scope.querySelectorAll(".nota-assessor-card"))
+        .find(el => el.getAttribute("data-nota-id") === notaIdSeguro);
       if (card) {
         const txt = card.querySelector(".nota-conteudo-textarea");
         if (txt && txt.value !== valor) {
@@ -2555,27 +2575,40 @@ function renderizarNotasRelatorio(scope = document) {
 
     container.innerHTML = "";
 
-    notasPagina.forEach(nota => {
+    notasPagina.forEach((nota, idx) => {
+      const notaIdSeguro = _normalizarNotaId(nota.id, idx);
       const card = document.createElement("div");
       card.className = "nota-assessor-card";
-      card.id = "card_nota_" + nota.id;
-      card.setAttribute("data-nota-id", nota.id);
+      card.id = "card_nota_" + notaIdSeguro;
+      card.setAttribute("data-nota-id", notaIdSeguro);
 
-      const conteudoEscaped = (nota.conteudo || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const textarea = document.createElement("textarea");
+      textarea.className = "nota-conteudo-textarea";
+      textarea.placeholder = "Digite sua observação aqui...";
+      textarea.value = nota.conteudo || "";
+      textarea.addEventListener("input", () => {
+        atualizarNotaTexto(notaIdSeguro, "conteudo", textarea.value);
+        autoAjustarTextarea(textarea);
+      });
 
-      card.innerHTML = `
-        <textarea class="nota-conteudo-textarea" placeholder="Digite sua observação aqui..." oninput="atualizarNotaTexto('${nota.id}', 'conteudo', this.value); autoAjustarTextarea(this);">${conteudoEscaped}</textarea>
-        <div class="nota-card-actions no-print">
-          <button type="button" class="btn-delete-nota" onclick="removerObservacaoPagina('${nota.id}')" title="Excluir observação">Apagar</button>
-        </div>
-      `;
+      const actionsDiv = document.createElement("div");
+      actionsDiv.className = "nota-card-actions no-print";
 
+      const btnDelete = document.createElement("button");
+      btnDelete.type = "button";
+      btnDelete.className = "btn-delete-nota";
+      btnDelete.title = "Excluir observação";
+      btnDelete.textContent = "Apagar";
+      btnDelete.addEventListener("click", () => {
+        removerObservacaoPagina(notaIdSeguro);
+      });
+
+      actionsDiv.appendChild(btnDelete);
+      card.appendChild(textarea);
+      card.appendChild(actionsDiv);
       container.appendChild(card);
 
-      const txt = card.querySelector("textarea");
-      if (txt) {
-        setTimeout(() => autoAjustarTextarea(txt), 0);
-      }
+      setTimeout(() => autoAjustarTextarea(textarea), 0);
     });
   });
 }

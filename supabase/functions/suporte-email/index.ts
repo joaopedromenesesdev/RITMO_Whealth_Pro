@@ -10,13 +10,36 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
 
+const ALLOWED_ORIGINS_DEFAULT = [
+  "https://joaopedromenesesdev.github.io",
+  "http://localhost",
+  "http://127.0.0.1"
+];
+
+function resolverOrigemPermitida(originHeader: string): string {
+  const configuredList = ALLOWED_ORIGIN
+    ? ALLOWED_ORIGIN.split(",").map(s => s.trim()).filter(Boolean)
+    : [];
+  const whitelist = configuredList.length > 0 ? configuredList : ALLOWED_ORIGINS_DEFAULT;
+
+  if (originHeader) {
+    for (const allowedBase of whitelist) {
+      if (originHeader === allowedBase) return originHeader;
+      if (
+        (allowedBase === "http://localhost" || allowedBase === "http://127.0.0.1") &&
+        /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(originHeader)
+      ) {
+        return originHeader;
+      }
+    }
+  }
+
+  return whitelist[0] || "https://joaopedromenesesdev.github.io";
+}
+
 function getCorsHeaders(req: Request) {
   const origin = req.headers.get("Origin") || "";
-  let allowed = ALLOWED_ORIGIN || "*";
-
-  if (ALLOWED_ORIGIN && origin) {
-    allowed = (ALLOWED_ORIGIN === origin) ? origin : ALLOWED_ORIGIN;
-  }
+  const allowed = resolverOrigemPermitida(origin);
 
   return {
     "Access-Control-Allow-Origin": allowed,
@@ -74,19 +97,41 @@ serve(async (req) => {
       );
     }
 
-    // 3. Rate Limiting Defensivo: máximo de 5 chamados a cada 10 minutos por usuário
+    // 3. Rate Limiting Atomico e Anti-Replay: maximo de 5 envios a cada 10 minutos por usuario
     const dezMinutosAtras = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-    const { count, error: countErr } = await supabase
+    const { count: chamadosCount, error: countErr } = await supabase
       .from("suporte_chamados")
       .select("id", { count: "exact", head: true })
       .eq("user_id", user.id)
       .gte("created_at", dezMinutosAtras);
 
-    if (!countErr && typeof count === "number" && count >= 5) {
+    const { count: dispatchCount, error: dispatchCountErr } = await supabase
+      .from("audit_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("acao", "SUPORTE_EMAIL_DISPATCH")
+      .gte("created_at", dezMinutosAtras);
+
+    const enviosRecentes = Math.max(
+      (!countErr && typeof chamadosCount === "number") ? chamadosCount : 0,
+      (!dispatchCountErr && typeof dispatchCount === "number") ? dispatchCount : 0
+    );
+
+    if (enviosRecentes >= 5) {
       return new Response(
         JSON.stringify({ error: "Limite de solicitações de suporte atingido. Por favor, aguarde alguns minutos antes de enviar outro chamado." }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 429 }
       );
+    }
+
+    // Registra tentativa atomica de despacho antes de prosseguir (bloqueia loop direto sem insercao)
+    const { error: dispatchAuditErr } = await supabase.from("audit_logs").insert([{
+      user_id: user.id,
+      acao: "SUPORTE_EMAIL_DISPATCH",
+      detalhes: { origem: "edge_suporte_email" }
+    }]);
+    if (dispatchAuditErr) {
+      console.warn("[suporte-email] Aviso ao registrar trilha de rate limit em audit_logs:", dispatchAuditErr.message);
     }
 
     // 4. Leitura dos dados do chamado

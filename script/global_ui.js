@@ -1179,7 +1179,7 @@ window.renderizarTabelaRelatoriosMaster = function() {
     tbody.innerHTML = html;
 };
 
-window.abrirRelatorioPeloPainelMaster = function(repId, modo = "editar") {
+window.abrirRelatorioPeloPainelMaster = async function(repId, modo = "editar") {
     const relatorios = window.__masterUsabilidadeCache.relatorios || [];
     const rep = relatorios.find(r => String(r.id) === String(repId));
     if (!rep) return;
@@ -1241,8 +1241,14 @@ window.abrirRelatorioPeloPainelMaster = function(repId, modo = "editar") {
 
     let currentUid = "";
     try {
-        const cached = JSON.parse(localStorage.getItem("pace_user_cache") || "{}");
-        if (cached && cached.id) currentUid = String(cached.id);
+        if (typeof window.authObterUsuario === "function") {
+            const u = await window.authObterUsuario();
+            if (u && u.id) currentUid = String(u.id);
+        }
+        if (!currentUid) {
+            const cached = JSON.parse(localStorage.getItem("pace_user_cache") || "{}");
+            if (cached && cached.id) currentUid = String(cached.id);
+        }
     } catch (_) {}
 
     const ehRelatorioDeOutroAssessor = !currentUid || !rep.userId || String(rep.userId) !== String(currentUid);
@@ -1347,12 +1353,10 @@ window.recarregarDadosUsabilidadeMaster = async function() {
 };
 
 window.abrirPainelUsabilidadeMaster = async function() {
-    // Valida se o usuário atual possui permissão Master
+    // Valida se o usuário atual possui permissão Master estritamente via sessão autenticada
     let isMaster = false;
     try {
-        const cached = JSON.parse(localStorage.getItem("pace_user_cache") || "{}");
-        if (cached && cached.role === "master") isMaster = true;
-        if (!isMaster && typeof window.authObterUsuario === "function") {
+        if (typeof window.authObterUsuario === "function") {
             const u = await window.authObterUsuario();
             if (u && typeof window.authIsMaster === "function" && window.authIsMaster(u)) {
                 isMaster = true;

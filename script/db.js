@@ -105,7 +105,12 @@ async function _gerarChaveCriptografia(userId = 'pace_default', versao = 1) {
 
 async function _criptografarPayload(payload, userId) {
   if (!payload || typeof payload !== 'object') return payload;
+  const temWebCrypto = typeof crypto !== 'undefined' && crypto && crypto.subtle;
+  const contextoSeguro = (typeof window === 'undefined') ? true : (window.isSecureContext !== false);
   try {
+    if (!temWebCrypto) {
+      throw new Error("Web Crypto API indisponível no ambiente atual.");
+    }
     const key = await _gerarChaveCriptografia(userId, 2);
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const jsonStr = JSON.stringify(payload);
@@ -126,7 +131,11 @@ async function _criptografarPayload(payload, userId) {
       ciphertext: ciphertext
     };
   } catch (e) {
-    console.warn("[_criptografarPayload] Mantendo formato legível de fallback:", e);
+    if (temWebCrypto && contextoSeguro) {
+      console.error("[_criptografarPayload] Falha crítica ao criptografar payload:", e);
+      throw new Error("Falha ao criptografar os dados da simulação. Salvamento bloqueado por segurança.");
+    }
+    console.warn("[_criptografarPayload] Web Crypto indisponível fora de contexto seguro:", e);
     return payload;
   }
 }
@@ -249,9 +258,20 @@ function _obterBackupLocal(userId) {
   }
 }
 
+function _limparBackupsDeOutrosUsuarios(userIdAtivo) {
+  if (typeof localStorage === "undefined" || !userIdAtivo) return;
+  try {
+    const chaveAtiva = `relatorios_backup_${userIdAtivo}`;
+    Object.keys(localStorage)
+      .filter(k => k.startsWith("relatorios_backup_") && k !== chaveAtiva)
+      .forEach(k => localStorage.removeItem(k));
+  } catch (e) { }
+}
+
 function _salvarBackupLocal(userId, relatorios) {
   if (!userId) return;
   try {
+    _limparBackupsDeOutrosUsuarios(userId);
     const key = `relatorios_backup_${userId}`;
     localStorage.setItem(key, JSON.stringify(relatorios));
   } catch (e) {
@@ -1111,7 +1131,13 @@ if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     calcularMetricasUsabilidadeEquipe,
     filtrarRelatoriosPainelMaster,
-    sanitizarNumero
+    sanitizarNumero,
+    sanitizarEValidarSimulacao,
+    executarComRetry,
+    _gerarChaveCriptografia,
+    _criptografarPayload,
+    _descriptografarPayload,
+    _limparBackupsDeOutrosUsuarios
   };
 }
 
