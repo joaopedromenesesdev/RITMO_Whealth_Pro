@@ -176,7 +176,7 @@ async function _descriptografarPayload(payload, userId) {
 
 // Mapeia linha do Supabase para objeto padronizado (com descriptografia se necessário)
 async function _mapearLinhaSupabaseAsync(item, fallbackUserId) {
-  const ownerId = item.user_id || fallbackUserId;
+  const ownerId = item.user_id || fallbackUserId || null;
   let dadosCompletos = item.dados_completos;
   if (typeof dadosCompletos === "string" && dadosCompletos.length > 0) {
     try {
@@ -341,7 +341,8 @@ async function dbObterRelatorios(incluirTodosEquipe = false) {
         };
 
         const data = await executarComRetry(fetchRemote, 3, 300);
-        const mapeados = await Promise.all((data || []).map(item => _mapearLinhaSupabaseAsync(item, session.user.id)));
+        const fallbackId = incluirTodosEquipe ? null : session.user.id;
+        const mapeados = await Promise.all((data || []).map(item => _mapearLinhaSupabaseAsync(item, fallbackId)));
         // Atualiza o backup local exclusivamente com os relatórios pertencentes ao próprio usuário
         const apenasProprios = incluirTodosEquipe
           ? mapeados.filter(r => String(r.userId || "") === String(session.user.id))
