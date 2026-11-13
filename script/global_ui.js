@@ -892,12 +892,16 @@ function _criarModalUsabilidadeMasterDOM() {
             <strong class="master-kpi-value" id="master_kpi_total_usuarios">0</strong>
           </div>
           <div class="master-kpi-card">
-            <span class="master-kpi-label">Usuários com Acesso</span>
-            <strong class="master-kpi-value" id="master_kpi_usuarios_ativos">0</strong>
+            <span class="master-kpi-label">Total de Relatórios</span>
+            <strong class="master-kpi-value" id="master_kpi_total_relatorios">0</strong>
           </div>
           <div class="master-kpi-card">
-            <span class="master-kpi-label">Relatórios Gerados</span>
-            <strong class="master-kpi-value" id="master_kpi_total_relatorios">0</strong>
+            <span class="master-kpi-label">Prejuízo Médio / Cliente</span>
+            <strong class="master-kpi-value" id="master_kpi_prejuizo_medio">R$ 0</strong>
+          </div>
+          <div class="master-kpi-card">
+            <span class="master-kpi-label">Prejuízo Tributário Total</span>
+            <strong class="master-kpi-value" id="master_kpi_prejuizo_total">R$ 0</strong>
           </div>
           <div class="master-kpi-card">
             <span class="master-kpi-label">Volume Patrimonial Mapeado</span>
@@ -1288,19 +1292,24 @@ window.recarregarDadosUsabilidadeMaster = async function() {
 
         // Atualiza KPIs
         const totalUsuarios = usuarios.length;
-        const usuariosAtivos = usuarios.filter(u => !!u.ultimo_acesso).length;
         const totalRelatorios = relatorios.length;
         const patrimonioTotal = relatorios.reduce((acc, r) => acc + (Number(r.totalPatrimonio) || 0), 0);
+        const prejuizoTotal = relatorios.reduce((acc, r) => acc + (Number(r.prejuizoTributario) || 0), 0);
+        const prejuizoMedio = totalRelatorios > 0 ? Math.round(prejuizoTotal / totalRelatorios) : 0;
 
         const elTotalU = document.getElementById("master_kpi_total_usuarios");
-        const elAtivosU = document.getElementById("master_kpi_usuarios_ativos");
         const elTotalR = document.getElementById("master_kpi_total_relatorios");
+        const elPrejMedio = document.getElementById("master_kpi_prejuizo_medio");
+        const elPrejTotal = document.getElementById("master_kpi_prejuizo_total");
         const elPatTotal = document.getElementById("master_kpi_patrimonio_total");
 
         if (elTotalU) elTotalU.textContent = String(totalUsuarios);
-        if (elAtivosU) elAtivosU.textContent = String(usuariosAtivos);
         if (elTotalR) elTotalR.textContent = String(totalRelatorios);
-        if (elPatTotal) elPatTotal.textContent = "R$ " + patrimonioTotal.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+        
+        // Formatação unificada para garantir alinhamento visual
+        if (elPrejMedio) elPrejMedio.innerHTML = `<span>R$</span> <span>${prejuizoMedio.toLocaleString("pt-BR")}</span>`;
+        if (elPrejTotal) elPrejTotal.innerHTML = `<span>R$</span> <span>${Math.round(prejuizoTotal).toLocaleString("pt-BR")}</span>`;
+        if (elPatTotal) elPatTotal.innerHTML = `<span>R$</span> <span>${Math.round(patrimonioTotal).toLocaleString("pt-BR")}</span>`;
 
         // Popula select de assessores na aba de relatórios usando userId canonico (com fallback por nome para legados sem user_id)
         const selectAssessor = document.getElementById("master_select_assessor_relatorio");

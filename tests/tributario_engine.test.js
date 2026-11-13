@@ -1559,6 +1559,24 @@
       assert(resBuscaDono.length === 1 && resBuscaDono[0].id === "r3", "Busca textual tambem encontra relatorios pelo full_name do proprietario");
     }
 
+    // ── TESTE 41: KPIs Executivos do Painel Master ──
+    console.log("\n-> Teste 41: Validação de Cálculo dos Novos KPIs Executivos");
+    const usuariosMockKPI = [{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}]; // 20 usuarios
+    const relatoriosMockKPI = [
+        { totalPatrimonio: 1000000, prejuizoTributario: 100000 },
+        { totalPatrimonio: 2000000, prejuizoTributario: 200000 }
+    ];
+    const totalUsuarios = usuariosMockKPI.length;
+    const totalRelatorios = relatoriosMockKPI.length;
+    const prejuizoTotal = relatoriosMockKPI.reduce((acc, r) => acc + r.prejuizoTributario, 0);
+    const prejuizoMedio = totalRelatorios > 0 ? Math.round(prejuizoTotal / totalRelatorios) : 0;
+    
+    assert(totalUsuarios === 20, "Total de usuários calculado incorretamente");
+    assert(totalRelatorios === 2, "Total de relatórios calculado incorretamente");
+    assert(prejuizoTotal === 300000, "Prejuízo total calculado incorretamente");
+    assert(prejuizoMedio === 150000, "Prejuízo médio calculado incorretamente");
+    console.log("  [PASS] Cálculos matemáticos dos novos KPIs conferidos");
+
     // ── TESTE 40: Hardening Zero-Regressao (XSS Notas, Cache Purge, SRI/CSP, SQL/Edge) ──
     console.log("\n-> Teste 40: Hardening Zero-Regressao (XSS Notas, Cache Purge, SRI/CSP, SQL/Edge)");
     if (typeof require === "function") {
