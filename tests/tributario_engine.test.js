@@ -1761,10 +1761,113 @@
       assert(!edgeSrc.includes('ALLOWED_ORIGIN || "*"') && edgeSrc.includes("SUPORTE_EMAIL_DISPATCH"), "Edge Function suporte-email usa CORS fail-closed e rate limit atomico anti-bypass");
     }
 
+    // ── TESTE 42: Validação de Sintaxe JS dos Scripts de Interface (vm.Script) ──
+    if (typeof require === "function") {
+      const fs = require("fs");
+      const path = require("path");
+      const vm = require("vm");
+
+      console.log("\n-> Teste 42: Validação Sintática (vm.Script) dos Scripts de Interface");
+      const uiScripts = [
+        "patrimonio.js",
+        "familiar.js",
+        "evolucao.js",
+        "tributario.js",
+        "dashboard.js",
+        "global_ui.js"
+      ];
+
+      uiScripts.forEach(scriptFile => {
+        let sintaxeValida = false;
+        let erroMsg = "";
+        try {
+          const code = fs.readFileSync(path.resolve(__dirname, "..", "script", scriptFile), "utf8");
+          new vm.Script(code, { filename: scriptFile });
+          sintaxeValida = true;
+        } catch (err) {
+          erroMsg = err && err.message ? err.message : String(err);
+        }
+        assert(sintaxeValida, `Sintaxe JS válida em script/${scriptFile}${erroMsg ? " -> " + erroMsg : ""}`);
+      });
+
+      // ── TESTE 43: Secret Scanner Client-Side (Bloqueio Crítico + Alerta de Legado) ──
+      console.log("\n-> Teste 43: Secret Scanner nos Arquivos Client-Side");
+      const rootDir = path.resolve(__dirname, "..");
+      const clientJsFiles = fs.readdirSync(path.join(rootDir, "script"))
+        .filter(f => f.endsWith(".js"))
+        .map(f => path.join("script", f));
+      const clientHtmlFiles = [
+        "index.html", "login.html", "patrimonio.html", "familiar.html",
+        "evolucao.html", "nova_simulacao.html", "tributario.html", "termos_privacidade.html"
+      ];
+      const clientTargets = [...clientJsFiles, ...clientHtmlFiles];
+
+      const forbiddenPatterns = [
+        { nome: "service_role", regex: /\bservice_role\b/i },
+        { nome: "token sbp_", regex: /\bsbp_[a-zA-Z0-9_-]{8,}/ },
+        { nome: "chave sk_", regex: /\bsk_(?:live|test|proj|admin|[a-zA-Z0-9]{16,})\b/ },
+        { nome: "chave sb_secret_", regex: /\bsb_secret_[a-zA-Z0-9_-]{8,}/ },
+        { nome: "chave privada PEM", regex: /-----BEGIN[A-Z ]*PRIVATE KEY-----/ }
+      ];
+
+      const legacyAllowlist = {
+        APP_PEPPER: new Set(["script/db.js"]),
+        MASTER_UIDS: new Set(["script/auth.js", "script/db.js", "script/tributario_engine.js"])
+      };
+
+      const achadosCriticos = [];
+      const alertasLegado = [];
+
+      clientTargets.forEach(relPath => {
+        const normPath = relPath.replace(/\\/g, "/");
+        const content = fs.readFileSync(path.join(rootDir, normPath), "utf8");
+        const lines = content.split(/\r?\n/);
+
+        lines.forEach((line, idx) => {
+          const lineNum = idx + 1;
+          forbiddenPatterns.forEach(pat => {
+            if (pat.regex.test(line)) {
+              achadosCriticos.push(`${normPath}:${lineNum} (${pat.nome})`);
+            }
+          });
+
+          if (/\bAPP_PEPPER\b/.test(line)) {
+            if (legacyAllowlist.APP_PEPPER.has(normPath)) {
+              alertasLegado.push(`${normPath}:${lineNum} (APP_PEPPER legado)`);
+            } else {
+              achadosCriticos.push(`${normPath}:${lineNum} (novo APP_PEPPER fora do legado)`);
+            }
+          }
+
+          if (/\bMASTER_UIDS(?:_AUTORIZADOS)?\b/.test(line)) {
+            if (legacyAllowlist.MASTER_UIDS.has(normPath)) {
+              alertasLegado.push(`${normPath}:${lineNum} (MASTER_UIDS legado)`);
+            } else {
+              achadosCriticos.push(`${normPath}:${lineNum} (novo MASTER_UIDS fora do legado)`);
+            }
+          }
+        });
+      });
+
+      if (alertasLegado.length > 0) {
+        console.warn("  [WARN] Pendências legadas para migração futura ao back-end:");
+        alertasLegado.forEach(a => console.warn(`         - ${a}`));
+      }
+
+      assert(
+        achadosCriticos.length === 0,
+        `Nenhum segredo crítico (service_role/sbp_/sk_/private key) ou novo vazamento client-side encontrado${achadosCriticos.length ? ": " + achadosCriticos.join(", ") : ""}`
+      );
+    }
+
     console.log("\n=================================================");
     console.log(`RESUMO DA SUÍTE DE TESTES:`);
     console.log(`   Total: ${totalTestes} | Passados: ${testesPassados} | Falhas: ${testesFalhados}`);
     console.log("=================================================");
+
+    if (testesFalhados > 0 && typeof process !== "undefined") {
+      process.exitCode = 1;
+    }
 
     return { totalTestes, testesPassados, testesFalhados };
   }
