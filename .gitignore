@@ -11,6 +11,7 @@ brain/
 *.local.json
 supabase/assessores.local.json
 supabase/private_seeds/
+supabase/.temp/
 
 # Node / Dependencias (se instaladas localmente)
 node_modules/
