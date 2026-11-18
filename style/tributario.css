@@ -1746,6 +1746,19 @@ body.pdf-exporting .capa {
   margin-bottom: 16px;
 }
 
+/* Card 5 (Estrutura base sem inputs/lógica) */
+.reducao-card-5 {
+  min-height: 110px;
+}
+
+.reducao-card-5 .reducao-col {
+  justify-content: flex-start;
+}
+
+.reducao-card-5 .input-title {
+  margin-bottom: 0;
+}
+
 /* Responsividade Completa (Tablet e Celular) */
 @media (max-width: 1024px) {
   .tributario-dashboard {
