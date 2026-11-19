@@ -1481,7 +1481,7 @@
       const authSrc = fs.readFileSync(path.resolve(__dirname, "..", "script/auth.js"), "utf8");
       const dbSrc = fs.readFileSync(path.resolve(__dirname, "..", "script/db.js"), "utf8");
       const sqlHardening = fs.readFileSync(
-        path.resolve(__dirname, "..", "supabase/migrations/20261111_hardening_auth_e_nomes_assessores.sql"),
+        path.resolve(__dirname, "..", "supabase/migrations/2026111101_hardening_auth_e_nomes_assessores.sql"),
         "utf8"
       );
 
@@ -1753,7 +1753,7 @@
       });
 
       // 6. SQL Hardening & Edge Function CORS/RateLimit
-      const sqlZeroReg = fs.readFileSync(path.resolve(__dirname, "..", "supabase/migrations/20261111_hardening_audit_constraints_zero_regressao.sql"), "utf8");
+      const sqlZeroReg = fs.readFileSync(path.resolve(__dirname, "..", "supabase/migrations/2026111102_hardening_audit_constraints_zero_regressao.sql"), "utf8");
       assert(sqlZeroReg.includes("create table if not exists public.audit_logs") && sqlZeroReg.includes("fn_relatorios_audit_trigger") && sqlZeroReg.includes("chk_relatorios_dados_completos_size") && sqlZeroReg.includes("fn_suporte_chamados_blindagem"), "Migration 20261111 contem audit_logs, trigger de auditoria, check size e blindagem suporte_chamados");
       assert(!sqlZeroReg.toLowerCase().includes("@pacecapital.com.br"), "Migration 20261111 nao expoe e-mails pessoais ou corporativos");
 
