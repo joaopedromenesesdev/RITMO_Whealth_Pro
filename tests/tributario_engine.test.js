@@ -1858,6 +1858,39 @@
         achadosCriticos.length === 0,
         `Nenhum segredo crítico (service_role/sbp_/sk_/private key) ou novo vazamento client-side encontrado${achadosCriticos.length ? ": " + achadosCriticos.join(", ") : ""}`
       );
+
+      // ── TESTE 44: Integridade da Infraestrutura de Harness (CI e Agent Workflows) ──
+      console.log("\n-> Teste 44: Integridade da Infraestrutura de Harness (CI e Agent Workflows)");
+      const ciWorkflowRelPath = ".github/workflows/ci.yml";
+      const ciWorkflowPath = path.join(rootDir, ciWorkflowRelPath);
+      const ciWorkflowExists = fs.existsSync(ciWorkflowPath);
+      assert(ciWorkflowExists, `${ciWorkflowRelPath} existe no repositório`);
+
+      const ciWorkflowContent = ciWorkflowExists ? fs.readFileSync(ciWorkflowPath, "utf8") : "";
+      assert(
+        /^\s*run:\s*.*\bnode\s+tests\/tributario_engine\.test\.js\b/m.test(ciWorkflowContent),
+        `${ciWorkflowRelPath} executa node tests/tributario_engine.test.js`
+      );
+      assert(
+        /^permissions:\s*(?:\r?\n\s+contents:\s*read|\{\s*contents:\s*read\s*\})\s*$/m.test(ciWorkflowContent),
+        `${ciWorkflowRelPath} mantém permissions: contents: read`
+      );
+      assert(
+        !/\b(?:contents:\s*write|permissions:\s*write-all)\b/i.test(ciWorkflowContent),
+        `${ciWorkflowRelPath} não eleva permissões para escrita (contents: write / write-all)`
+      );
+
+      const requiredAgentWorkflows = [
+        ".agents/workflows/release.md",
+        ".agents/workflows/audit-full.md"
+      ];
+      requiredAgentWorkflows.forEach(workflowRelPath => {
+        const workflowFullPath = path.join(rootDir, workflowRelPath);
+        const workflowExists = fs.existsSync(workflowFullPath);
+        assert(workflowExists, `${workflowRelPath} existe no repositório`);
+        const workflowContent = workflowExists ? fs.readFileSync(workflowFullPath, "utf8") : "";
+        assert(workflowContent.trim().length > 0, `${workflowRelPath} não está vazio`);
+      });
     }
 
     console.log("\n=================================================");
