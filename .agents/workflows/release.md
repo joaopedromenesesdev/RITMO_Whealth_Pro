@@ -1,5 +1,5 @@
 ---
-description: Workflow padronizado de liberação segura (/release) com validação da suíte de 428 testes, auditoria de escopo Git, commit atômico com pre-commit hook e sincronização controlada com origin/main.
+description: Workflow padronizado de liberação segura (/release) com validação de 100% da suíte tributario_engine.test.js com 0 falhas, auditoria de escopo Git, commit atômico com pre-commit hook e sincronização controlada com origin/main.
 ---
 
 # 🚀 Workflow `/release` — Liberação Segura (Whealth Planner Pro)
@@ -8,7 +8,7 @@ Este workflow padroniza as Fases 7 a 9 do **Protocolo Brownfield** para garantir
 
 ---
 
-## Passo 1 — Gate de Regressão e Segurança (`428/428`)
+## Passo 1 — Gate de Regressão e Segurança (100% / 0 Falhas)
 
 Execute a suíte completa de testes unitários, validação sintática (`vm.Script`) e **Secret Scanner** client-side:
 
@@ -17,7 +17,7 @@ node tests/tributario_engine.test.js
 ```
 
 **Critério de bloqueio (Exit Gate):**
-- O resumo final deve exibir `Total: 428 | Passados: 428 | Falhas: 0` (ou total superior caso novos testes tenham sido adicionados, sempre com `Falhas: 0`).
+- O resumo final deve aprovar **100% da suíte `tributario_engine.test.js` com `Falhas: 0`** (`Total == Passados` e `Falhas: 0`).
 - O Teste 42 (`vm.Script`) e o Teste 43 (`Secret Scanner`) devem exibir `[PASS]`.
 - Se houver qualquer falha (`exitCode != 0`), **interrompa o release imediatamente** e retorne à Fase 6.
 
