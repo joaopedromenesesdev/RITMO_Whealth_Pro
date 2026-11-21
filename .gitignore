@@ -31,6 +31,9 @@ tmp/
 *.tmp
 *.bak
 
+# Build / Deploy (Cloudflare Pages)
+dist/
+
 # Editores e IDEs
 .vscode/
 .idea/
