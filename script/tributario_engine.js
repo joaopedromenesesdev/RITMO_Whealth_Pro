@@ -1,10 +1,321 @@
+// @ts-check
 // tributario_engine.js - Motor de Cálculo Tributário e Sucessório (Whealth Planner Pro)
 // Contém todas as regras de alíquotas estaduais (ITCMD), partilha de regimes de bens e estratégias de liquidez.
 
+/**
+ * @typedef {Record<string, any>} TributarioGlobalScope
+ */
+
+/**
+ * @typedef {Object} RegraContaExterior
+ * @property {string} id
+ * @property {string} nome
+ * @property {string} nomeCurto
+ * @property {boolean} sujeitoInventario
+ * @property {string} congelamentoInventario
+ * @property {string} inventario
+ * @property {string} congelamento
+ * @property {string} estateTax
+ * @property {string} forms
+ * @property {string} formsNecessarios
+ * @property {string} [alertaSucessorio]
+ */
+
+/**
+ * @typedef {Object} AtivoIsentoEstateTax
+ * @property {string} id
+ * @property {string} nome
+ * @property {string} categoria
+ */
+
+/**
+ * @typedef {Object} FaixaEstateTax
+ * @property {number} faixa
+ * @property {number} de
+ * @property {number} ate
+ * @property {number} aliquota
+ * @property {number} aliquotaPercentual
+ * @property {number} baseMaxima
+ * @property {number} impostoAcumuladoAnterior
+ */
+
+/**
+ * @typedef {Object} DetalhamentoFaixaEstateTax
+ * @property {number} faixaNumero
+ * @property {number} de
+ * @property {number | null} ate
+ * @property {number} baseTributada
+ * @property {number} aliquota
+ * @property {number} impostoFaixa
+ */
+
+/**
+ * @typedef {Object} ResultadoEstateTaxProgressivo
+ * @property {number} totalUSD
+ * @property {number} isencaoUSD
+ * @property {number} excedenteUSD
+ * @property {number} impostoTotalUSD
+ * @property {number} aliquotaEfetivaExcedente
+ * @property {number} aliquotaEfetivaTotal
+ * @property {number} aliquotaMarginal
+ * @property {string} fraseExplicativa
+ * @property {boolean} isento
+ * @property {DetalhamentoFaixaEstateTax[]} detalhamento
+ * @property {boolean} [isentoPorEstruturaPJ]
+ * @property {boolean} [isentoPorAtivo]
+ * @property {number} [saldoExpostoUSD]
+ */
+
+/**
+ * @typedef {Object} ParamsExposicaoEstateTax
+ * @property {number | string | null} [valorOffshoreUSD]
+ * @property {string | null} [tipoConta]
+ * @property {string[] | null} [ativosIsentos]
+ * @property {number | string | null} [cotaFalecidoPercentual]
+ * @property {number | string | null} [percentualUSSitus]
+ */
+
+/**
+ * @typedef {Object} ResultadoExposicaoEstateTax
+ * @property {string} status
+ * @property {string} mensagem
+ * @property {string} classeBadge
+ * @property {boolean} exposicao
+ * @property {number} [qtdIsentos]
+ * @property {string} tipoConta
+ * @property {RegraContaExterior} regrasConta
+ * @property {number} saldoTotalUSD
+ * @property {number} saldoRelevanteUSD
+ * @property {number} percUSSitus
+ * @property {number} saldoExpostoUSD
+ * @property {number} saldoIsentoUSD
+ * @property {number} [cotaFalecidoPercentual]
+ * @property {string} fraseExplicativa
+ * @property {ResultadoEstateTaxProgressivo} calculoProgressivo
+ */
+
+/**
+ * @typedef {Object} ResultadoEstimativaLei14754
+ * @property {number} saldoUSD
+ * @property {number} taxaRentabilidade
+ * @property {number} rendimentoAnualUSD
+ * @property {number} aliquotaPercentual
+ * @property {number} impostoAnualUSD
+ * @property {number} impostoAnualBRL
+ * @property {number} ptax
+ * @property {string} regra
+ */
+
+/**
+ * @typedef {Object} ResultadoValidacaoDoacaoIsenta
+ * @property {number} valorValido
+ * @property {boolean} excedeuLimite
+ * @property {number} limiteMaximo
+ */
+
+/**
+ * @typedef {Object} ResultadoCustosInventario
+ * @property {number} patrimonio
+ * @property {number} valorITCMD
+ * @property {number} valorHonorarios
+ * @property {number} valorCustas
+ * @property {number} totalPrejuizo
+ * @property {number} pctPrejuizoTotal
+ */
+
+/**
+ * @typedef {Object} ParamsMemoriaPrejuizo
+ * @property {number | string | null} [totalPatrimonio]
+ * @property {number | string | null} [valorPrevidencia]
+ * @property {number | string | null} [valorOffshore]
+ * @property {string | null} [estadoCivil]
+ * @property {string | null} [regime]
+ * @property {number | string | null} [bensParticulares]
+ * @property {number | string | null} [itcmd]
+ * @property {number | string | null} [honorarios]
+ * @property {number | string | null} [custas]
+ */
+
+/**
+ * @typedef {Object} ResultadoMemoriaPrejuizo
+ * @property {number} patrimonioBruto
+ * @property {number} valorPrevidencia
+ * @property {number} valorOffshore
+ * @property {number} subtotalLiquido
+ * @property {number} bensComuns
+ * @property {number} bensParticulares
+ * @property {number} meacao
+ * @property {number} multiplicadorRegime
+ * @property {boolean} temMeacao
+ * @property {string} regimeDescricao
+ * @property {number} baseTributavel
+ * @property {number} taxaITCMD
+ * @property {number} valorITCMD
+ * @property {number} taxaHonorarios
+ * @property {number} valorHonorarios
+ * @property {number} taxaCustas
+ * @property {number} valorCustas
+ * @property {number} taxaTotal
+ * @property {number} prejuizoTotal
+ * @property {number} pctSobrePatrimonio
+ */
+
+/**
+ * @typedef {Object} DadosPatrimonioPartilha
+ * @property {number | string | null} [totalPatrimonio]
+ * @property {number | string | null} [bens_particulares]
+ */
+
+/**
+ * @typedef {Object} DadosFamilia
+ * @property {string | null} [estadoCivil]
+ * @property {string | null} [regime]
+ * @property {string | null} [temFilhos]
+ * @property {number | string | null} [qtdFilhos]
+ * @property {string | null} [possuiPais]
+ * @property {number | string | null} [qtdPais]
+ * @property {string | null} [possuiColaterais]
+ * @property {number | string | null} [qtdColaterais]
+ */
+
+/**
+ * @typedef {Object} ResultadoPartilhaRegime
+ * @property {number} totalPatrimonio
+ * @property {string} regime
+ * @property {number} meacaoConjuge
+ * @property {number} herancaTransmitida
+ */
+
+/**
+ * @typedef {Object} ParamsPartilhaSucessoria
+ * @property {number | string | null} [totalPatrimonio]
+ * @property {number | string | null} [valorPrevidencia]
+ * @property {number | string | null} [valorOffshore]
+ * @property {number | string | null} [bensParticulares]
+ * @property {DadosFamilia | null} [familia]
+ */
+
+/**
+ * @typedef {Object} DetalhesPartilhaSucessoria
+ * @property {number} bensComuns
+ * @property {number} bensParticulares
+ * @property {number} cHerancaComuns
+ * @property {number} cHerancaParticulares
+ * @property {number} filhosComuns
+ * @property {number} filhosParticulares
+ * @property {number} paisComuns
+ * @property {number} paisParticulares
+ * @property {number} colateraisComuns
+ * @property {number} colateraisParticulares
+ * @property {number} uniaoComuns
+ * @property {number} uniaoParticulares
+ */
+
+/**
+ * @typedef {Object} ResultadoPartilhaSucessoria
+ * @property {number} totalCalculo
+ * @property {number} meacao
+ * @property {number} heranca
+ * @property {number} fatiaConjugeTotal
+ * @property {string[]} labels
+ * @property {number[]} fatias
+ * @property {DetalhesPartilhaSucessoria} detalhes
+ */
+
+/**
+ * @typedef {Object} InputsEstrategias
+ * @property {number | string | null} [doacao]
+ * @property {number | string | null} [itcmd]
+ * @property {number | string | null} [doacao_avista]
+ * @property {number | string | null} [previdencia]
+ * @property {number | string | null} [honorarios]
+ * @property {number | string | null} [custas]
+ * @property {number | string | null} [seguro_capital]
+ * @property {number | string | null} [seguro_idade]
+ */
+
+/**
+ * @typedef {Object} ResultadoEstrategiaGradual
+ * @property {number} pct
+ * @property {number} valorDoado
+ * @property {number} economiaITCMD
+ * @property {number} prejuizoAjustado
+ */
+
+/**
+ * @typedef {Object} ResultadoEstrategiaAVista
+ * @property {number} pct
+ * @property {number} valorDoado
+ * @property {number} itcmdAntecipado
+ */
+
+/**
+ * @typedef {Object} ResultadoEstrategiaPrevidencia
+ * @property {number} valor
+ * @property {number} economiaInventario
+ */
+
+/**
+ * @typedef {Object} ResultadoEstrategiaSeguro
+ * @property {number} capitalSeguro
+ * @property {number} idadeSegurado
+ * @property {number} premioAnual
+ * @property {number} premioMensal
+ */
+
+/**
+ * @typedef {Object} ResultadoEstrategias
+ * @property {ResultadoEstrategiaGradual} gradual
+ * @property {ResultadoEstrategiaAVista} aVista
+ * @property {ResultadoEstrategiaPrevidencia} previdencia
+ * @property {ResultadoEstrategiaSeguro} seguro
+ */
+
+/**
+ * @typedef {Object} PerfilUsuarioMaster
+ * @property {string | null} [id]
+ * @property {string | null} [email]
+ * @property {string | null} [full_name]
+ * @property {string | null} [role]
+ * @property {string | null} [ultimo_acesso]
+ * @property {string | null} [last_sign_in_at]
+ */
+
+/**
+ * @typedef {Object} RelatorioResumoMaster
+ * @property {string | null} [userId]
+ * @property {number | string | null} [totalPatrimonio]
+ * @property {string | null} [dataCriacao]
+ */
+
+/**
+ * @typedef {Object} MetricaUsabilidadeUsuario
+ * @property {string} id
+ * @property {string} email
+ * @property {string} full_name
+ * @property {string} role
+ * @property {string | null | undefined} ultimo_acesso
+ * @property {number} total_relatorios
+ * @property {number} total_patrimonio
+ */
+
+/**
+ * @typedef {Object} UsuarioPermissao
+ * @property {string} id
+ * @property {string | null} [role]
+ * @property {string | null} [profile_role]
+ */
+
+/**
+ * @param {TributarioGlobalScope} global
+ */
 (function (global) {
   'use strict';
 
-  // Tabela de Alíquotas Médias / Progressivas do ITCMD por Estado
+  /**
+   * Tabela de Alíquotas Médias / Progressivas do ITCMD por Estado.
+   * @type {Record<string, number>}
+   */
   const ALIQUOTAS_ITCMD_ESTADOS = {
     SP: 4.0,   // São Paulo (fixo 4% - simulação de reforma pode ir até 8%)
     RJ: 8.0,   // Rio de Janeiro (progressivo 4% a 8%)
@@ -24,7 +335,10 @@
     // Limite de isenção anual legal do ITCMD (2.500 UFESPs / SP como padrão de referência nacional)
     LIMITE_ISENCAO_ANUAL: 96050,
 
-    // Tipos de Conta no Exterior & Regras Sucessórias (Páginas 4 e 5 BTG Pactual)
+    /**
+     * Tipos de Conta no Exterior & Regras Sucessórias (Páginas 4 e 5 BTG Pactual).
+     * @type {Record<string, RegraContaExterior>}
+     */
     TIPOS_CONTA_EXTERIOR: {
       individual: {
         id: "individual",
@@ -89,7 +403,10 @@
       }
     },
 
-    // Ativos NÃO sujeitos ao US Estate Tax (Página 4 BTG Pactual)
+    /**
+     * Ativos NÃO sujeitos ao US Estate Tax (Página 4 BTG Pactual).
+     * @type {AtivoIsentoEstateTax[]}
+     */
     ATIVOS_ISENTOS_ESTATE_TAX: [
       { id: "tbills", nome: "T-Bills (Treasury Bills)", categoria: "Renda Fixa Pública" },
       { id: "bonds_federais", nome: "Bonds federais (US Treasuries)", categoria: "Renda Fixa Pública" },
@@ -102,8 +419,11 @@
       { id: "imovel_non_us", nome: "Imóvel localizado fora dos Estados Unidos", categoria: "Imóveis" }
     ],
 
-    // Tabela progressiva oficial de US Estate Tax para não-residentes (Página 3 BTG Pactual)
-    // Aplicada estritamente sobre a base que exceder a isenção geral de USD 60.000,00
+    /**
+     * Tabela progressiva oficial de US Estate Tax para não-residentes (Página 3 BTG Pactual).
+     * Aplicada estritamente sobre a base que exceder a isenção geral de USD 60.000,00.
+     * @type {FaixaEstateTax[]}
+     */
     FAIXAS_ESTATE_TAX: [
       { faixa: 1, de: 0, ate: 10000, aliquota: 0.18, aliquotaPercentual: 18, baseMaxima: 10000, impostoAcumuladoAnterior: 0 },
       { faixa: 2, de: 10000, ate: 20000, aliquota: 0.20, aliquotaPercentual: 20, baseMaxima: 10000, impostoAcumuladoAnterior: 1800 },
@@ -119,8 +439,12 @@
       { faixa: 12, de: 1000000, ate: Infinity, aliquota: 0.40, aliquotaPercentual: 40, baseMaxima: Infinity, impostoAcumuladoAnterior: 345800 }
     ],
 
-    // Calcula o US Estate Tax de forma progressiva
-    // Regra mandatória: O imposto incide exclusivamente sobre o valor excedente aos USD 60.000,00 e não sobre o total.
+    /**
+     * Calcula o US Estate Tax de forma progressiva.
+     * Regra mandatória: o imposto incide exclusivamente sobre o valor excedente aos USD 60.000,00 e não sobre o total.
+     * @param {number | string | null | undefined} valorTotalUSD
+     * @returns {ResultadoEstateTaxProgressivo}
+     */
     calcularEstateTaxProgressivo(valorTotalUSD) {
       const totalUSD = Math.max(0, Number(valorTotalUSD) || 0);
       const isencaoUSD = 60000;
@@ -144,6 +468,7 @@
 
       let impostoTotalUSD = 0;
       let aliquotaMarginal = 0;
+      /** @type {DetalhamentoFaixaEstateTax[]} */
       const detalhamento = [];
 
       for (let i = 0; i < this.FAIXAS_ESTATE_TAX.length; i++) {
@@ -187,7 +512,11 @@
       };
     },
 
-    // Analisa exposição a Estate Tax com suporte a tipos de conta, cota TIC, ativos isentos e proporção US Situs
+    /**
+     * Analisa exposição a US Estate Tax com suporte a tipos de conta, cota TIC, ativos isentos e proporção US Situs.
+     * @param {ParamsExposicaoEstateTax} [params={}]
+     * @returns {ResultadoExposicaoEstateTax}
+     */
     analisarExposicaoEstateTax(params = {}) {
       const valorUSD = Math.max(0, Number(params.valorOffshoreUSD) || 0);
       const tipoConta = String(params.tipoConta || "individual").toLowerCase().trim();
@@ -372,7 +701,13 @@
       };
     },
 
-    // Estimativa de IRPF Anual no exterior na Pessoa Física (Lei nº 14.754/2023 - 15% na DAA)
+    /**
+     * Estimativa de IRPF Anual no exterior na Pessoa Física (Lei nº 14.754/2023 - 15% na DAA).
+     * @param {number | string | null | undefined} saldoUSD
+     * @param {number | string | null} [rentabilidadeEstimada=0.05]
+     * @param {number | string | null} [ptax=5.5]
+     * @returns {ResultadoEstimativaLei14754}
+     */
     calcularEstimativaLei14754(saldoUSD, rentabilidadeEstimada = 0.05, ptax = 5.5) {
       const saldo = Math.max(0, Number(saldoUSD) || 0);
       const taxaRent = Math.max(0, Number(rentabilidadeEstimada) || 0.05);
@@ -394,13 +729,21 @@
       };
     },
 
-    // Consulta de regras da conta exterior com fallback seguro para Conta Individual
+    /**
+     * Consulta de regras da conta exterior com fallback seguro para Conta Individual.
+     * @param {string | null | undefined} tipoId
+     * @returns {RegraContaExterior}
+     */
     obterRegrasContaExterior(tipoId) {
       const chave = String(tipoId || "individual").toLowerCase().trim();
       return this.TIPOS_CONTA_EXTERIOR[chave] || this.TIPOS_CONTA_EXTERIOR.individual;
     },
 
-    // Valida e aplica trava ao valor anual de doação isenta
+    /**
+     * Valida e aplica trava ao valor anual de doação isenta.
+     * @param {number | string | null | undefined} valor
+     * @returns {ResultadoValidacaoDoacaoIsenta}
+     */
     validarLimiteDoacaoIsenta(valor) {
       const num = Math.max(0, Number(valor) || 0);
       const excedeu = num > this.LIMITE_ISENCAO_ANUAL;
@@ -411,14 +754,25 @@
       };
     },
 
-    // Obter alíquota estimada do ITCMD por Estado
+    /**
+     * Obter alíquota estimada do ITCMD por Estado.
+     * @param {string | null | undefined} uf
+     * @returns {number}
+     */
     obterAliquotaITCMD(uf) {
       if (!uf) return 4.0;
       const ufUpper = String(uf).toUpperCase().trim();
       return ALIQUOTAS_ITCMD_ESTADOS[ufUpper] !== undefined ? ALIQUOTAS_ITCMD_ESTADOS[ufUpper] : 4.0;
     },
 
-    // Calcular custo bruto do inventário (ITCMD + Honorários + Custas)
+    /**
+     * Calcular custo bruto do inventário (ITCMD + Honorários + Custas).
+     * @param {number | string | null | undefined} totalPatrimonio
+     * @param {number | string | null | undefined} aliquotaITCMD
+     * @param {number | string | null | undefined} pctHonorarios
+     * @param {number | string | null | undefined} pctCustas
+     * @returns {ResultadoCustosInventario}
+     */
     calcularCustosInventario(totalPatrimonio, aliquotaITCMD, pctHonorarios, pctCustas) {
       const patrimonio = Math.max(0, Number(totalPatrimonio) || 0);
       const itcmdPct = Math.max(0, Number(aliquotaITCMD) || 0) / 100;
@@ -442,7 +796,11 @@
       };
     },
 
-    // Gera a memória de cálculo analítica e auditável do prejuízo tributário
+    /**
+     * Gera a memória de cálculo analítica e auditável do prejuízo tributário.
+     * @param {ParamsMemoriaPrejuizo | null | undefined} params
+     * @returns {ResultadoMemoriaPrejuizo}
+     */
     calcularMemoriaPrejuizo(params) {
       const p = params || {};
       const patrimonioBruto = Math.max(0, Number(p.totalPatrimonio) || 0);
@@ -527,7 +885,13 @@
       };
     },
 
-    // Calcular partilha de bens (Meação vs. Herança)
+    /**
+     * Calcular partilha de bens (Meação vs. Herança).
+     * @param {DadosPatrimonioPartilha | null | undefined} dadosPatrimonio
+     * @param {DadosFamilia | null | undefined} familia
+     * @param {number | string | null} [totalPatrimonio=0]
+     * @returns {ResultadoPartilhaRegime}
+     */
     calcularPartilhaRegime(dadosPatrimonio, familia, totalPatrimonio = 0) {
       const dp = dadosPatrimonio || {};
       const fam = familia || {};
@@ -575,8 +939,12 @@
       };
     },
 
-    // Calcular partilha sucessória completa (Código Civil Brasileiro - Arts. 1.829 a 1.839)
-    // Função pura: recebe parâmetros sem efeitos colaterais e sem dependência de DOM ou storage
+    /**
+     * Calcular partilha sucessória completa (Código Civil Brasileiro - Arts. 1.829 a 1.839).
+     * Função pura: recebe parâmetros sem efeitos colaterais e sem dependência de DOM ou storage.
+     * @param {ParamsPartilhaSucessoria | null | undefined} parametros
+     * @returns {ResultadoPartilhaSucessoria}
+     */
     calcularPartilhaSucessoria(parametros) {
       const params = parametros || {};
       const fam = params.familia || {};
@@ -711,7 +1079,9 @@
       }
 
       // Montagem de quotas, fatias e labels estruturados
+      /** @type {string[]} */
       const labels = [];
+      /** @type {number[]} */
       const fatias = [];
 
       const totalHerancaConjuge = cHerancaComuns + cHerancaParticulares;
@@ -780,7 +1150,13 @@
       };
     },
 
-    // Calcular as 4 Estratégias de Preservação e Liquidez Sucessória
+    /**
+     * Calcular as 4 Estratégias de Preservação e Liquidez Sucessória.
+     * @param {number | string | null | undefined} totalPatrimonio
+     * @param {number | string | null | undefined} prejuizoBruto
+     * @param {InputsEstrategias | null | undefined} inputs
+     * @returns {ResultadoEstrategias}
+     */
     calcularEstrategias(totalPatrimonio, prejuizoBruto, inputs) {
       const patrimonio = Math.max(0, Number(totalPatrimonio) || 0);
       const prejuizo = Math.max(0, Number(prejuizoBruto) || 0);
@@ -838,9 +1214,13 @@
     },
 
     /**
-     * 9. Consolida métricas de usabilidade por usuário (acessos e relatórios gerados) para o Painel Master
+     * 9. Consolida métricas de usabilidade por usuário (acessos e relatórios gerados) para o Painel Master.
+     * @param {PerfilUsuarioMaster[] | null} [perfis=[]]
+     * @param {RelatorioResumoMaster[] | null} [relatorios=[]]
+     * @returns {MetricaUsabilidadeUsuario[]}
      */
     consolidarUsabilidadeMaster(perfis = [], relatorios = []) {
+      /** @type {Map<string, MetricaUsabilidadeUsuario>} */
       const mapa = new Map();
       const masterUids = Array.isArray(global.MASTER_UIDS_AUTORIZADOS)
         ? global.MASTER_UIDS_AUTORIZADOS
@@ -882,7 +1262,11 @@
     },
 
     /**
-     * 10. Filtra relatórios conforme perfil do usuário (Master tem acesso completo a todos os relatórios)
+     * 10. Filtra relatórios conforme perfil do usuário (Master tem acesso completo a todos os relatórios).
+     * @template {RelatorioResumoMaster} T
+     * @param {T[] | null} [relatorios=[]]
+     * @param {UsuarioPermissao | null} [usuario=null]
+     * @returns {T[]}
      */
     filtrarRelatoriosPorPermissao(relatorios = [], usuario = null) {
       if (!usuario || !Array.isArray(relatorios)) return [];
@@ -906,4 +1290,4 @@
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = TributarioEngine;
   }
-})(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this));
+})(/** @type {TributarioGlobalScope} */ (typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this)));
