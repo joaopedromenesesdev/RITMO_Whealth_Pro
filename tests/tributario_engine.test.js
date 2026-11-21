@@ -1893,6 +1893,303 @@
       });
     }
 
+    // ── TESTE 45: Casos Extremos do Motor Tributário (Zero, Limites de Faixa, Altas Magnitudes e Nulos/Parciais) ──
+    console.log("\n-> Teste 45: Casos Extremos do Motor Tributário (Edge Cases & Proteção Anti-NaN)");
+    const semNaN = (valor) => {
+      if (typeof valor === "number") return Number.isFinite(valor);
+      if (Array.isArray(valor)) return valor.every(semNaN);
+      if (valor && typeof valor === "object") return Object.values(valor).every(semNaN);
+      return true;
+    };
+
+    // 45.A — Valores zerados
+    const etZero = engine.calcularEstateTaxProgressivo(0);
+    assert(
+      etZero.totalUSD === 0 && etZero.excedenteUSD === 0 && etZero.impostoTotalUSD === 0 &&
+      etZero.aliquotaEfetivaTotal === 0 && etZero.aliquotaMarginal === 0 &&
+      etZero.isento === true && etZero.detalhamento.length === 0 && semNaN(etZero),
+      "Edge[Zero]: calcularEstateTaxProgressivo(0) retorna isento sem NaN"
+    );
+
+    const invZero = engine.calcularCustosInventario(0, 0, 0, 0);
+    assert(
+      invZero.patrimonio === 0 && invZero.valorITCMD === 0 && invZero.valorHonorarios === 0 &&
+      invZero.valorCustas === 0 && invZero.totalPrejuizo === 0 && invZero.pctPrejuizoTotal === 0 && semNaN(invZero),
+      "Edge[Zero]: calcularCustosInventario(0, 0, 0, 0) evita 0/0 NaN"
+    );
+
+    const memZero = engine.calcularMemoriaPrejuizo({
+      totalPatrimonio: 0, valorPrevidencia: 0, valorOffshore: 0, itcmd: 0, honorarios: 0, custas: 0
+    });
+    assert(
+      memZero.subtotalLiquido === 0 && memZero.baseTributavel === 0 &&
+      memZero.prejuizoTotal === 0 && memZero.pctSobrePatrimonio === 0 && semNaN(memZero),
+      "Edge[Zero]: calcularMemoriaPrejuizo com patrimônio zerado retorna 0 sem NaN"
+    );
+
+    const memDeducaoExcedente = engine.calcularMemoriaPrejuizo({
+      totalPatrimonio: 500000, valorPrevidencia: 400000, valorOffshore: 300000, itcmd: 8, honorarios: 5, custas: 1.5
+    });
+    assert(
+      memDeducaoExcedente.subtotalLiquido === 0 && memDeducaoExcedente.baseTributavel === 0 &&
+      memDeducaoExcedente.prejuizoTotal === 0 && semNaN(memDeducaoExcedente),
+      "Edge[Zero]: calcularMemoriaPrejuizo com deduções maiores que patrimônio trava base em 0"
+    );
+
+    const partZero = engine.calcularPartilhaSucessoria({
+      totalPatrimonio: 0,
+      familia: { estadoCivil: "casado", regime: "comunhao_parcial", temFilhos: "sim", qtdFilhos: 2 }
+    });
+    assert(
+      partZero.totalCalculo === 0 && partZero.meacao === 0 && partZero.heranca === 0 &&
+      partZero.fatias.length === 0 && partZero.labels.length === 0 && semNaN(partZero),
+      "Edge[Zero]: calcularPartilhaSucessoria com patrimônio 0 gera fatias vazias sem NaN"
+    );
+
+    const estZero = engine.calcularEstrategias(0, 0, { doacao: 0, doacao_avista: 0, previdencia: 0, seguro_capital: 0 });
+    assert(
+      estZero.gradual.valorDoado === 0 && estZero.aVista.itcmdAntecipado === 0 &&
+      estZero.previdencia.economiaInventario === 0 && estZero.seguro.premioMensal === 0 && semNaN(estZero),
+      "Edge[Zero]: calcularEstrategias com zeros retorna métricas zeradas sem NaN"
+    );
+
+    const leiZero = engine.calcularEstimativaLei14754(0, 0.05, 5.5);
+    assert(
+      leiZero.saldoUSD === 0 && leiZero.rendimentoAnualUSD === 0 &&
+      leiZero.impostoAnualUSD === 0 && leiZero.impostoAnualBRL === 0 && semNaN(leiZero),
+      "Edge[Zero]: calcularEstimativaLei14754(0) retorna imposto zero sem NaN"
+    );
+
+    const doaZero = engine.validarLimiteDoacaoIsenta(0);
+    assert(
+      doaZero.valorValido === 0 && doaZero.excedeuLimite === false && semNaN(doaZero),
+      "Edge[Zero]: validarLimiteDoacaoIsenta(0) aceita zero sem exceder limite"
+    );
+
+    // 45.B — Faixas-limite de alíquota (US Estate Tax, Limite Doação Isenta e ITCMD)
+    const etLimiteIsencao = engine.calcularEstateTaxProgressivo(60000);
+    assert(
+      etLimiteIsencao.excedenteUSD === 0 && etLimiteIsencao.impostoTotalUSD === 0 &&
+      etLimiteIsencao.isento === true && etLimiteIsencao.aliquotaMarginal === 0 && semNaN(etLimiteIsencao),
+      "Edge[Faixa]: Estate Tax em USD 60.000 exatos permanece isento (0 imposto)"
+    );
+
+    const etCentavoAcima = engine.calcularEstateTaxProgressivo(60000.01);
+    assert(
+      etCentavoAcima.excedenteUSD === 0.01 && etCentavoAcima.isento === false &&
+      etCentavoAcima.aliquotaMarginal === 18 && etCentavoAcima.detalhamento.length === 1 && semNaN(etCentavoAcima),
+      "Edge[Faixa]: Estate Tax em USD 60.000,01 entra na Faixa 1 (18%)"
+    );
+
+    const etTetoFaixa1 = engine.calcularEstateTaxProgressivo(70000);
+    assert(
+      etTetoFaixa1.excedenteUSD === 10000 && etTetoFaixa1.impostoTotalUSD === 1800 &&
+      etTetoFaixa1.aliquotaMarginal === 18 && etTetoFaixa1.detalhamento.length === 1 && semNaN(etTetoFaixa1),
+      "Edge[Faixa]: Estate Tax no teto da Faixa 1 (USD 70.000) cobra exatamente USD 1.800"
+    );
+
+    const etEntradaFaixa2 = engine.calcularEstateTaxProgressivo(70001);
+    assert(
+      etEntradaFaixa2.impostoTotalUSD === 1800.2 && etEntradaFaixa2.aliquotaMarginal === 20 &&
+      etEntradaFaixa2.detalhamento.length === 2 && semNaN(etEntradaFaixa2),
+      "Edge[Faixa]: Estate Tax em USD 70.001 cruza para Faixa 2 (20%) com imposto USD 1.800,20"
+    );
+
+    const etTetoFaixa11 = engine.calcularEstateTaxProgressivo(1060000);
+    assert(
+      etTetoFaixa11.excedenteUSD === 1000000 && etTetoFaixa11.impostoTotalUSD === 345800 &&
+      etTetoFaixa11.aliquotaMarginal === 39 && etTetoFaixa11.detalhamento.length === 11 && semNaN(etTetoFaixa11),
+      "Edge[Faixa]: Estate Tax no teto da Faixa 11 (USD 1.060.000) totaliza exatamente USD 345.800 (39%)"
+    );
+
+    const etEntradaFaixa12 = engine.calcularEstateTaxProgressivo(1060001);
+    assert(
+      etEntradaFaixa12.impostoTotalUSD === 345800.4 && etEntradaFaixa12.aliquotaMarginal === 40 &&
+      etEntradaFaixa12.detalhamento.length === 12 && etEntradaFaixa12.detalhamento[11].ate === null && semNaN(etEntradaFaixa12),
+      "Edge[Faixa]: Estate Tax em USD 1.060.001 entra na faixa máxima de 40% (USD 345.800,40)"
+    );
+
+    const expLimite60k = engine.analisarExposicaoEstateTax({ valorOffshoreUSD: 60000, tipoConta: "individual" });
+    const expAcima60k = engine.analisarExposicaoEstateTax({ valorOffshoreUSD: 60000.01, tipoConta: "individual" });
+    assert(
+      expLimite60k.status === "dentro_limite_isencao" && expLimite60k.exposicao === false && semNaN(expLimite60k) &&
+      expAcima60k.status === "potencial_exposicao" && expAcima60k.exposicao === true && semNaN(expAcima60k),
+      "Edge[Faixa]: analisarExposicaoEstateTax alterna exatamente em USD 60.000 vs USD 60.000,01"
+    );
+
+    const doaLimiteExato = engine.validarLimiteDoacaoIsenta(96050);
+    const doaAcimaCentavo = engine.validarLimiteDoacaoIsenta(96050.01);
+    assert(
+      doaLimiteExato.valorValido === 96050 && doaLimiteExato.excedeuLimite === false &&
+      doaAcimaCentavo.valorValido === 96050 && doaAcimaCentavo.excedeuLimite === true,
+      "Edge[Faixa]: validarLimiteDoacaoIsenta trava exatamente acima de R$ 96.050,00"
+    );
+
+    assert(
+      engine.obterAliquotaITCMD(" sp ") === 4.0 && engine.obterAliquotaITCMD("rj") === 8.0 &&
+      engine.obterAliquotaITCMD("df") === 6.0 && engine.obterAliquotaITCMD("ZZ") === 4.0,
+      "Edge[Faixa]: obterAliquotaITCMD normaliza espaços/caixa baixa e faz fallback para 4.0%"
+    );
+
+    // 45.C — Patrimônio muito alto (precisão numérica)
+    const invAlto = engine.calcularCustosInventario(1e12, 8, 5, 1.5);
+    assert(
+      invAlto.valorITCMD === 8e10 && invAlto.valorHonorarios === 5e10 && invAlto.valorCustas === 1.5e10 &&
+      invAlto.totalPrejuizo === 1.45e11 && Math.abs(invAlto.pctPrejuizoTotal - 14.5) < 1e-9 && semNaN(invAlto),
+      "Edge[AltoValor]: calcularCustosInventario mantém precisão em patrimônio de R$ 1 trilhão"
+    );
+
+    const memAlto = engine.calcularMemoriaPrejuizo({
+      totalPatrimonio: 1e12,
+      estadoCivil: "casado",
+      regime: "comunhao_parcial",
+      bensParticulares: 2e11,
+      itcmd: 8,
+      honorarios: 5,
+      custas: 1.5
+    });
+    assert(
+      memAlto.bensComuns === 8e11 && memAlto.meacao === 4e11 &&
+      memAlto.baseTributavel === 6e11 && memAlto.prejuizoTotal === 8.7e10 && semNaN(memAlto),
+      "Edge[AltoValor]: calcularMemoriaPrejuizo mantém exatidão em R$ 1 trilhão com bens particulares"
+    );
+
+    const partAlto = engine.calcularPartilhaSucessoria({
+      totalPatrimonio: 1e12,
+      familia: { estadoCivil: "casado", regime: "comunhao_parcial", temFilhos: "sim", qtdFilhos: 3 }
+    });
+    const somaFatiasAlto = partAlto.fatias.reduce((acc, v) => acc + v, 0);
+    assert(
+      partAlto.meacao === 5e11 && partAlto.heranca === 5e11 &&
+      Math.abs(somaFatiasAlto - 1e12) < 1e-2 && semNaN(partAlto),
+      "Edge[AltoValor]: calcularPartilhaSucessoria conserva soma exata das fatias em R$ 1 trilhão"
+    );
+
+    const etBilhao = engine.calcularEstateTaxProgressivo(1000000000);
+    assert(
+      etBilhao.excedenteUSD === 999940000 && etBilhao.impostoTotalUSD === 399921800 &&
+      etBilhao.aliquotaMarginal === 40 && etBilhao.aliquotaEfetivaExcedente <= 40 && semNaN(etBilhao),
+      "Edge[AltoValor]: calcularEstateTaxProgressivo mantém precisão em USD 1 bilhão"
+    );
+
+    const estAlto = engine.calcularEstrategias(1e12, 1.45e11, {
+      doacao: 100, doacao_avista: 100, previdencia: 1e11,
+      itcmd: 8, honorarios: 5, custas: 1.5, seguro_capital: 1.45e11, seguro_idade: 60
+    });
+    assert(
+      estAlto.gradual.valorDoado === 1e12 && estAlto.gradual.economiaITCMD === 8e10 &&
+      estAlto.gradual.prejuizoAjustado === 6.5e10 && semNaN(estAlto),
+      "Edge[AltoValor]: calcularEstrategias preserva precisão finita em R$ 1 trilhão"
+    );
+
+    // 45.D — Entradas nulas, indefinidas, parciais ou inválidas (sem NaN silencioso)
+    const etEntradasInvalidas = [null, undefined, "abc", -50000, NaN].map(v => engine.calcularEstateTaxProgressivo(v));
+    assert(
+      etEntradasInvalidas.every(r => r.impostoTotalUSD === 0 && r.isento === true && semNaN(r)),
+      "Edge[Nulo/Invalido]: calcularEstateTaxProgressivo sanitiza null/undefined/NaN/string/negativo sem NaN"
+    );
+
+    const expIndef = engine.analisarExposicaoEstateTax();
+    const expParcialNulo = engine.analisarExposicaoEstateTax({ valorOffshoreUSD: null, tipoConta: undefined, ativosIsentos: null });
+    assert(
+      expIndef.status === "sem_offshore" && expIndef.saldoTotalUSD === 0 && semNaN(expIndef) &&
+      expParcialNulo.status === "sem_offshore" && expParcialNulo.saldoTotalUSD === 0 && semNaN(expParcialNulo),
+      "Edge[Nulo/Parcial]: analisarExposicaoEstateTax trata chamada vazia e campos nulos sem NaN"
+    );
+
+    const expTicParcial = engine.analisarExposicaoEstateTax({
+      valorOffshoreUSD: 200000, tipoConta: "tic", cotaFalecidoPercentual: "", percentualUSSitus: ""
+    });
+    assert(
+      expTicParcial.cotaFalecidoPercentual === 50 && expTicParcial.percUSSitus === 100 &&
+      expTicParcial.saldoExpostoUSD === 100000 && semNaN(expTicParcial),
+      "Edge[Parcial]: analisarExposicaoEstateTax aplica defaults seguros para TIC com strings vazias"
+    );
+
+    const leiNulo = engine.calcularEstimativaLei14754(null, undefined, null);
+    assert(
+      leiNulo.saldoUSD === 0 && leiNulo.taxaRentabilidade === 0.05 &&
+      leiNulo.ptax === 5.5 && leiNulo.impostoAnualBRL === 0 && semNaN(leiNulo),
+      "Edge[Nulo]: calcularEstimativaLei14754 aplica defaults seguros para argumentos nulos/indefinidos"
+    );
+
+    assert(
+      engine.obterRegrasContaExterior(null).id === "individual" &&
+      engine.obterRegrasContaExterior(undefined).id === "individual" &&
+      engine.obterRegrasContaExterior("inexistente").id === "individual",
+      "Edge[Nulo]: obterRegrasContaExterior faz fallback para conta individual"
+    );
+
+    const doaInvalidas = [null, undefined, "abc", -1000, NaN].map(v => engine.validarLimiteDoacaoIsenta(v));
+    assert(
+      doaInvalidas.every(r => r.valorValido === 0 && r.excedeuLimite === false && semNaN(r)),
+      "Edge[Nulo/Invalido]: validarLimiteDoacaoIsenta sanitiza entradas inválidas para 0 sem NaN"
+    );
+
+    assert(
+      engine.obterAliquotaITCMD(null) === 4.0 &&
+      engine.obterAliquotaITCMD(undefined) === 4.0 &&
+      engine.obterAliquotaITCMD("") === 4.0,
+      "Edge[Nulo]: obterAliquotaITCMD retorna 4.0% para null/undefined/string vazia"
+    );
+
+    const invNulo = engine.calcularCustosInventario(null, undefined, "abc", -10);
+    assert(
+      invNulo.patrimonio === 0 && invNulo.totalPrejuizo === 0 && invNulo.pctPrejuizoTotal === 0 && semNaN(invNulo),
+      "Edge[Nulo/Invalido]: calcularCustosInventario sanitiza entradas nulas/negativas/texto sem NaN"
+    );
+
+    const memNulo = engine.calcularMemoriaPrejuizo(null);
+    const memVazio = engine.calcularMemoriaPrejuizo({});
+    assert(
+      memNulo.prejuizoTotal === 0 && memNulo.baseTributavel === 0 && semNaN(memNulo) &&
+      memVazio.prejuizoTotal === 0 && memVazio.baseTributavel === 0 && semNaN(memVazio),
+      "Edge[Nulo/Parcial]: calcularMemoriaPrejuizo aceita null e objeto vazio sem NaN"
+    );
+
+    const regNulo = engine.calcularPartilhaRegime(null, null, undefined);
+    assert(
+      regNulo.totalPatrimonio === 0 && regNulo.meacaoConjuge === 0 &&
+      regNulo.herancaTransmitida === 0 && regNulo.regime === "comunhao_parcial" && semNaN(regNulo),
+      "Edge[Nulo]: calcularPartilhaRegime trata parâmetros nulos/indefinidos sem NaN"
+    );
+
+    const partNulo = engine.calcularPartilhaSucessoria(null);
+    const partParcial = engine.calcularPartilhaSucessoria({ totalPatrimonio: 500000 });
+    assert(
+      partNulo.totalCalculo === 0 && partNulo.meacao === 0 && partNulo.heranca === 0 && semNaN(partNulo) &&
+      partParcial.totalCalculo === 500000 && partParcial.labels[0] === "Município / DF / União" &&
+      partParcial.fatias[0] === 500000 && semNaN(partParcial),
+      "Edge[Nulo/Parcial]: calcularPartilhaSucessoria trata null e objeto parcial sem familia sem NaN"
+    );
+
+    const estNulo = engine.calcularEstrategias(null, undefined, null);
+    const estClamp = engine.calcularEstrategias(1000000, 100000, { doacao: 150, doacao_avista: -20 });
+    assert(
+      estNulo.gradual.valorDoado === 0 && estNulo.seguro.capitalSeguro === 0 && semNaN(estNulo) &&
+      estClamp.gradual.pct === 100 && estClamp.aVista.pct === 0 && semNaN(estClamp),
+      "Edge[Nulo/Clamp]: calcularEstrategias trata nulos e aplica clamping [0..100] sem NaN"
+    );
+
+    const usabNulo = engine.consolidarUsabilidadeMaster(null, null);
+    const usabParcial = engine.consolidarUsabilidadeMaster(
+      [null, { id: "" }, { id: "u1" }],
+      [null, { userId: "u1", totalPatrimonio: "abc" }]
+    );
+    assert(
+      Array.isArray(usabNulo) && usabNulo.length === 0 &&
+      usabParcial.length === 1 && usabParcial[0].total_relatorios === 1 &&
+      usabParcial[0].total_patrimonio === 0 && usabParcial[0].role === "assessor" && semNaN(usabParcial),
+      "Edge[Nulo/Parcial]: consolidarUsabilidadeMaster ignora registros nulos/inválidos sem NaN"
+    );
+
+    assert(
+      engine.filtrarRelatoriosPorPermissao(null, null).length === 0 &&
+      engine.filtrarRelatoriosPorPermissao([{ userId: "u1" }], null).length === 0 &&
+      engine.filtrarRelatoriosPorPermissao(null, { id: "u1", role: "assessor" }).length === 0,
+      "Edge[Nulo]: filtrarRelatoriosPorPermissao retorna lista vazia para entradas nulas"
+    );
+
     console.log("\n=================================================");
     console.log(`RESUMO DA SUÍTE DE TESTES:`);
     console.log(`   Total: ${totalTestes} | Passados: ${testesPassados} | Falhas: ${testesFalhados}`);
