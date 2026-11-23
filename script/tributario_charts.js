@@ -116,33 +116,100 @@
       });
     },
 
+    // Helper defensivo anti-XSS para interpolação em templates HTML
+    escapeTexto(valor) {
+      if (typeof window.escapeHTML === 'function') {
+        return window.escapeHTML(valor);
+      }
+      return String(valor ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    },
+
     // Gráfico 3B: Canibalização de Liquidez / Asfixiamento do Caixa (Abordagem 1)
     renderizarGraficoCanibalizacaoLiquidez(canvasId, dados) {
       this.initPlugins();
       const canvas = document.getElementById(canvasId);
 
-      const liquidezAtual = Number(dados?.liquidezAtual) || 0;
-      const prejuizoAtual = Number(dados?.prejuizoAtual) || 0;
-      const liquidezProjetada = Number(dados?.liquidezProjetada) || 0;
-      const prejuizoProjetado = Number(dados?.prejuizoProjetado) || 0;
+      const liquidezAtual = Math.max(0, Number(dados?.liquidezAtual) || 0);
+      const prejuizoAtual = Math.max(0, Number(dados?.prejuizoAtual) || 0);
+      const liquidezProjetada = Math.max(0, Number(dados?.liquidezProjetada) || 0);
+      const prejuizoProjetado = Math.max(0, Number(dados?.prejuizoProjetado) || 0);
+      const anosProjecao = Math.max(0, Math.round(Number(dados?.anosProjecao) || 0));
+      const fatorCrescimento = Number(dados?.fatorCrescimento) > 0 ? Number(dados.fatorCrescimento) : 1;
 
-      const pctConsumoAtual = liquidezAtual > 0 ? (prejuizoAtual / liquidezAtual) * 100 : (prejuizoAtual > 0 ? 100 : 0);
-      const pctConsumoProjetado = liquidezProjetada > 0 ? (prejuizoProjetado / liquidezProjetada) * 100 : (prejuizoProjetado > 0 ? 100 : 0);
+      const siglaComposicao = String(dados?.siglaComposicao || 'RF + RV + Fundos');
+      const descricaoComposicao = String(dados?.descricaoComposicao || 'Renda Fixa + Renda Variável + Fundos');
+      const componentesAtivos = Array.isArray(dados?.componentesAtivos) ? dados.componentesAtivos : [
+        { sigla: 'RF', valor: Math.max(0, Number(dados?.rf) || 0) },
+        { sigla: 'RV', valor: Math.max(0, Number(dados?.rv) || 0) },
+        { sigla: 'Fundos', valor: Math.max(0, Number(dados?.inter) || 0) }
+      ];
 
-      const caixaRestanteAtual = Math.max(0, liquidezAtual - prejuizoAtual);
-      const deficitAtual = Math.max(0, prejuizoAtual - liquidezAtual);
+      const metricas = (window.TributarioEngine && typeof window.TributarioEngine.calcularMetricasCanibalizacao === 'function')
+        ? window.TributarioEngine.calcularMetricasCanibalizacao({
+          liquidezAtual,
+          prejuizoAtual,
+          liquidezProjetada,
+          prejuizoProjetado
+        })
+        : (() => {
+          const semLiquidezAtual = liquidezAtual <= 0 && prejuizoAtual > 0;
+          const semLiquidezProjetada = liquidezProjetada <= 0 && prejuizoProjetado > 0;
+          const pctConsumoAtual = Math.round(liquidezAtual) > 0
+            ? (Math.round(prejuizoAtual) / Math.round(liquidezAtual)) * 100
+            : (prejuizoAtual > 0 ? null : 0);
+          const pctConsumoProjetado = Math.round(liquidezProjetada) > 0
+            ? (Math.round(prejuizoProjetado) / Math.round(liquidezProjetada)) * 100
+            : (prejuizoProjetado > 0 ? null : 0);
+          return {
+            semLiquidezAtual,
+            semLiquidezProjetada,
+            pctConsumoAtual,
+            pctConsumoProjetado,
+            caixaRestanteAtual: Math.max(0, liquidezAtual - prejuizoAtual),
+            deficitAtual: Math.max(0, prejuizoAtual - liquidezAtual),
+            caixaRestanteProjetado: Math.max(0, liquidezProjetada - prejuizoProjetado),
+            deficitProjetado: Math.max(0, prejuizoProjetado - liquidezProjetada),
+            textoComprometimentoAtual: semLiquidezAtual ? 'Sem caixa' : `${(pctConsumoAtual || 0).toFixed(1).replace('.', ',')}% drenados`,
+            textoComprometimentoProjetado: semLiquidezProjetada ? 'Sem caixa' : `${(pctConsumoProjetado || 0).toFixed(1).replace('.', ',')}% da liquidez`
+          };
+        })();
 
-      const caixaRestanteProjetado = Math.max(0, liquidezProjetada - prejuizoProjetado);
-      const deficitProjetado = Math.max(0, prejuizoProjetado - liquidezProjetada);
+      const labelProjecao = anosProjecao > 0 ? `Projeção Futura (${anosProjecao} anos)` : 'Projeção Futura';
+      const notaProjecaoLegenda = anosProjecao > 0 ? ` · Projetada em ${anosProjecao} anos` : '';
 
-      // Injeta legenda da Abordagem 1
+      // Injeta legenda da Abordagem 1 com composição explícita da barra azul
       const idLegendaCanib = dados?.legendaContainerId || "canibalizacao_legenda_container";
       const legendaContainer = document.getElementById(idLegendaCanib) || document.getElementById("erosao_legenda_container");
       if (legendaContainer) {
+        const descSegura = this.escapeTexto(descricaoComposicao);
+        const notaProjSegura = this.escapeTexto(notaProjecaoLegenda);
+        const fmtBRL = (v) => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+        const chavesAtivas = componentesAtivos.map(c => c.chave);
+        const parcelas = componentesAtivos
+          .filter(c => Number(c.valor) > 0)
+          .map(c => `${c.sigla} ${fmtBRL(c.valor)}`);
+        const excluidos = ['imóveis', 'empresas', 'bens'];
+        if (!chavesAtivas.includes('prev')) excluidos.push('previdência');
+        if (!chavesAtivas.includes('offshore')) excluidos.push('offshore');
+        const fatorTxt = fatorCrescimento.toFixed(2).replace('.', ',');
+        const textoHoje = parcelas.length > 0
+          ? `Hoje = ${parcelas.join(' + ')} = ${fmtBRL(liquidezAtual)}.`
+          : `Hoje = nenhuma aplicação em ${siglaComposicao} cadastrada (R$ 0).`;
+        const textoFuturo = anosProjecao > 0
+          ? ` Futuro = essa mesma reserva corrigida pelo crescimento da Evolução Patrimonial em ${anosProjecao} anos (× ${fatorTxt}) = ${fmtBRL(liquidezProjetada)}.`
+          : ` Futuro = essa mesma reserva corrigida pelo crescimento patrimonial (× ${fatorTxt}) = ${fmtBRL(liquidezProjetada)}.`;
+        const textoExclusao = ` Não entram: ${excluidos.join(', ')}.`;
+        const notaComoLer = this.escapeTexto(textoHoje + textoFuturo + textoExclusao);
+
         legendaContainer.innerHTML = `
           <div class="legenda-item">
             <span class="legenda-dot" style="background: #0f172a;"></span>
-            <span class="legenda-texto"><strong>Liquidez Total Disponível</strong> (Reserva em Dinheiro/Caixa)</span>
+            <span class="legenda-texto"><strong>Liquidez Financeira Disponível</strong> (${descSegura}${notaProjSegura})</span>
           </div>
           <div class="legenda-item">
             <span class="legenda-dot" style="background: #dc2626;"></span>
@@ -152,6 +219,9 @@
             <span class="legenda-dot" style="background: #f59e0b;"></span>
             <span class="legenda-texto"><strong>Risco Operacional:</strong> Contas bancárias e investimentos bloqueados até alvará</span>
           </div>
+          <div class="legenda-item" style="flex-basis: 100%; align-items: flex-start; padding-top: 8px; border-top: 1px dashed #e4e4e7;">
+            <span class="legenda-texto" style="line-height: 1.5;"><strong>Como ler as barras azuis:</strong> ${notaComoLer}</span>
+          </div>
         `;
       }
 
@@ -159,24 +229,32 @@
       const idKpisCanib = dados?.kpisContainerId || "canibalizacao_kpis_grid_container";
       const kpisGrid = document.getElementById(idKpisCanib) || document.getElementById("erosao_kpis_grid_container");
       if (kpisGrid) {
-        const isDeficit = deficitAtual > 0;
+        const isDeficit = metricas.deficitAtual > 0;
+        const isCriticoAtual = metricas.semLiquidezAtual || (metricas.pctConsumoAtual !== null && metricas.pctConsumoAtual >= 50);
+        const subAtual = metricas.semLiquidezAtual
+          ? `100% descoberto — R$ ${prejuizoAtual.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} sem liquidez cadastrada`
+          : `R$ ${prejuizoAtual.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} exigidos em dinheiro vivo`;
+        const subFuturo = metricas.semLiquidezProjetada
+          ? `100% descoberto — R$ ${prejuizoProjetado.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} sem caixa projetado`
+          : `R$ ${prejuizoProjetado.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} retirados do caixa projetado${anosProjecao > 0 ? ` (${anosProjecao} anos)` : ''}`;
+
         kpisGrid.innerHTML = `
-          <div class="erosao-kpi-card ${pctConsumoAtual >= 50 ? 'kpi-perigo-critico' : 'kpi-alerta'}">
+          <div class="erosao-kpi-card ${isCriticoAtual ? 'kpi-perigo-critico' : 'kpi-alerta'}">
             <span class="kpi-label">Comprometimento do Caixa Atual</span>
-            <span class="kpi-valor" style="color: #dc2626;">${pctConsumoAtual.toFixed(1).replace(".", ",")}% drenados</span>
-            <span class="kpi-sub">R$ ${prejuizoAtual.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} exigidos em dinheiro vivo</span>
+            <span class="kpi-valor" style="color: #dc2626;">${this.escapeTexto(metricas.textoComprometimentoAtual)}</span>
+            <span class="kpi-sub">${this.escapeTexto(subAtual)}</span>
           </div>
           <div class="erosao-kpi-card ${isDeficit ? 'kpi-perigo-critico' : ''}">
             <span class="kpi-label">${isDeficit ? 'Déficit Imediato de Caixa' : 'Caixa Restante para Sobrevivência'}</span>
             <span class="kpi-valor" style="color: ${isDeficit ? '#dc2626' : '#0f172a'};">
-              ${isDeficit ? '- R$ ' + deficitAtual.toLocaleString("pt-BR", { maximumFractionDigits: 0 }) : 'R$ ' + caixaRestanteAtual.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+              ${isDeficit ? '- R$ ' + metricas.deficitAtual.toLocaleString("pt-BR", { maximumFractionDigits: 0 }) : 'R$ ' + metricas.caixaRestanteAtual.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
             </span>
-            <span class="kpi-sub">${isDeficit ? 'A família precisará vender imóveis às pressas' : 'Saldo livre após pagar guias fiscais e custas'}</span>
+            <span class="kpi-sub">${isDeficit ? 'A família precisará vender imóveis/bens com deságio' : 'Saldo livre após pagar guias fiscais e custas'}</span>
           </div>
-          <div class="erosao-kpi-card">
+          <div class="erosao-kpi-card ${metricas.semLiquidezProjetada ? 'kpi-perigo-critico' : ''}">
             <span class="kpi-label">Comprometimento Futuro</span>
-            <span class="kpi-valor" style="color: #b91c1c;">${pctConsumoProjetado.toFixed(1).replace(".", ",")}% da liquidez</span>
-            <span class="kpi-sub">R$ ${prejuizoProjetado.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} retirados do caixa projetado</span>
+            <span class="kpi-valor" style="color: #b91c1c;">${this.escapeTexto(metricas.textoComprometimentoProjetado)}</span>
+            <span class="kpi-sub">${this.escapeTexto(subFuturo)}</span>
           </div>
           <div class="erosao-kpi-card kpi-alerta">
             <span class="kpi-label">Prazo Fatal SEFAZ / Justiça</span>
@@ -194,14 +272,19 @@
         } catch (_) {}
       }
 
+      const breakdownAtualTexto = componentesAtivos
+        .filter(c => Number(c.valor) > 0)
+        .map(c => `${c.sigla}: R$ ${Number(c.valor).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`)
+        .join(' | ');
+
       const ctx = canvas.getContext('2d');
       this.instancias[canvasId] = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: ['Cenário Atual', 'Projeção Futura'],
+          labels: ['Cenário Atual', labelProjecao],
           datasets: [
             {
-              label: 'Liquidez Disponível da Família',
+              label: `Liquidez Disponível (${siglaComposicao})`,
               data: [liquidezAtual, liquidezProjetada],
               backgroundColor: '#0f172a',
               borderRadius: 6,
@@ -256,11 +339,22 @@
                   const val = Number(context.raw) || 0;
                   const idx = context.dataIndex;
                   const liq = idx === 0 ? liquidezAtual : liquidezProjetada;
-                  const pct = liq > 0 ? ((val / liq) * 100).toFixed(1).replace('.', ',') + '%' : '100%';
                   if (context.datasetIndex === 1) {
-                    return ` ${context.dataset.label}: R$ ${val.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} (${pct} do caixa)`;
+                    if (liq <= 0 && val > 0) {
+                      return ` ${context.dataset.label}: R$ ${val.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} (Sem liquidez — 100% descoberto)`;
+                    }
+                    const pct = liq > 0 ? ((Math.round(val) / Math.round(liq)) * 100).toFixed(1).replace('.', ',') + '%' : '0,0%';
+                    return ` ${context.dataset.label}: R$ ${val.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} (${pct} da liquidez)`;
                   }
-                  return ` ${context.dataset.label}: R$ ${val.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`;
+                  const baseLabel = ` ${context.dataset.label}: R$ ${val.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`;
+                  if (idx === 0) {
+                    return breakdownAtualTexto ? [baseLabel, ` Composição: ${breakdownAtualTexto}`] : [baseLabel, ' Sem aplicações líquidas cadastradas'];
+                  }
+                  const fatorFmt = fatorCrescimento.toFixed(2).replace('.', ',');
+                  const descProj = anosProjecao > 0
+                    ? ` Reserva líquida projetada em ${anosProjecao} anos (× ${fatorFmt})`
+                    : ` Reserva líquida projetada (× ${fatorFmt})`;
+                  return [baseLabel, descProj];
                 }
               }
             },
@@ -268,10 +362,19 @@
               color: '#ffffff',
               anchor: 'center',
               align: 'center',
+              textAlign: 'center',
               font: { family: 'Outfit', weight: '700', size: 11 },
-              formatter: (val) => {
-                if (Number(val) <= 0) return '';
-                return 'R$ ' + Number(val).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+              formatter: (val, ctx) => {
+                const num = Number(val) || 0;
+                if (num <= 0) return '';
+                const valorTxt = 'R$ ' + num.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+                const maiorValor = Math.max(liquidezAtual, liquidezProjetada, prejuizoAtual, prejuizoProjetado, 1);
+                const barraPequena = (num / maiorValor) < 0.18;
+                if (ctx.datasetIndex !== 0 || barraPequena) return valorTxt;
+                const subtitulo = ctx.dataIndex === 0
+                  ? siglaComposicao
+                  : (anosProjecao > 0 ? `Projeção ${anosProjecao} anos` : 'Projetada');
+                return [valorTxt, subtitulo];
               }
             }
           }
@@ -483,7 +586,7 @@
           <div class="erosao-kpi-card kpi-perigo-critico">
             <span class="kpi-label">Destruição Patrimonial Futura</span>
             <span class="kpi-valor" style="color: #7f1d1d;">R$ ${perdaTotalProjetada.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}</span>
-            <span class="kpi-sub">Mais de 3/4 de milhão destruídos pela inércia</span>
+            <span class="kpi-sub">Perda total projetada somando impostos, custas e deságio</span>
           </div>
         `;
       }
@@ -740,23 +843,57 @@
       this.initPlugins();
       const canvas = document.getElementById(canvasId);
 
-      const prejuizoAtual = Number(dados?.prejuizoAtual) || 0;
-      const prejuizoProjetado = Number(dados?.prejuizoProjetado) || 0;
-      const totalAtual = Number(dados?.totalAtual) || 0;
-      const totalProjetado = Number(dados?.totalProjetado) || 0;
-      const anosProjecao = Number(dados?.anosProjecao) || 10;
+      const prejuizoAtual = Math.max(0, Number(dados?.prejuizoAtual) || 0);
+      const prejuizoProjetado = Math.max(0, Number(dados?.prejuizoProjetado) || 0);
+      const totalAtual = Math.max(0, Number(dados?.totalAtual) || 0);
+      const totalProjetado = Math.max(0, Number(dados?.totalProjetado) || 0);
+      const liquidezAtual = Math.max(0, Number(dados?.liquidezAtual) || 0);
+      const liquidezProjetada = Math.max(0, Number(dados?.liquidezProjetada) || 0);
+      const anosProjecao = Math.max(0, Math.round(Number(dados?.anosProjecao) || 10));
 
-      // Estimativa de rendimento mensal (benchmark conservador 0.7% a.m. líquido sobre ativos)
-      const rendimentoMensalEstimadoAtual = Math.max(1000, Math.round((totalAtual * 0.3) * 0.007));
-      const mesesTrabalhadosAtual = Math.min(120, Math.max(6, Math.round(prejuizoAtual / rendimentoMensalEstimadoAtual)));
+      const mat = (window.TributarioEngine && typeof window.TributarioEngine.calcularMaterializacaoPrejuizo === 'function')
+        ? window.TributarioEngine.calcularMaterializacaoPrejuizo({
+          prejuizoAtual,
+          prejuizoProjetado,
+          totalAtual,
+          totalProjetado,
+          liquidezAtual,
+          liquidezProjetada,
+          anosProjecao
+        })
+        : (() => {
+          const fmtCompacto = (v) => {
+            if (v >= 1000000) return 'R$ ' + (v / 1000000).toFixed(2).replace('.', ',').replace(/,00$/, '') + 'M';
+            if (v >= 1000) return 'R$ ' + Math.round(v / 1000) + 'k';
+            return 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+          };
+          const eqFallback = (v) => ({
+            valor: v,
+            valorCompacto: fmtCompacto(v),
+            titulo: v > 0 ? fmtCompacto(v) : 'Sem prejuízo estimado',
+            curto: v > 0 ? fmtCompacto(v) : 'Sem prejuízo',
+            subtitulo: v > 0 ? 'Valor equivalente drenado em custos de inventário' : 'Nenhum custo tributário projetado'
+          });
+          const usouLiq = liquidezAtual > 0;
+          const rendA = (usouLiq ? liquidezAtual : totalAtual * 0.3) * 0.007;
+          const rendP = (liquidezProjetada > 0 ? liquidezProjetada : totalProjetado * 0.3) * 0.007;
+          const mA = (prejuizoAtual > 0 && rendA > 0) ? Math.max(1, Math.round(prejuizoAtual / rendA)) : 0;
+          const mP = (prejuizoProjetado > 0 && rendP > 0) ? Math.max(1, Math.round(prejuizoProjetado / rendP)) : 0;
+          const txtM = (mA === 0 && mP === 0) ? '0 meses' : (mA === mP ? `~${mA} meses` : `~${Math.min(mA, mP)} a ${Math.max(mA, mP)} meses`);
+          return {
+            equivalenciaAtual: eqFallback(prejuizoAtual),
+            equivalenciaProjetada: eqFallback(prejuizoProjetado),
+            textoMeses: txtM,
+            subtituloMeses: usouLiq
+              ? 'Meses de rendimento líquido (0,7% a.m.) sobre sua liquidez financeira'
+              : 'Estimativa a 0,7% a.m. sobre 30% do patrimônio (sem liquidez cadastrada)',
+            custoDiarioInercia: Math.round(Math.max(0, prejuizoProjetado - prejuizoAtual) / Math.max(365, anosProjecao * 365))
+          };
+        })();
 
-      const rendimentoMensalEstimadoProj = Math.max(2500, Math.round((totalProjetado * 0.3) * 0.007));
-      const mesesTrabalhadosProj = Math.min(180, Math.max(12, Math.round(prejuizoProjetado / rendimentoMensalEstimadoProj)));
-
-      // Custo da inércia por mês e por dia
-      const deltaPerda = Math.max(0, prejuizoProjetado - prejuizoAtual);
-      const totalDias = Math.max(365, anosProjecao * 365);
-      const custoDiarioInercia = Math.round(deltaPerda / totalDias);
+      const eqAtual = mat.equivalenciaAtual;
+      const eqProjetada = mat.equivalenciaProjetada;
+      const labelProjecao = anosProjecao > 0 ? `Projeção Futura (${anosProjecao} anos)` : 'Projeção Futura';
 
       // Injeta legenda da Abordagem 4
       const idLegendaMat = dados?.legendaContainerId || "materializacao_legenda_container";
@@ -778,29 +915,29 @@
         `;
       }
 
-      // Injeta micro-cards de KPI de Choque (Abordagem 4)
+      // Injeta micro-cards de KPI de Choque (Abordagem 4 — 100% dinâmicos)
       const idKpisMat = dados?.kpisContainerId || "materializacao_kpis_grid_container";
       const kpisGrid = document.getElementById(idKpisMat) || document.getElementById("erosao_kpis_grid_container");
       if (kpisGrid) {
         kpisGrid.innerHTML = `
           <div class="erosao-kpi-card kpi-alerta">
             <span class="kpi-label">Equivalência Atual (R$ ${prejuizoAtual.toLocaleString("pt-BR", { maximumFractionDigits: 0 })})</span>
-            <span class="kpi-valor" style="color: #ef4444;">1 Veículo Zero Km</span>
-            <span class="kpi-sub">Ou 3 a 4 anos de mensalidades escolares de ponta entregues à SEFAZ</span>
+            <span class="kpi-valor" style="color: #ef4444;">${this.escapeTexto(eqAtual.titulo)}</span>
+            <span class="kpi-sub">${this.escapeTexto(eqAtual.subtitulo)}</span>
           </div>
           <div class="erosao-kpi-card kpi-perigo-critico">
             <span class="kpi-label">Equivalência Futura (R$ ${prejuizoProjetado.toLocaleString("pt-BR", { maximumFractionDigits: 0 })})</span>
-            <span class="kpi-valor" style="color: #dc2626;">1 Imóvel Residencial</span>
-            <span class="kpi-sub">O valor integral de 1 apartamento novo evaporado em burocracia</span>
+            <span class="kpi-valor" style="color: #dc2626;">${this.escapeTexto(eqProjetada.titulo)}</span>
+            <span class="kpi-sub">${this.escapeTexto(eqProjetada.subtitulo)}</span>
           </div>
           <div class="erosao-kpi-card">
             <span class="kpi-label">Rendimento Queimado (Hoje vs. Futuro)</span>
-            <span class="kpi-valor" style="color: #0f172a;">${mesesTrabalhadosAtual} a ${mesesTrabalhadosProj} meses</span>
-            <span class="kpi-sub">Meses de rentabilidade líquida dos seus investimentos sacrificados</span>
+            <span class="kpi-valor" style="color: #0f172a;">${this.escapeTexto(mat.textoMeses)}</span>
+            <span class="kpi-sub">${this.escapeTexto(mat.subtituloMeses)}</span>
           </div>
           <div class="erosao-kpi-card kpi-alerta">
             <span class="kpi-label">Custo Diário de Adiar o Planejamento</span>
-            <span class="kpi-valor cor-alerta">+ R$ ${custoDiarioInercia.toLocaleString("pt-BR")}/dia</span>
+            <span class="kpi-valor cor-alerta">+ R$ ${mat.custoDiarioInercia.toLocaleString("pt-BR")}/dia</span>
             <span class="kpi-sub">A perda tributária aumenta silenciosamente a cada dia que passa</span>
           </div>
         `;
@@ -818,7 +955,7 @@
       this.instancias[canvasId] = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: ['Cenário Atual', 'Projeção Futura'],
+          labels: ['Cenário Atual', labelProjecao],
           datasets: [
             {
               label: 'Prejuízo Tributário (R$)',
@@ -866,9 +1003,8 @@
               callbacks: {
                 label: (context) => {
                   const val = Number(context.raw) || 0;
-                  const idx = context.dataIndex;
-                  const bem = idx === 0 ? "Equivale a 1 Carro Zero Km" : "Equivale a 1 Apartamento Inteiro";
-                  return ` Prejuízo: R$ ${val.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} (${bem})`;
+                  const eq = context.dataIndex === 0 ? eqAtual : eqProjetada;
+                  return ` Prejuízo: R$ ${val.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} (${eq.curto})`;
                 }
               }
             },
@@ -876,12 +1012,12 @@
               color: '#ffffff',
               anchor: 'center',
               align: 'center',
+              textAlign: 'center',
               font: { family: 'Outfit', weight: '700', size: 11 },
               formatter: (val, ctx) => {
-                const idx = ctx.dataIndex;
-                const texto = idx === 0 ? 'R$ 154k (1 Carro Zero Km)' : 'R$ 399k (1 Apartamento)';
                 if (Number(val) <= 0) return '';
-                return texto;
+                const eq = ctx.dataIndex === 0 ? eqAtual : eqProjetada;
+                return [eq.valorCompacto, `(${eq.curto})`];
               }
             }
           }

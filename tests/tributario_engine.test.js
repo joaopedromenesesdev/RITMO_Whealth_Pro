@@ -2190,6 +2190,159 @@
       "Edge[Nulo]: filtrarRelatoriosPorPermissao retorna lista vazia para entradas nulas"
     );
 
+    // =========================================================================
+    // TESTE 46: Liquidez Unificada, Canibalização (Liquidez=0) e Materialização Dinâmica
+    // =========================================================================
+    console.log("\n-> Teste 46: Liquidez Unificada, Canibalização e Materialização Dinâmica");
+
+    // 46.A — Fórmula unificada de liquidez (Opção A padrão: RF + RV + Fundos)
+    const liqPrint = engine.calcularLiquidezPatrimonial(
+      { rf: 2000000, rv: 1000000, inter: 1000000, prev: 500000, offshore: 300000 },
+      { totalAtual: 20000000, totalProjetado: 32577894, anosProjecao: 10 }
+    );
+    assert(
+      liqPrint.liquidezAtual === 4000000 &&
+      liqPrint.liquidezProjetada === 6515579 &&
+      liqPrint.siglaComposicao === "RF + RV + Fundos" &&
+      liqPrint.pctImobilizado === 80 &&
+      semNaN(liqPrint),
+      "Liquidez[Print]: soma RF+RV+Fundos = R$ 4M e projeta R$ 6.515.579 em 10 anos sem incluir prev/offshore por padrão"
+    );
+
+    const liqComPrev = engine.calcularLiquidezPatrimonial(
+      { rf: 2000000, rv: 1000000, inter: 1000000, prev: 500000, offshore: 300000 },
+      { totalAtual: 20000000, totalProjetado: 20000000, incluirPrevidencia: true, incluirOffshore: true }
+    );
+    assert(
+      liqComPrev.liquidezAtual === 4800000 &&
+      liqComPrev.siglaComposicao === "RF + RV + Fundos + Prev. + Offshore",
+      "Liquidez[Opções]: permite incluir Previdência e Offshore quando parametrizado"
+    );
+
+    // 46.B — Canibalização no cenário dos prints (consistência de arredondamento 38,8% hoje e futuro)
+    const canibPrint = engine.calcularMetricasCanibalizacao({
+      liquidezAtual: 4000000,
+      prejuizoAtual: 1550000,
+      liquidezProjetada: 6515579,
+      prejuizoProjetado: 2524786.785
+    });
+    assert(
+      canibPrint.textoComprometimentoAtual === "38,8% drenados" &&
+      canibPrint.textoComprometimentoProjetado === "38,8% da liquidez" &&
+      canibPrint.caixaRestanteAtual === 2450000 &&
+      canibPrint.deficitAtual === 0 &&
+      canibPrint.semLiquidezAtual === false &&
+      semNaN(canibPrint),
+      "Canibalização[Print]: comprometimento consistente (38,8% hoje e futuro) e caixa restante R$ 2.450.000"
+    );
+
+    // 46.C — Bug crítico: Liquidez = R$ 0 (100% imobilizado) sem Math.max(liquidez, 1)
+    const liqZero = engine.calcularLiquidezPatrimonial(
+      { rf: 0, rv: 0, inter: 0 },
+      { totalAtual: 10000000, totalProjetado: 16288947, anosProjecao: 10 }
+    );
+    const canibZero = engine.calcularMetricasCanibalizacao({
+      liquidezAtual: liqZero.liquidezAtual,
+      prejuizoAtual: 1550000,
+      liquidezProjetada: liqZero.liquidezProjetada,
+      prejuizoProjetado: 2524787
+    });
+    assert(
+      liqZero.liquidezAtual === 0 &&
+      liqZero.liquidezProjetada === 0 &&
+      canibZero.semLiquidezAtual === true &&
+      canibZero.semLiquidezProjetada === true &&
+      canibZero.pctConsumoAtual === null &&
+      canibZero.deficitAtual === 1550000 &&
+      canibZero.textoComprometimentoAtual === "Sem caixa" &&
+      canibZero.textoComprometimentoProjetado === "Sem caixa",
+      "Canibalização[Liquidez=0]: evita divisão por R$ 1 (sem 155.000.000%), déficit integral e rótulo 'Sem caixa'"
+    );
+
+    // 46.D — Materialização dinâmica no cenário dos prints (sem hardcoded 154k/399k e sem '37 a 37 meses')
+    const matPrint = engine.calcularMaterializacaoPrejuizo({
+      prejuizoAtual: 1550000,
+      prejuizoProjetado: 2524787,
+      totalAtual: 20000000,
+      totalProjetado: 32577894,
+      liquidezAtual: 4000000,
+      liquidezProjetada: 6515579,
+      anosProjecao: 10
+    });
+    assert(
+      matPrint.equivalenciaAtual.valorCompacto === "R$ 1,55M" &&
+      matPrint.equivalenciaProjetada.valorCompacto === "R$ 2,52M" &&
+      matPrint.equivalenciaAtual.titulo.includes("Imóvel de Alto Padrão") &&
+      matPrint.equivalenciaProjetada.titulo.includes("Imóveis de Alto Padrão") &&
+      matPrint.usouLiquidezReal === true &&
+      matPrint.mesesAtual === 55 &&
+      matPrint.mesesProjetado === 55 &&
+      matPrint.textoMeses === "~55 meses" &&
+      matPrint.custoDiarioInercia === 267 &&
+      semNaN(matPrint),
+      "Materialização[Print]: calcula R$ 1,55M / R$ 2,52M, equivalências reais, '~55 meses' (sem duplicar) e +R$ 267/dia"
+    );
+
+    // 46.E — Fallback de rendimento queimado quando liquidez = 0 (30% do patrimônio) sem duplicar '37 a 37 meses'
+    const matFallback = engine.calcularMaterializacaoPrejuizo({
+      prejuizoAtual: 1550000,
+      prejuizoProjetado: 2524787,
+      totalAtual: 20000000,
+      totalProjetado: 32577894,
+      liquidezAtual: 0,
+      liquidezProjetada: 0,
+      anosProjecao: 10
+    });
+    assert(
+      matFallback.usouLiquidezReal === false &&
+      matFallback.mesesAtual === 37 &&
+      matFallback.mesesProjetado === 37 &&
+      matFallback.textoMeses === "~37 meses",
+      "Materialização[Fallback]: sem liquidez usa 30% do patrimônio e exibe '~37 meses' sem duplicar '37 a 37'"
+    );
+
+    // 46.F — Faixas progressivas de equivalência e cenário zerado sem clamps enganosos
+    const matZero = engine.calcularMaterializacaoPrejuizo({
+      prejuizoAtual: 0,
+      prejuizoProjetado: 0,
+      totalAtual: 0,
+      totalProjetado: 0,
+      liquidezAtual: 0,
+      liquidezProjetada: 0,
+      anosProjecao: 10
+    });
+    const eqPequeno = engine.classificarEquivalenciaBem(50000);
+    const eqCarro = engine.classificarEquivalenciaBem(154000);
+    const eqApto = engine.classificarEquivalenciaBem(650000);
+    assert(
+      matZero.textoMeses === "0 meses" &&
+      matZero.equivalenciaAtual.titulo === "Sem prejuízo estimado" &&
+      eqPequeno.valorCompacto === "R$ 50k" &&
+      eqCarro.valorCompacto === "R$ 154k" && eqCarro.titulo.includes("Veículo Zero Km") &&
+      eqApto.valorCompacto === "R$ 650k" && eqApto.titulo.includes("Apartamento") &&
+      semNaN(matZero),
+      "Materialização[Faixas/Zero]: cobre R$ 0 (0 meses sem clamp), R$ 50k, R$ 154k e R$ 650k corretamente"
+    );
+
+    // 46.G — Auditoria estática anti-hardcoded em tributario_charts.js e anti-Math.max(liquidez,1) em tributario.js
+    if (typeof require === "function") {
+      const fsAudit = require("fs");
+      const pathAudit = require("path");
+      const chartsSrc = fsAudit.readFileSync(pathAudit.join(__dirname, "../script/tributario_charts.js"), "utf8");
+      const tribSrc = fsAudit.readFileSync(pathAudit.join(__dirname, "../script/tributario.js"), "utf8");
+      assert(
+        !chartsSrc.includes("R$ 154k (1 Carro Zero Km)") &&
+        !chartsSrc.includes("R$ 399k (1 Apartamento)") &&
+        !chartsSrc.includes("Mais de 3/4 de milhão"),
+        "Auditoria[Charts]: nenhum literal hardcoded (R$ 154k, R$ 399k ou 3/4 de milhão) restante em tributario_charts.js"
+      );
+      assert(
+        !tribSrc.includes("Math.max(liquidez, 1)") &&
+        !tribSrc.includes("Math.max(liqProjetadaCalculada, 1)"),
+        "Auditoria[Tributario]: fallback distorcido Math.max(liquidez, 1) removido de tributario.js"
+      );
+    }
+
     console.log("\n=================================================");
     console.log(`RESUMO DA SUÍTE DE TESTES:`);
     console.log(`   Total: ${totalTestes} | Passados: ${testesPassados} | Falhas: ${testesFalhados}`);

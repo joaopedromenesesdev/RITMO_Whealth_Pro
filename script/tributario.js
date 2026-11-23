@@ -1406,21 +1406,30 @@ function calcularPrejuizo() {
   if (elBAtual) elBAtual.innerText = "R$ " + baseAtual.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
   if (elBProj) elBProj.innerText = "R$ " + baseProjetada.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
 
-  // Alarme de Liquidez
+  // Alarme de Liquidez (fórmula unificada via TributarioEngine: RF + RV + Fundos)
   const dadosPatrimonio = JSON.parse(sessionStorage.getItem("patrimonio_dados")) || {};
   const rf = parseValor(dadosPatrimonio.rf);
+  const rv = parseValor(dadosPatrimonio.rv);
   const inter = parseValor(dadosPatrimonio.inter);
-  const liquidez = rf + prev + inter + offshore;
-  const imobilizado = totalAtual > 0 ? (totalAtual - liquidez) : 0;
+  const liquidezInfo = (window.TributarioEngine && typeof window.TributarioEngine.calcularLiquidezPatrimonial === "function")
+    ? window.TributarioEngine.calcularLiquidezPatrimonial({ rf, rv, inter, prev, offshore }, { totalAtual })
+    : {
+      liquidezAtual: rf + rv + inter,
+      imobilizadoAtual: totalAtual > 0 ? Math.max(0, totalAtual - (rf + rv + inter)) : 0,
+      pctImobilizado: totalAtual > 0 ? Math.round((Math.max(0, totalAtual - (rf + rv + inter)) / totalAtual) * 100) : 0,
+      siglaComposicao: "RF + RV + Fundos"
+    };
+  const liquidez = liquidezInfo.liquidezAtual;
 
   const alertaLiquidez = document.getElementById("alerta_liquidez");
   const alertaTexto = document.getElementById("alerta_liquidez_texto");
 
   if (alertaLiquidez && alertaTexto) {
     if (prejuizoAtual > liquidez && totalAtual > 0) {
-      let pctImobilizado = ((imobilizado / totalAtual) * 100).toFixed(0);
+      const pctImobilizado = liquidezInfo.pctImobilizado;
+      const siglaSegura = escapeHTML(liquidezInfo.siglaComposicao || "RF + RV + Fundos");
       alertaLiquidez.style.display = "block";
-      alertaTexto.innerHTML = `Seu patrimônio é <b>${pctImobilizado}% imobilizado</b>. Em caso de sucessão, sua família não terá caixa suficiente (R$ ${liquidez.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}) para pagar os <b>R$ ${prejuizoAtual.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}</b> do inventário e será forçada a vender imóveis/empresas com deságio.`;
+      alertaTexto.innerHTML = `Seu patrimônio é <b>${pctImobilizado}% imobilizado</b>. Em caso de sucessão, sua família não terá liquidez financeira suficiente (${siglaSegura}: R$ ${liquidez.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}) para pagar os <b>R$ ${prejuizoAtual.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}</b> do inventário e poderá precisar vender imóveis/empresas com deságio.`;
     } else {
       alertaLiquidez.style.display = "none";
     }
@@ -2984,8 +2993,7 @@ window.renderizarGraficoCorrosaoUnico = function () {
   const rv = parseValor(dadosPatrimonio.rv);
   const inter = parseValor(dadosPatrimonio.inter);
   const prev = parseValor(dadosPatrimonio.prev);
-  const liquidez = rf + rv + inter;
-  const liquidezCalculada = Math.max(liquidez, 1);
+  const offshore = obterOffshoreBRL(dadosPatrimonio);
 
   const dadosEvolucao = JSON.parse(sessionStorage.getItem("evolucao_dados")) || { resultados: [], resultadosPrev: [] };
   const totalProjetado = (dadosEvolucao.resultados && dadosEvolucao.resultados.length > 0)
@@ -2996,8 +3004,28 @@ window.renderizarGraficoCorrosaoUnico = function () {
     : prev;
   const anosProj = Number(dadosEvolucao.tempo) || (Array.isArray(dadosEvolucao.resultados) && dadosEvolucao.resultados.length > 1 ? dadosEvolucao.resultados.length - 1 : 10);
 
-  const fatorCrescimento = totalAtual > 0 ? (totalProjetado / totalAtual) : 1;
-  const liqProjetadaCalculada = Math.max(prevProjetado || 0, Math.round(liquidezCalculada * (fatorCrescimento > 1 ? fatorCrescimento : 1)));
+  const liquidezInfo = (window.TributarioEngine && typeof window.TributarioEngine.calcularLiquidezPatrimonial === "function")
+    ? window.TributarioEngine.calcularLiquidezPatrimonial(
+      { rf, rv, inter, prev, offshore },
+      { totalAtual, totalProjetado, anosProjecao: anosProj }
+    )
+    : (() => {
+      const liqAtual = Math.max(0, rf + rv + inter);
+      const fator = totalAtual > 0 && totalProjetado > 0 ? (totalProjetado / totalAtual) : 1;
+      return {
+        liquidezAtual: liqAtual,
+        liquidezProjetada: Math.round(liqAtual * (fator > 0 ? fator : 1)),
+        fatorCrescimento: fator,
+        anosProjecao: anosProj,
+        descricaoComposicao: "Renda Fixa + Renda Variável + Fundos",
+        siglaComposicao: "RF + RV + Fundos",
+        componentesAtivos: [
+          { chave: "rf", rotulo: "Renda Fixa", sigla: "RF", valor: rf },
+          { chave: "rv", rotulo: "Renda Variável", sigla: "RV", valor: rv },
+          { chave: "inter", rotulo: "Fundos", sigla: "Fundos", valor: inter }
+        ]
+      };
+    })();
 
   const prejuizoFinalObj = JSON.parse(sessionStorage.getItem("prejuizo_final")) || {};
   const prejuizoAtual = Number(prejuizoFinalObj.prejuizoAtual) || 0;
@@ -3009,12 +3037,18 @@ window.renderizarGraficoCorrosaoUnico = function () {
     if (typeof window.TributarioCharts.renderizarGraficoCanibalizacaoLiquidez === "function") {
       try {
         window.TributarioCharts.renderizarGraficoCanibalizacaoLiquidez("grafico_erosao_patrimonial", {
-          liquidezAtual: liquidezCalculada,
+          liquidezAtual: liquidezInfo.liquidezAtual,
           prejuizoAtual,
-          liquidezProjetada: Math.max(liqProjetadaCalculada, 1),
+          liquidezProjetada: liquidezInfo.liquidezProjetada,
           prejuizoProjetado,
+          anosProjecao: liquidezInfo.anosProjecao,
+          fatorCrescimento: liquidezInfo.fatorCrescimento,
+          descricaoComposicao: liquidezInfo.descricaoComposicao,
+          siglaComposicao: liquidezInfo.siglaComposicao,
+          componentesAtivos: liquidezInfo.componentesAtivos,
           rf,
           rv,
+          inter,
           prev,
           prevProjetado,
           legendaContainerId: "erosao_legenda_container",
@@ -3032,6 +3066,8 @@ window.renderizarGraficoCorrosaoUnico = function () {
           prejuizoAtual,
           totalProjetado,
           prejuizoProjetado,
+          liquidezAtual: liquidezInfo.liquidezAtual,
+          liquidezProjetada: liquidezInfo.liquidezProjetada,
           anosProjecao: anosProj,
           legendaContainerId: "erosao_legenda_container",
           kpisContainerId: "erosao_kpis_grid_container"

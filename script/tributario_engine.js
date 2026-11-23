@@ -1282,6 +1282,300 @@
         masterUids.includes(usuario.id);
       if (isMaster) return [...relatorios];
       return relatorios.filter(r => r.userId === usuario.id);
+    },
+
+    /**
+     * 11. Calcula a liquidez patrimonial unificada (Alarme de Liquidez + Gráfico Canibalização).
+     * Padrão oficial (Opção A): Aplicações Financeiras Líquidas Onshore (RF + RV + Fundos).
+     * Previdência (fora do inventário) e Offshore (sucessão internacional) são opcionais.
+     * @param {Record<string, any> | null} [dadosPatrimonio={}]
+     * @param {Record<string, any> | null} [opcoes={}]
+     */
+    calcularLiquidezPatrimonial(dadosPatrimonio = {}, opcoes = {}) {
+      const dados = (dadosPatrimonio && typeof dadosPatrimonio === "object") ? dadosPatrimonio : {};
+      const opts = (opcoes && typeof opcoes === "object") ? opcoes : {};
+
+      const sanitizarNaoNegativo = (v) => {
+        const num = Number(v);
+        return (Number.isFinite(num) && num > 0) ? num : 0;
+      };
+
+      const rf = sanitizarNaoNegativo(dados.rf);
+      const rv = sanitizarNaoNegativo(dados.rv);
+      const inter = sanitizarNaoNegativo(dados.inter);
+      const prev = sanitizarNaoNegativo(dados.prev);
+      const offshore = sanitizarNaoNegativo(dados.offshore);
+
+      const incluirPrevidencia = Boolean(opts.incluirPrevidencia);
+      const incluirOffshore = Boolean(opts.incluirOffshore);
+
+      const componentesAtivos = [
+        { chave: "rf", rotulo: "Renda Fixa", sigla: "RF", valor: rf },
+        { chave: "rv", rotulo: "Renda Variável", sigla: "RV", valor: rv },
+        { chave: "inter", rotulo: "Fundos", sigla: "Fundos", valor: inter }
+      ];
+      if (incluirPrevidencia) {
+        componentesAtivos.push({ chave: "prev", rotulo: "Previdência", sigla: "Prev.", valor: prev });
+      }
+      if (incluirOffshore) {
+        componentesAtivos.push({ chave: "offshore", rotulo: "Offshore", sigla: "Offshore", valor: offshore });
+      }
+
+      const liquidezAtual = componentesAtivos.reduce((acc, item) => acc + item.valor, 0);
+      const totalAtual = sanitizarNaoNegativo(opts.totalAtual);
+      const totalProjetadoRaw = Number(opts.totalProjetado);
+      const totalProjetado = (Number.isFinite(totalProjetadoRaw) && totalProjetadoRaw > 0)
+        ? totalProjetadoRaw
+        : totalAtual;
+      const anosProjecaoRaw = Number(opts.anosProjecao);
+      const anosProjecao = (Number.isFinite(anosProjecaoRaw) && anosProjecaoRaw > 0)
+        ? Math.round(anosProjecaoRaw)
+        : 0;
+
+      const fatorCrescimento = (totalAtual > 0 && totalProjetado > 0)
+        ? (totalProjetado / totalAtual)
+        : 1;
+      const liquidezProjetada = Math.round(liquidezAtual * (fatorCrescimento > 0 ? fatorCrescimento : 1));
+      const imobilizadoAtual = totalAtual > 0 ? Math.max(0, totalAtual - liquidezAtual) : 0;
+      const pctImobilizado = totalAtual > 0 ? Math.round((imobilizadoAtual / totalAtual) * 100) : 0;
+
+      return {
+        liquidezAtual,
+        liquidezProjetada,
+        fatorCrescimento,
+        anosProjecao,
+        imobilizadoAtual,
+        pctImobilizado,
+        descricaoComposicao: componentesAtivos.map(c => c.rotulo).join(" + "),
+        siglaComposicao: componentesAtivos.map(c => c.sigla).join(" + "),
+        componentes: { rf, rv, inter, prev, offshore },
+        componentesAtivos
+      };
+    },
+
+    /**
+     * 12. Calcula métricas de canibalização de caixa sem distorções quando liquidez = 0.
+     * @param {Record<string, any> | null} [params={}]
+     */
+    calcularMetricasCanibalizacao(params = {}) {
+      const p = (params && typeof params === "object") ? params : {};
+      const sanitizarNaoNegativo = (v) => {
+        const num = Number(v);
+        return (Number.isFinite(num) && num > 0) ? num : 0;
+      };
+
+      const liquidezAtual = sanitizarNaoNegativo(p.liquidezAtual);
+      const prejuizoAtual = sanitizarNaoNegativo(p.prejuizoAtual);
+      const liquidezProjetada = sanitizarNaoNegativo(p.liquidezProjetada);
+      const prejuizoProjetado = sanitizarNaoNegativo(p.prejuizoProjetado);
+
+      const semLiquidezAtual = liquidezAtual <= 0 && prejuizoAtual > 0;
+      const semLiquidezProjetada = liquidezProjetada <= 0 && prejuizoProjetado > 0;
+
+      const liqAtualBase = Math.round(liquidezAtual);
+      const prejAtualBase = Math.round(prejuizoAtual);
+      const liqProjBase = Math.round(liquidezProjetada);
+      const prejProjBase = Math.round(prejuizoProjetado);
+
+      const pctConsumoAtual = liqAtualBase > 0
+        ? (prejAtualBase / liqAtualBase) * 100
+        : (prejAtualBase > 0 ? null : 0);
+      const pctConsumoProjetado = liqProjBase > 0
+        ? (prejProjBase / liqProjBase) * 100
+        : (prejProjBase > 0 ? null : 0);
+
+      const caixaRestanteAtual = Math.max(0, liquidezAtual - prejuizoAtual);
+      const deficitAtual = Math.max(0, prejuizoAtual - liquidezAtual);
+      const caixaRestanteProjetado = Math.max(0, liquidezProjetada - prejuizoProjetado);
+      const deficitProjetado = Math.max(0, prejuizoProjetado - liquidezProjetada);
+
+      const textoComprometimentoAtual = semLiquidezAtual
+        ? "Sem caixa"
+        : `${(pctConsumoAtual || 0).toFixed(1).replace(".", ",")}% drenados`;
+      const textoComprometimentoProjetado = semLiquidezProjetada
+        ? "Sem caixa"
+        : `${(pctConsumoProjetado || 0).toFixed(1).replace(".", ",")}% da liquidez`;
+
+      return {
+        liquidezAtual,
+        prejuizoAtual,
+        liquidezProjetada,
+        prejuizoProjetado,
+        semLiquidezAtual,
+        semLiquidezProjetada,
+        pctConsumoAtual,
+        pctConsumoProjetado,
+        caixaRestanteAtual,
+        deficitAtual,
+        caixaRestanteProjetado,
+        deficitProjetado,
+        textoComprometimentoAtual,
+        textoComprometimentoProjetado
+      };
+    },
+
+    /**
+     * 13. Formata valor monetário compacto em R$ (ex.: R$ 1,55M, R$ 154k, R$ 0).
+     * @param {number | string | null} [valor=0]
+     * @returns {string}
+     */
+    formatarMoedaCompacta(valor = 0) {
+      const num = Number(valor);
+      const val = (Number.isFinite(num) && num > 0) ? num : 0;
+      if (val >= 1000000) {
+        const milhoes = (val / 1000000).toFixed(2).replace(".", ",").replace(/,00$/, "").replace(/(\,\d)0$/, "$1");
+        return `R$ ${milhoes}M`;
+      }
+      if (val >= 1000) {
+        return `R$ ${Math.round(val / 1000)}k`;
+      }
+      return `R$ ${Math.round(val).toLocaleString("pt-BR")}`;
+    },
+
+    /**
+     * 14. Classifica a equivalência concreta em bens de forma 100% dinâmica pelo valor real do prejuízo.
+     * @param {number | string | null} [valor=0]
+     */
+    classificarEquivalenciaBem(valor = 0) {
+      const num = Number(valor);
+      const val = (Number.isFinite(num) && num > 0) ? num : 0;
+      const valorCompacto = this.formatarMoedaCompacta(val);
+
+      const REF_CARRO = 150000;
+      const REF_APARTAMENTO = 600000;
+      const REF_IMOVEL_ALTO_PADRAO = 1500000;
+      const REF_RESERVA_MENSAL = 10000;
+
+      if (val <= 0) {
+        return {
+          valor: 0,
+          valorCompacto: "R$ 0",
+          titulo: "Sem prejuízo estimado",
+          curto: "Sem prejuízo",
+          subtitulo: "Nenhum custo tributário de inventário projetado neste cenário"
+        };
+      }
+
+      if (val < 120000) {
+        const mesesReserva = Math.max(1, Math.round(val / REF_RESERVA_MENSAL));
+        const pctCarro = Math.max(1, Math.round((val / REF_CARRO) * 100));
+        return {
+          valor: val,
+          valorCompacto,
+          titulo: `~${mesesReserva} ${mesesReserva === 1 ? "mês" : "meses"} de reserva`,
+          curto: `≈ ${mesesReserva} ${mesesReserva === 1 ? "mês" : "meses"} de reserva`,
+          subtitulo: `Equivalente a ~${pctCarro}% de um veículo zero km (ref. R$ 150 mil)`
+        };
+      }
+
+      if (val < 550000) {
+        const qtdCarros = Math.max(1, Math.round(val / REF_CARRO));
+        return {
+          valor: val,
+          valorCompacto,
+          titulo: `~${qtdCarros} ${qtdCarros === 1 ? "Veículo Zero Km" : "Veículos Zero Km"}`,
+          curto: `≈ ${qtdCarros} ${qtdCarros === 1 ? "Carro Zero Km" : "Carros Zero Km"}`,
+          subtitulo: "Ref. R$ 150 mil por veículo entregues diretamente em custos de inventário"
+        };
+      }
+
+      if (val < 1400000) {
+        const qtdAptos = Math.max(1, Math.round((val / REF_APARTAMENTO) * 2) / 2);
+        const qtdFmt = Number.isInteger(qtdAptos) ? String(qtdAptos) : qtdAptos.toFixed(1).replace(".", ",");
+        const plural = qtdAptos > 1;
+        const qtdCarrosEq = Math.max(1, Math.round(val / REF_CARRO));
+        return {
+          valor: val,
+          valorCompacto,
+          titulo: `~${qtdFmt} ${plural ? "Apartamentos" : "Apartamento"}`,
+          curto: `≈ ${qtdFmt} ${plural ? "Apartamentos" : "Apartamento"}`,
+          subtitulo: `Ref. R$ 600 mil por apartamento (≈ ${qtdCarrosEq} veículos zero km)`
+        };
+      }
+
+      const qtdImoveis = Math.max(1, Math.round((val / REF_IMOVEL_ALTO_PADRAO) * 2) / 2);
+      const qtdFmt = Number.isInteger(qtdImoveis) ? String(qtdImoveis) : qtdImoveis.toFixed(1).replace(".", ",");
+      const plural = qtdImoveis > 1;
+      const qtdAptosEq = Math.max(1, Math.round(val / REF_APARTAMENTO));
+      return {
+        valor: val,
+        valorCompacto,
+        titulo: `~${qtdFmt} ${plural ? "Imóveis de Alto Padrão" : "Imóvel de Alto Padrão"}`,
+        curto: `≈ ${qtdFmt} ${plural ? "Imóveis Alto Padrão" : "Imóvel Alto Padrão"}`,
+        subtitulo: `Ref. R$ 1,5M por imóvel (≈ ${qtdAptosEq} apartamentos de R$ 600 mil)`
+      };
+    },
+
+    /**
+     * 15. Calcula materialização em bens, meses de rendimento queimado (sem duplicidade "37 a 37") e custo diário.
+     * @param {Record<string, any> | null} [params={}]
+     */
+    calcularMaterializacaoPrejuizo(params = {}) {
+      const p = (params && typeof params === "object") ? params : {};
+      const sanitizarNaoNegativo = (v) => {
+        const num = Number(v);
+        return (Number.isFinite(num) && num > 0) ? num : 0;
+      };
+
+      const prejuizoAtual = sanitizarNaoNegativo(p.prejuizoAtual);
+      const prejuizoProjetado = sanitizarNaoNegativo(p.prejuizoProjetado);
+      const totalAtual = sanitizarNaoNegativo(p.totalAtual);
+      const totalProjetado = sanitizarNaoNegativo(p.totalProjetado);
+      const liquidezAtual = sanitizarNaoNegativo(p.liquidezAtual);
+      const liquidezProjetada = sanitizarNaoNegativo(p.liquidezProjetada);
+      const anosProjecaoRaw = Number(p.anosProjecao);
+      const anosProjecao = (Number.isFinite(anosProjecaoRaw) && anosProjecaoRaw > 0) ? Math.round(anosProjecaoRaw) : 10;
+
+      const taxaMensalLiquida = 0.007;
+      const usouLiquidezReal = liquidezAtual > 0;
+      const baseRendAtual = usouLiquidezReal ? liquidezAtual : (totalAtual * 0.3);
+      const baseRendProj = liquidezProjetada > 0 ? liquidezProjetada : (totalProjetado * 0.3);
+
+      const rendimentoMensalAtual = baseRendAtual * taxaMensalLiquida;
+      const rendimentoMensalProjetado = baseRendProj * taxaMensalLiquida;
+
+      const mesesAtual = (prejuizoAtual > 0 && rendimentoMensalAtual > 0)
+        ? Math.max(1, Math.round(prejuizoAtual / rendimentoMensalAtual))
+        : 0;
+      const mesesProjetado = (prejuizoProjetado > 0 && rendimentoMensalProjetado > 0)
+        ? Math.max(1, Math.round(prejuizoProjetado / rendimentoMensalProjetado))
+        : 0;
+
+      let textoMeses = "0 meses";
+      if (mesesAtual > 0 || mesesProjetado > 0) {
+        if (mesesAtual === mesesProjetado) {
+          textoMeses = `~${mesesAtual} ${mesesAtual === 1 ? "mês" : "meses"}`;
+        } else if (mesesAtual === 0) {
+          textoMeses = `~${mesesProjetado} ${mesesProjetado === 1 ? "mês" : "meses"}`;
+        } else if (mesesProjetado === 0) {
+          textoMeses = `~${mesesAtual} ${mesesAtual === 1 ? "mês" : "meses"}`;
+        } else {
+          textoMeses = `~${Math.min(mesesAtual, mesesProjetado)} a ${Math.max(mesesAtual, mesesProjetado)} meses`;
+        }
+      }
+
+      const subtituloMeses = usouLiquidezReal
+        ? "Meses de rendimento líquido (0,7% a.m.) sobre sua liquidez financeira"
+        : "Estimativa a 0,7% a.m. sobre 30% do patrimônio (sem liquidez cadastrada)";
+
+      const deltaPerda = Math.max(0, prejuizoProjetado - prejuizoAtual);
+      const totalDias = Math.max(365, anosProjecao * 365);
+      const custoDiarioInercia = Math.round(deltaPerda / totalDias);
+
+      return {
+        equivalenciaAtual: this.classificarEquivalenciaBem(prejuizoAtual),
+        equivalenciaProjetada: this.classificarEquivalenciaBem(prejuizoProjetado),
+        usouLiquidezReal,
+        rendimentoMensalAtual,
+        rendimentoMensalProjetado,
+        mesesAtual,
+        mesesProjetado,
+        textoMeses,
+        subtituloMeses,
+        deltaPerda,
+        custoDiarioInercia,
+        anosProjecao
+      };
     }
   };
 
