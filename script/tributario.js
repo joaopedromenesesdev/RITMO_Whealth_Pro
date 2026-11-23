@@ -48,12 +48,14 @@ window.onload = function () {
   initPrejuizo();
   renderizarNotasRelatorio(document);
   preencherDadosAssessorRelatorio(document);
+  vincularBotoesVisualizarRelatorio();
 
   // Verifica se deve abrir o preview do PDF automaticamente
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get("preview") === "true") {
+    const modoInicial = normalizarModoRelatorio(urlParams.get("modo"));
     setTimeout(() => {
-      abrirPreview();
+      abrirPreview(modoInicial);
     }, 600);
   }
 };
@@ -2365,9 +2367,57 @@ function preencherDadosAssessorRelatorio(scope = document) {
 // =========================
 // PREVIEW E GERAR PDF
 // =========================
-async function abrirPreview() {
+let _modoRelatorioAtual = "on";
+
+function normalizarModoRelatorio(modo) {
+  const valor = String(modo || "").trim().toLowerCase();
+  return (valor === "off" || valor === "of") ? "off" : "on";
+}
+
+function obterTituloPreviewRelatorio(modo) {
+  return normalizarModoRelatorio(modo) === "off"
+    ? "Preview do Relatório OFF (Páginas 1 a 4)"
+    : "Preview do Relatório ON (Completo)";
+}
+
+function obterNomeArquivoPDF(modo) {
+  return normalizarModoRelatorio(modo) === "off"
+    ? "Relatorio_Ritmo_Wealth_Pro_OFF.pdf"
+    : "Relatorio_Ritmo_Wealth_Pro_ON.pdf";
+}
+
+function aplicarFiltroModoRelatorioNoClone(clone, modo) {
+  if (!clone || normalizarModoRelatorio(modo) !== "off") return;
+  const paginasOmitidas = clone.querySelectorAll('[data-ocultar-modo-off="true"]');
+  paginasOmitidas.forEach(pag => {
+    if (typeof pag.remove === "function") {
+      pag.remove();
+    } else if (pag.parentNode && typeof pag.parentNode.removeChild === "function") {
+      pag.parentNode.removeChild(pag);
+    }
+  });
+}
+
+function vincularBotoesVisualizarRelatorio() {
+  const btnOn = document.getElementById("btn_visualizar_relatorio_on");
+  if (btnOn && !btnOn.dataset.boundPreview) {
+    btnOn.dataset.boundPreview = "true";
+    btnOn.addEventListener("click", () => abrirPreview("on"));
+  }
+
+  const btnOff = document.getElementById("btn_visualizar_relatorio_off");
+  if (btnOff && !btnOff.dataset.boundPreview) {
+    btnOff.dataset.boundPreview = "true";
+    btnOff.addEventListener("click", () => abrirPreview("off"));
+  }
+}
+
+async function abrirPreview(modo = "on") {
   const modal = document.getElementById("modal-preview");
   if (!modal) return;
+
+  const modoNormalizado = normalizarModoRelatorio(modo);
+  _modoRelatorioAtual = modoNormalizado;
 
   // Garante que o modal esteja anexado direto no body para flutuar acima de todos os elementos
   if (modal.parentNode !== document.body) {
@@ -2376,6 +2426,7 @@ async function abrirPreview() {
 
   const modalBody = document.getElementById("modal-body-pdf");
   const reportArea = document.getElementById("area-relatorio");
+  if (!modalBody || !reportArea) return;
 
   // Limpa o modal antes de clonar
   modalBody.innerHTML = "";
@@ -2388,9 +2439,18 @@ async function abrirPreview() {
     console.warn("Erro ao atualizar bloco offshore no preview:", e);
   }
 
+  // Sincroniza modo no container fonte para consistência em impressão nativa (Ctrl+P)
+  if (reportArea.classList && typeof reportArea.classList.toggle === "function") {
+    reportArea.classList.toggle("modo-relatorio-off", modoNormalizado === "off");
+  }
+
   // Clona o conteúdo
   const clone = reportArea.cloneNode(true);
   clone.id = "area-relatorio-clone";
+  clone.setAttribute("data-modo-relatorio", modoNormalizado);
+
+  // Remove Páginas 5 e 6 apenas do clone quando no modo OFF (mantendo #area-relatorio intacto)
+  aplicarFiltroModoRelatorioNoClone(clone, modoNormalizado);
 
   // Limpa TODOS os estilos inline que vieram do original (como top: -9999px)
   clone.removeAttribute("style");
@@ -2404,6 +2464,11 @@ async function abrirPreview() {
   clone.style.boxShadow = "none";
 
   modalBody.appendChild(clone);
+
+  const modalTitulo = document.getElementById("modal-preview-titulo");
+  if (modalTitulo) {
+    modalTitulo.textContent = obterTituloPreviewRelatorio(modoNormalizado);
+  }
 
   modal.style.display = "flex";
   document.body.style.overflow = "hidden";
@@ -2681,7 +2746,11 @@ function recalculaGraficosEspeciaisPDF(total, regime, scope = document) {
 
 function fecharPreview() {
   const modal = document.getElementById("modal-preview");
-  modal.style.display = "none";
+  if (modal) modal.style.display = "none";
+  const reportArea = document.getElementById("area-relatorio");
+  if (reportArea && reportArea.classList) {
+    reportArea.classList.remove("modo-relatorio-off");
+  }
   document.body.style.overflow = "auto";
 }
 
@@ -2783,12 +2852,15 @@ async function gerarPDF() {
     });
 
     // DISPARO DO DOWNLOAD
+    const modoExportacao = normalizarModoRelatorio(
+      clone.getAttribute("data-modo-relatorio") || _modoRelatorioAtual
+    );
     const blob = pdf.output('blob');
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.style.display = 'none';
     a.href = url;
-    a.download = 'Relatorio_Ritmo_Wealth_Pro.pdf';
+    a.download = obterNomeArquivoPDF(modoExportacao);
     document.body.appendChild(a);
     a.click();
 

@@ -2343,6 +2343,206 @@
       );
     }
 
+    // =========================================================================
+    // TESTE 47: Modos de Relatório PDF ON (Completo) e OFF (Sem Páginas 5 e 6)
+    // =========================================================================
+    console.log("\n-> Teste 47: Modos de Relatório PDF ON (Completo) e OFF (Páginas 1 a 4)");
+    if (typeof require === "function") {
+      const fs47 = require("fs");
+      const path47 = require("path");
+      const vm47 = require("vm");
+
+      const html47 = fs47.readFileSync(path47.join(__dirname, "../tributario.html"), "utf8");
+      const js47 = fs47.readFileSync(path47.join(__dirname, "../script/tributario.js"), "utf8");
+      const css47 = fs47.readFileSync(path47.join(__dirname, "../style/tributario.css"), "utf8");
+
+      // 47.A — Validação estrutural do HTML e CSS
+      assert(
+        html47.includes('id="btn_visualizar_relatorio_on"') &&
+        html47.includes("Visualizar Relatório ON") &&
+        html47.includes('id="btn_visualizar_relatorio_off"') &&
+        html47.includes("Visualizar Relatório OFF") &&
+        !html47.includes("Visualizar Relatório PDF"),
+        "HTML[Botões]: botões 'Visualizar Relatório ON' e 'Visualizar Relatório OFF' presentes sem botão legado"
+      );
+      assert(
+        html47.includes('id="pagina_5" data-ocultar-modo-off="true"') &&
+        html47.includes('id="pagina_6" data-ocultar-modo-off="true"') &&
+        (html47.match(/data-ocultar-modo-off="true"/g) || []).length === 2,
+        "HTML[Páginas]: exatamente Páginas 5 e 6 marcadas com data-ocultar-modo-off='true'"
+      );
+      assert(
+        css47.includes(".btn-pdf-off") &&
+        css47.includes('#area-relatorio.modo-relatorio-off [data-ocultar-modo-off="true"]'),
+        "CSS[ON/OFF]: estilo .btn-pdf-off e regra @media print para modo OFF presentes em tributario.css"
+      );
+
+      // 47.B — Execução em sandbox isolada de tributario.js validando helpers e abrirPreview("on" | "off")
+      function criarNoDOM(id, attrs = {}, children = []) {
+        const classes = new Set();
+        const attrMap = { ...attrs };
+        const no = {
+          id: id || "",
+          style: {},
+          dataset: {},
+          textContent: "",
+          parentNode: null,
+          children: [],
+          classList: {
+            add(c) { classes.add(c); },
+            remove(c) { classes.delete(c); },
+            contains(c) { return classes.has(c); },
+            toggle(c, force) {
+              if (force === undefined) {
+                if (classes.has(c)) { classes.delete(c); return false; }
+                classes.add(c); return true;
+              }
+              if (force) classes.add(c); else classes.delete(c);
+              return !!force;
+            }
+          },
+          setAttribute(k, v) { attrMap[k] = String(v); },
+          getAttribute(k) { return attrMap[k] !== undefined ? attrMap[k] : null; },
+          removeAttribute(k) { delete attrMap[k]; },
+          appendChild(child) {
+            child.parentNode = this;
+            this.children.push(child);
+            return child;
+          },
+          removeChild(child) {
+            const idx = this.children.indexOf(child);
+            if (idx >= 0) this.children.splice(idx, 1);
+            child.parentNode = null;
+          },
+          remove() {
+            if (this.parentNode) this.parentNode.removeChild(this);
+          },
+          cloneNode(deep) {
+            const copia = criarNoDOM(this.id, attrMap, []);
+            if (deep) {
+              this.children.forEach(c => copia.appendChild(c.cloneNode(true)));
+            }
+            return copia;
+          },
+          querySelectorAll(sel) {
+            if (sel === '[data-ocultar-modo-off="true"]') {
+              return this.children.filter(c => c.getAttribute("data-ocultar-modo-off") === "true");
+            }
+            if (sel === ".pagina") {
+              return this.children.filter(c => c.getAttribute("data-is-pagina") === "true");
+            }
+            return [];
+          },
+          querySelector() { return null; },
+          addEventListener() {}
+        };
+        Object.defineProperty(no, "innerHTML", {
+          get() { return ""; },
+          set(v) { if (v === "") this.children = []; }
+        });
+        children.forEach(c => no.appendChild(c));
+        return no;
+      }
+
+      const body47 = criarNoDOM("body");
+      const modal47 = criarNoDOM("modal-preview");
+      const modalTitulo47 = criarNoDOM("modal-preview-titulo");
+      const modalBody47 = criarNoDOM("modal-body-pdf");
+      body47.appendChild(modal47);
+
+      const reportArea47 = criarNoDOM("area-relatorio", {}, [
+        criarNoDOM("capa", { "data-is-pagina": "true" }),
+        criarNoDOM("pagina_1", { "data-is-pagina": "true" }),
+        criarNoDOM("pagina_2", { "data-is-pagina": "true" }),
+        criarNoDOM("pagina_3", { "data-is-pagina": "true" }),
+        criarNoDOM("pagina_4", { "data-is-pagina": "true" }),
+        criarNoDOM("pagina_5", { "data-is-pagina": "true", "data-ocultar-modo-off": "true" }),
+        criarNoDOM("pagina_6", { "data-is-pagina": "true", "data-ocultar-modo-off": "true" })
+      ]);
+
+      const mapaIds47 = {
+        "modal-preview": modal47,
+        "modal-preview-titulo": modalTitulo47,
+        "modal-body-pdf": modalBody47,
+        "area-relatorio": reportArea47
+      };
+
+      const sb47 = {
+        window: {},
+        Chart: { register() {} },
+        ChartDataLabels: {},
+        URLSearchParams,
+        console: { log() {}, warn() {}, error() {} },
+        setTimeout: () => 0,
+        sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} },
+        localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
+        document: {
+          body: body47,
+          getElementById: id => mapaIds47[id] || null,
+          querySelector: () => null,
+          querySelectorAll: () => [],
+          addEventListener() {}
+        },
+        atualizarBlocoOffshoreEstateTaxUI() {},
+        criarGraficos() {},
+        renderizarGraficoEvolucao() {},
+        recalculaGraficosEspeciaisPDF() {},
+        renderizarNotasRelatorio() {},
+        preencherDadosAssessorRelatorio() {}
+      };
+      sb47.window = sb47;
+      vm47.createContext(sb47);
+      vm47.runInContext(js47, sb47);
+
+      // Allowlist de modos e nomes de arquivo
+      assert(
+        sb47.normalizarModoRelatorio("off") === "off" &&
+        sb47.normalizarModoRelatorio(" OFF ") === "off" &&
+        sb47.normalizarModoRelatorio("of") === "off" &&
+        sb47.normalizarModoRelatorio("on") === "on" &&
+        sb47.normalizarModoRelatorio("off<script>") === "on" &&
+        sb47.normalizarModoRelatorio(null) === "on" &&
+        sb47.obterNomeArquivoPDF("on") === "Relatorio_Ritmo_Wealth_Pro_ON.pdf" &&
+        sb47.obterNomeArquivoPDF("off") === "Relatorio_Ritmo_Wealth_Pro_OFF.pdf",
+        "Helpers[ON/OFF]: allowlist estrita de modo (anti-XSS) e nomes de PDF ON/OFF corretos"
+      );
+
+      // Abrir no modo OFF -> clone tem apenas 5 folhas (Capa + Págs 1 a 4), fonte mantém 7 folhas
+      await sb47.abrirPreview("off");
+      const cloneOff = modalBody47.children[0];
+      const paginasOff = cloneOff ? cloneOff.querySelectorAll(".pagina").map(p => p.id) : [];
+      assert(
+        paginasOff.length === 5 &&
+        !paginasOff.includes("pagina_5") &&
+        !paginasOff.includes("pagina_6") &&
+        paginasOff[paginasOff.length - 1] === "pagina_4" &&
+        reportArea47.querySelectorAll(".pagina").length === 7 &&
+        reportArea47.classList.contains("modo-relatorio-off") &&
+        modalTitulo47.textContent.includes("OFF"),
+        "Preview[OFF]: remove Páginas 5 e 6 do clone (mantém Capa + Págs 1–4), preserva fonte original e atualiza título"
+      );
+
+      // Fechar limpa classe modo-relatorio-off
+      sb47.fecharPreview();
+      assert(
+        !reportArea47.classList.contains("modo-relatorio-off") && modal47.style.display === "none",
+        "Preview[Fechar]: fecharPreview limpa classe modo-relatorio-off e oculta o modal"
+      );
+
+      // Abrir no modo ON após OFF -> restaura todas as 7 folhas (Capa + Págs 1 a 6)
+      await sb47.abrirPreview("on");
+      const cloneOn = modalBody47.children[0];
+      const paginasOn = cloneOn ? cloneOn.querySelectorAll(".pagina").map(p => p.id) : [];
+      assert(
+        paginasOn.length === 7 &&
+        paginasOn.includes("pagina_5") &&
+        paginasOn.includes("pagina_6") &&
+        !reportArea47.classList.contains("modo-relatorio-off") &&
+        modalTitulo47.textContent.includes("ON"),
+        "Preview[ON]: alternância OFF -> ON restaura todas as 7 folhas (Capa + Págs 1–6) corretamente"
+      );
+    }
+
     console.log("\n=================================================");
     console.log(`RESUMO DA SUÍTE DE TESTES:`);
     console.log(`   Total: ${totalTestes} | Passados: ${testesPassados} | Falhas: ${testesFalhados}`);
