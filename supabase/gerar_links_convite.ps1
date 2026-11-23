@@ -1,9 +1,9 @@
-param(
+﻿param(
     [Parameter(Mandatory=$true)]
     [string]$ServiceRoleKey,
 
     [Parameter(Mandatory=$false)]
-    [string]$BaseUrl = "https://joaopedromenesesdev.github.io/RITMO_Whealth_Pro/login.html"
+    [string]$BaseUrl = "https://ritmo-wealth.pages.dev/login.html"
 )
 
 $SupabaseUrl = "https://dogyopoylekiqsahadlc.supabase.co"

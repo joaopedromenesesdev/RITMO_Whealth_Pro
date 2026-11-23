@@ -11,6 +11,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
 
 const ALLOWED_ORIGINS_DEFAULT = [
+  "https://ritmo-wealth.pages.dev",
   "https://joaopedromenesesdev.github.io",
   "http://localhost",
   "http://127.0.0.1"

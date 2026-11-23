@@ -2759,6 +2759,42 @@
         (!_dbModNode || _dbModNode.sanitizarNumero(maskFn("5687700"), 0) === 56877),
         "Vendas[Máscara Digitação]: aplica pontos e vírgula em tempo real, limpa zeros, limita overflow e integra com sanitizarNumero"
       );
+
+      // ── TESTE 49: Migração Cloudflare Pages (Pretty URLs, Build Limpo dist/ e CORS Fail-Closed) ──
+      console.log("\n-> Teste 49: Migração Cloudflare Pages (Pretty URLs, Build dist/ e CORS)");
+      const ehAbaFn = maskCtx.window.ehAbaPlanejamentoPath;
+      assert(
+        typeof ehAbaFn === "function" &&
+        ehAbaFn("/patrimonio.html") === true &&
+        ehAbaFn("/patrimonio") === true &&
+        ehAbaFn("/patrimonio/") === true &&
+        ehAbaFn("/RITMO_Whealth_Pro/tributario.html") === true &&
+        ehAbaFn("/familiar") === true &&
+        ehAbaFn("/evolucao") === true &&
+        ehAbaFn("/tributario") === true &&
+        ehAbaFn("/index.html") === false &&
+        ehAbaFn("/index") === false &&
+        ehAbaFn("/login") === false &&
+        ehAbaFn("/") === false,
+        "Cloudflare[Pretty URLs]: guarda de rota em global_ui.js reconhece abas com e sem .html"
+      );
+
+      const edgeSrc49 = fs48.readFileSync(path48.join(__dirname, "../supabase/functions/suporte-email/index.ts"), "utf8");
+      const convitePs149 = fs48.readFileSync(path48.join(__dirname, "../supabase/gerar_links_convite.ps1"), "utf8");
+      assert(
+        edgeSrc49.includes("https://ritmo-wealth.pages.dev") &&
+        edgeSrc49.includes("https://joaopedromenesesdev.github.io") &&
+        !edgeSrc49.includes('ALLOWED_ORIGIN || "*"') &&
+        convitePs149.includes("https://ritmo-wealth.pages.dev/login.html"),
+        "Cloudflare[CORS & Convites]: suporte-email libera ritmo-wealth.pages.dev + github.io fail-closed e script de convites atualizado"
+      );
+
+      const buildScriptPath49 = path48.join(__dirname, "../scripts/build-pages.js");
+      assert(
+        fs48.existsSync(buildScriptPath49) &&
+        fs48.existsSync(path48.join(__dirname, "../_headers")),
+        "Cloudflare[Build]: scripts/build-pages.js e _headers presentes na raiz"
+      );
     }
 
     console.log("\n=================================================");

@@ -5,14 +5,30 @@ window.temSimulacaoEmAndamento = function() {
     return sessionStorage.getItem("simulacao_ativa") === "true";
 };
 
-// Guarda de Rota Imediata (executa síncrono antes do render)
-(function() {
-    const abasPlanejamento = ['patrimonio.html', 'familiar.html', 'evolucao.html', 'tributario.html'];
-    const pathAtual = window.location.pathname;
+const ABAS_PLANEJAMENTO_SLUGS = ['patrimonio', 'familiar', 'evolucao', 'tributario'];
 
+function normalizarRotaAtual(pathnameOverride) {
+    const raw = typeof pathnameOverride === 'string'
+        ? pathnameOverride
+        : (typeof window !== 'undefined' && window.location ? (window.location.pathname || '') : '');
+    return raw.toLowerCase().replace(/\/+$/, '').replace(/\.html$/, '');
+}
+
+function ehAbaPlanejamentoPath(pathnameOverride) {
+    const rota = normalizarRotaAtual(pathnameOverride);
+    return ABAS_PLANEJAMENTO_SLUGS.some(aba => rota === aba || rota.endsWith('/' + aba));
+}
+
+if (typeof window !== 'undefined') {
+    window.normalizarRotaAtual = normalizarRotaAtual;
+    window.ehAbaPlanejamentoPath = ehAbaPlanejamentoPath;
+}
+
+// Guarda de Rota Imediata (executa síncrono antes do render; suporta rotas com e sem .html)
+(function() {
     // Se o usuário acessar diretamente qualquer uma das 4 telas de planejamento sem ter iniciado simulação,
     // limpa qualquer resíduo anterior e redireciona imediatamente para a introdução (nova_simulacao.html)
-    if (abasPlanejamento.some(aba => pathAtual.endsWith(aba))) {
+    if (ehAbaPlanejamentoPath()) {
         if (!window.temSimulacaoEmAndamento()) {
             sessionStorage.clear();
             window.location.replace('nova_simulacao.html');
@@ -61,11 +77,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Intercepta cliques nas 4 abas do planejamento (Patrimônio, Estrutura Familiar, Evolução, Prejuízo Tributário)
     // Se o usuário NÃO iniciou uma simulação (sem simulação em andamento), limpa resíduos e abre a introdução em nova_simulacao.html
-    const abasPlanejamento = ['patrimonio.html', 'familiar.html', 'evolucao.html', 'tributario.html'];
-    
     document.querySelectorAll('a').forEach(link => {
-        const href = link.getAttribute('href') || '';
-        if (abasPlanejamento.some(aba => href.includes(aba))) {
+        const hrefLimpo = (link.getAttribute('href') || '').split(/[?#]/)[0];
+        if (ehAbaPlanejamentoPath(hrefLimpo)) {
             link.addEventListener('click', (e) => {
                 if (!window.temSimulacaoEmAndamento()) {
                     e.preventDefault();
@@ -77,8 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Se a página atual for uma das 4 telas de planejamento sem simulação em andamento, redireciona para a animação em nova_simulacao.html
-    const pathAtual = window.location.pathname;
-    if (abasPlanejamento.some(aba => pathAtual.endsWith(aba))) {
+    if (ehAbaPlanejamentoPath()) {
         if (!window.temSimulacaoEmAndamento()) {
             sessionStorage.clear();
             window.location.replace('nova_simulacao.html');
@@ -430,9 +443,13 @@ function inicializarWidgetSuporte() {
     // Impede a renderização do botão flutuante e do modal na interface dos assessores
     return;
 
-    const pathAtual = window.location.pathname;
-    // Não exibe na tela de login, termos ou runner de testes
-    if (pathAtual.endsWith('login.html') || pathAtual.endsWith('termos_privacidade.html') || pathAtual.includes('run_tests.html')) {
+    const rotaAtual = normalizarRotaAtual();
+    // Não exibe na tela de login, termos ou runner de testes (com ou sem extensão .html)
+    if (
+        rotaAtual === 'login' || rotaAtual.endsWith('/login') ||
+        rotaAtual === 'termos_privacidade' || rotaAtual.endsWith('/termos_privacidade') ||
+        rotaAtual.includes('run_tests')
+    ) {
         return;
     }
 
