@@ -2716,6 +2716,49 @@
         console.error("  [FAIL] Erro de sintaxe JS:", errSintaxe);
       }
       assert(sintaxeOk48, "Vendas[Sintaxe]: db.js, global_ui.js e dashboard.js compilam limpos via vm.Script");
+
+      // 48.F — Máscara monetária em tempo real no campo Valor da Venda (#venda_input_valor)
+      const maskCtx = {
+        window: {
+          location: { pathname: "/index.html", replace() {}, href: "" },
+          addEventListener() {},
+          PaceUI: {}
+        },
+        sessionStorage: { getItem: () => null, setItem() {}, clear() {} },
+        localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
+        document: {
+          addEventListener() {},
+          querySelectorAll: () => [],
+          querySelector: () => null,
+          getElementById: () => null
+        },
+        IntersectionObserver: function () { return { observe() {} }; },
+        MutationObserver: function () { return { observe() {} }; },
+        CustomEvent: function () {},
+        setTimeout: () => 0,
+        clearTimeout() {},
+        console
+      };
+      maskCtx.globalThis = maskCtx;
+      vm48.createContext(maskCtx);
+      vm48.runInContext(globalUiSrc48, maskCtx);
+      const maskFn = maskCtx.window.PaceUI?.formatarMascaraMoedaDigitacao;
+      const normalizeNBSP = (s) => String(s).replace(/\u00A0/g, " ");
+      assert(
+        typeof maskFn === "function" &&
+        normalizeNBSP(maskFn("5")) === "R$ 0,05" &&
+        normalizeNBSP(maskFn("56877")) === "R$ 568,77" &&
+        normalizeNBSP(maskFn("5687700")) === "R$ 56.877,00" &&
+        normalizeNBSP(maskFn("25000000")) === "R$ 250.000,00" &&
+        normalizeNBSP(maskFn("R$ 1.234.567,89")) === "R$ 1.234.567,89" &&
+        maskFn("") === "" &&
+        maskFn("R$ 0,0") === "" &&
+        maskFn("abc!@#") === "" &&
+        normalizeNBSP(maskFn("99999999999999999999")) === "R$ 9.999.999.999.999,99" &&
+        globalUiSrc48.includes('inputValor?.addEventListener("input"') &&
+        (!_dbModNode || _dbModNode.sanitizarNumero(maskFn("5687700"), 0) === 56877),
+        "Vendas[Máscara Digitação]: aplica pontos e vírgula em tempo real, limpa zeros, limita overflow e integra com sanitizarNumero"
+      );
     }
 
     console.log("\n=================================================");

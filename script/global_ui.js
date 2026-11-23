@@ -846,6 +846,15 @@ function _formatarMoedaBRLVenda(valor, casas = 0) {
     });
 }
 
+function _formatarMascaraMoedaDigitacao(valorBruto) {
+    const apenasDigitos = String(valorBruto ?? "").replace(/\D/g, "").slice(0, 15);
+    const semZerosEsquerda = apenasDigitos.replace(/^0+/, "");
+    if (!semZerosEsquerda) return "";
+    return _formatarMoedaBRLVenda(Number(semZerosEsquerda) / 100, 2);
+}
+window.PaceUI = window.PaceUI || {};
+window.PaceUI.formatarMascaraMoedaDigitacao = _formatarMascaraMoedaDigitacao;
+
 function _formatarDataBRVenda(isoDate) {
     if (!isoDate) return "—";
     const str = String(isoDate).trim();
@@ -1865,7 +1874,7 @@ function _criarModalVendaDOM() {
           <div class="pace-venda-grid-2">
             <div class="pace-venda-field">
               <label for="venda_input_valor">Valor da Venda (R$) *</label>
-              <input type="text" id="venda_input_valor" class="pace-venda-control" inputmode="decimal" placeholder="Ex.: R$ 250.000,00" required>
+              <input type="text" id="venda_input_valor" class="pace-venda-control" inputmode="numeric" placeholder="Ex.: R$ 250.000,00" autocomplete="off" required>
             </div>
             <div class="pace-venda-field">
               <label for="venda_input_data">Data da Venda *</label>
@@ -1919,10 +1928,17 @@ function _criarModalVendaDOM() {
     });
 
     const inputValor = overlay.querySelector("#venda_input_valor");
+    inputValor?.addEventListener("input", () => {
+        inputValor.value = _formatarMascaraMoedaDigitacao(inputValor.value);
+    });
     inputValor?.addEventListener("blur", () => {
+        if (!String(inputValor.value || "").trim()) {
+            inputValor.value = "";
+            return;
+        }
         const num = typeof window.sanitizarNumero === "function"
             ? window.sanitizarNumero(inputValor.value, 0)
-            : (parseFloat(String(inputValor.value || "").replace(/[^\d,.-]/g, "").replace(",", ".")) || 0);
+            : (parseFloat(String(inputValor.value || "").replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".")) || 0);
         const seguro = Math.max(0, num);
         inputValor.value = _formatarMoedaBRLVenda(seguro, 2);
     });
