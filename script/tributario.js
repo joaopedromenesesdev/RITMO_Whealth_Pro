@@ -941,7 +941,14 @@ function initPrejuizo() {
     inputAvista.addEventListener("input", function () {
       formatarMoeda(this);
       checkFilled(this);
+      marcarCampoManual(this, obterValorInput(this) > 0);
       salvarInputsTributario();
+    });
+    inputAvista.addEventListener("blur", function () {
+      if (obterValorInput(this) <= 0) {
+        marcarCampoManual(this, false);
+        salvarInputsTributario();
+      }
     });
   }
 
@@ -967,7 +974,14 @@ function initPrejuizo() {
     inputSeguroCapital.addEventListener("input", function () {
       formatarMoeda(this);
       checkFilled(this);
+      marcarCampoManual(this, obterValorInput(this) > 0);
       salvarInputsTributario();
+    });
+    inputSeguroCapital.addEventListener("blur", function () {
+      if (obterValorInput(this) <= 0) {
+        marcarCampoManual(this, false);
+        salvarInputsTributario();
+      }
     });
   }
 
@@ -991,12 +1005,15 @@ function initPrejuizo() {
         checkFilled(inputDoacao);
       }
     }
-    if (salvos.doacao_avista) {
-      if (inputAvista) {
-        const numericVal = Number(salvos.doacao_avista) || 0;
+    if (inputAvista) {
+      const numericVal = Number(salvos.doacao_avista) || 0;
+      if (salvos.doacao_avista_manual === true && numericVal > 0) {
         inputAvista.value = Math.round(numericVal * 100).toString();
         formatarMoeda(inputAvista);
         checkFilled(inputAvista);
+        marcarCampoManual(inputAvista, true);
+      } else {
+        marcarCampoManual(inputAvista, false);
       }
     }
     if (salvos.previdencia !== undefined && salvos.previdencia !== null) {
@@ -1015,14 +1032,15 @@ function initPrejuizo() {
         checkFilled(inputSeguroIdade);
       }
     }
-    if (salvos.seguro_capital !== undefined && salvos.seguro_capital !== null) {
-      if (inputSeguroCapital) {
-        const numericVal = Number(salvos.seguro_capital) || 0;
-        if (numericVal > 0) {
-          inputSeguroCapital.value = Math.round(numericVal * 100).toString();
-          formatarMoeda(inputSeguroCapital);
-          checkFilled(inputSeguroCapital);
-        }
+    if (inputSeguroCapital) {
+      const numericVal = Number(salvos.seguro_capital) || 0;
+      if (salvos.seguro_capital_manual === true && numericVal > 0) {
+        inputSeguroCapital.value = Math.round(numericVal * 100).toString();
+        formatarMoeda(inputSeguroCapital);
+        checkFilled(inputSeguroCapital);
+        marcarCampoManual(inputSeguroCapital, true);
+      } else {
+        marcarCampoManual(inputSeguroCapital, false);
       }
     }
   }
@@ -1051,20 +1069,74 @@ function sincronizarModoGraficoErosaoUI() {
   // Mantido para compatibilidade com eventuais chamadores legados
 }
 
-function salvarInputsTributario() {
+function marcarCampoManual(inputEl, isManual) {
+  if (!inputEl) return;
+  const flag = isManual ? "true" : "false";
+  if (inputEl.dataset) inputEl.dataset.manualOverride = flag;
+  if (typeof inputEl.setAttribute === "function") {
+    inputEl.setAttribute("data-manual-override", flag);
+  }
+}
+
+function isCampoManual(inputEl) {
+  if (!inputEl) return false;
+  if (inputEl.dataset && inputEl.dataset.manualOverride !== undefined) {
+    return inputEl.dataset.manualOverride === "true";
+  }
+  if (typeof inputEl.getAttribute === "function") {
+    return inputEl.getAttribute("data-manual-override") === "true";
+  }
+  return false;
+}
+
+function sincronizarInputComPrejuizo(inputEl, prejuizoAtual) {
+  if (!inputEl) return 0;
+  const estaEmFocoZerado = (typeof document !== "undefined" && document.activeElement === inputEl) && obterValorInput(inputEl) <= 0;
+  if (!isCampoManual(inputEl) && !estaEmFocoZerado) {
+    if (prejuizoAtual > 0) {
+      inputEl.value = Math.round(prejuizoAtual * 100).toString();
+      formatarMoeda(inputEl);
+    } else {
+      inputEl.value = "";
+    }
+    checkFilled(inputEl);
+  }
+  return obterValorInput(inputEl);
+}
+
+function persistirInputsTributarioNoSession() {
   const uf = document.getElementById("uf_itcmd")?.value;
   const itcmd = document.getElementById("taxa_itcmd")?.value;
   const honorarios = document.getElementById("taxa_honorarios")?.value;
   const custas = document.getElementById("taxa_custas")?.value;
   let doacao = obterValorInput(document.getElementById("input_doacao_vida"));
   if (doacao > 96050) doacao = 96050;
-  const doacao_avista = obterValorInput(document.getElementById("input_doacao_avista"));
+  const inputAvista = document.getElementById("input_doacao_avista");
+  const inputSeguroCapital = document.getElementById("input_seguro_capital");
+  const doacao_avista = obterValorInput(inputAvista);
+  const doacao_avista_manual = isCampoManual(inputAvista);
   const previdencia = obterValorInput(document.getElementById("input_previdencia"));
   const seguro_idade = document.getElementById("input_seguro_idade")?.value || "";
-  const seguro_capital = obterValorInput(document.getElementById("input_seguro_capital"));
+  const seguro_capital = obterValorInput(inputSeguroCapital);
+  const seguro_capital_manual = isCampoManual(inputSeguroCapital);
 
-  sessionStorage.setItem("tributario_inputs", JSON.stringify({ uf, itcmd, honorarios, custas, doacao, doacao_avista, previdencia, seguro_idade, seguro_capital }));
+  sessionStorage.setItem("tributario_inputs", JSON.stringify({
+    uf,
+    itcmd,
+    honorarios,
+    custas,
+    doacao,
+    doacao_avista,
+    doacao_avista_manual,
+    previdencia,
+    seguro_idade,
+    seguro_capital,
+    seguro_capital_manual
+  }));
+}
 
+function salvarInputsTributario() {
+  persistirInputsTributarioNoSession();
   sincronizarModoGraficoErosaoUI();
   calcularPrejuizo();
 }
@@ -1530,18 +1602,7 @@ function calcularPrejuizo() {
 
   // Opção 2: Doação à vista com incidência de ITCMD
   const inputAvista = document.getElementById("input_doacao_avista");
-  let avistaVal = 0;
-  if (inputAvista) {
-    const isInitAvista = (inputAvista.dataset && inputAvista.dataset.initialized) || (typeof inputAvista.getAttribute === "function" && inputAvista.getAttribute("data-initialized"));
-    if (inputAvista.value === "" && !isInitAvista && prejuizoAtual > 0) {
-      inputAvista.value = Math.round(prejuizoAtual * 100).toString();
-      formatarMoeda(inputAvista);
-      checkFilled(inputAvista);
-      if (inputAvista.dataset) inputAvista.dataset.initialized = "true";
-      if (typeof inputAvista.setAttribute === "function") inputAvista.setAttribute("data-initialized", "true");
-    }
-    avistaVal = obterValorInput(inputAvista);
-  }
+  const avistaVal = sincronizarInputComPrejuizo(inputAvista, prejuizoAtual);
 
   const elAvistaITCMD = document.getElementById("avista_custo_itcmd");
   const elAvistaTotal = document.getElementById("avista_custo_total");
@@ -1647,19 +1708,7 @@ function calcularPrejuizo() {
 
   const inputSeguroIdade = document.getElementById("input_seguro_idade");
   const inputSeguroCapital = document.getElementById("input_seguro_capital");
-  let seguroCapitalVal = 0;
-
-  if (inputSeguroCapital) {
-    const isInitSeguro = (inputSeguroCapital.dataset && inputSeguroCapital.dataset.initialized) || (typeof inputSeguroCapital.getAttribute === "function" && inputSeguroCapital.getAttribute("data-initialized"));
-    if (inputSeguroCapital.value === "" && !isInitSeguro && prejuizoAtual > 0) {
-      inputSeguroCapital.value = Math.round(prejuizoAtual * 100).toString();
-      formatarMoeda(inputSeguroCapital);
-      checkFilled(inputSeguroCapital);
-      if (inputSeguroCapital.dataset) inputSeguroCapital.dataset.initialized = "true";
-      if (typeof inputSeguroCapital.setAttribute === "function") inputSeguroCapital.setAttribute("data-initialized", "true");
-    }
-    seguroCapitalVal = obterValorInput(inputSeguroCapital);
-  }
+  const seguroCapitalVal = sincronizarInputComPrejuizo(inputSeguroCapital, prejuizoAtual);
 
   const elSeguroCapital = document.getElementById("seguro_resultado_capital");
   const elSeguroParcela = document.getElementById("seguro_resultado_parcela");
@@ -1695,27 +1744,36 @@ function calcularPrejuizo() {
             elSeguroEconomia.style.color = "#1D6F42";
           } else {
             elSeguroEconomia.innerText = fmt(0);
-            elSeguroEconomia.style.backgroundColor = "";
-            elSeguroEconomia.style.color = "";
+            elSeguroEconomia.style.backgroundColor = "rgba(229, 57, 53, 0.1)";
+            elSeguroEconomia.style.color = "#E53935";
           }
         }
       }
     } else {
       if (elSeguroParcela) elSeguroParcela.innerText = "Informe a idade";
       if (elSeguroQuitar) elSeguroQuitar.innerText = "Informe a idade";
-      if (elSeguroEconomia) elSeguroEconomia.innerText = "Informe a idade";
+      if (elSeguroEconomia) {
+        elSeguroEconomia.innerText = "Informe a idade";
+        elSeguroEconomia.style.backgroundColor = "";
+        elSeguroEconomia.style.color = "";
+      }
     }
   } else {
     if (elSeguroCapital) elSeguroCapital.innerText = "—";
     if (elSeguroParcela) elSeguroParcela.innerText = "—";
     if (elSeguroQuitar) elSeguroQuitar.innerText = "—";
-    if (elSeguroEconomia) elSeguroEconomia.innerText = "—";
+    if (elSeguroEconomia) {
+      elSeguroEconomia.innerText = "—";
+      elSeguroEconomia.style.backgroundColor = "";
+      elSeguroEconomia.style.color = "";
+    }
   }
 
   gerarNarrativaIA(totalAtual, prejuizoAtual, regime);
   calcularPartilha(totalAtual, regime);
   calcularHolding(prejuizoAtual);
   atualizarPreservacaoPDF();
+  persistirInputsTributarioNoSession();
 
   // Auto-save: persiste progressivamente no Supabase com debounce
   if (typeof dbAutoSalvar === "function") dbAutoSalvar();
@@ -1759,7 +1817,10 @@ function atualizarPreservacaoPDF() {
   if (pdfSeguroCapital && elSeguroCapital) pdfSeguroCapital.innerText = elSeguroCapital.innerText;
   if (pdfSeguroParcela && elSeguroParcela) pdfSeguroParcela.innerText = elSeguroParcela.innerText;
   if (pdfSeguroQuitar && elSeguroQuitar) pdfSeguroQuitar.innerText = elSeguroQuitar.innerText;
-  if (pdfSeguroEconomia && elSeguroEconomia) pdfSeguroEconomia.innerText = elSeguroEconomia.innerText;
+  if (pdfSeguroEconomia && elSeguroEconomia) {
+    pdfSeguroEconomia.innerText = elSeguroEconomia.innerText;
+    pdfSeguroEconomia.style.color = elSeguroEconomia.style.color || "#1D6F42";
+  }
 
   // Atualiza elementos dinâmicos da PÁGINA 6 (Estratégia de Liquidez e Seguro Resgatável)
   const p6CapitalRec = document.getElementById("p6_capital_recomendado");
