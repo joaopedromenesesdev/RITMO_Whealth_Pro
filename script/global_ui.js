@@ -821,9 +821,49 @@ window.enviarChamadoSuporte = async function(event) {
 window.__masterUsabilidadeCache = {
     usuarios: [],
     relatorios: [],
+    vendas: [],
     abaAtiva: 'usuarios',
-    filtroAssessorRelatorios: 'todos'
+    filtroAssessorRelatorios: 'todos',
+    filtroRelatorioVendas: ''
 };
+
+const PACE_PRODUTOS_VENDA_SUGESTOES = [
+    "Seguro de Vida",
+    "Previdência Privada (PGBL/VGBL)",
+    "Holding Patrimonial",
+    "Estrutura Offshore",
+    "Planejamento Sucessório / Consultoria",
+    "Gestão de Carteira / Investimentos",
+    "Consórcio / Crédito Estruturado",
+    "Outro"
+];
+
+function _formatarMoedaBRLVenda(valor, casas = 0) {
+    const num = Number(valor) || 0;
+    return "R$ " + num.toLocaleString("pt-BR", {
+        minimumFractionDigits: casas,
+        maximumFractionDigits: casas
+    });
+}
+
+function _formatarDataBRVenda(isoDate) {
+    if (!isoDate) return "—";
+    const str = String(isoDate).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+        const [ano, mes, dia] = str.split("-");
+        return `${dia}/${mes}/${ano}`;
+    }
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? str : d.toLocaleDateString("pt-BR");
+}
+
+function _obterDataHojeISO() {
+    const d = new Date();
+    const ano = d.getFullYear();
+    const mes = String(d.getMonth() + 1).padStart(2, "0");
+    const dia = String(d.getDate()).padStart(2, "0");
+    return `${ano}-${mes}-${dia}`;
+}
 
 function _formatarDataHoraAcessoMaster(isoStr) {
     if (!isoStr) return { dataHora: "Sem acesso registrado", relativo: "Pendente", ativo: false };
@@ -885,7 +925,7 @@ function _criarModalUsabilidadeMasterDOM() {
           </div>
         </div>
 
-        <!-- KPIs de Usabilidade -->
+        <!-- KPIs de Usabilidade (Grid 3x2) -->
         <div class="master-kpi-grid">
           <div class="master-kpi-card">
             <span class="master-kpi-label">Total de Usuários</span>
@@ -894,6 +934,14 @@ function _criarModalUsabilidadeMasterDOM() {
           <div class="master-kpi-card">
             <span class="master-kpi-label">Total de Relatórios</span>
             <strong class="master-kpi-value" id="master_kpi_total_relatorios">0</strong>
+          </div>
+          <div class="master-kpi-card is-sales-card" id="master_kpi_card_vendas" role="button" tabindex="0" aria-label="Abrir aba de Vendas Realizadas">
+            <div class="master-kpi-label-row">
+              <span class="master-kpi-label">Vendas Realizadas</span>
+              <span class="master-kpi-pill-sales" id="master_kpi_vendas_conv">0% conv.</span>
+            </div>
+            <strong class="master-kpi-value is-sales-value" id="master_kpi_total_vendas">0</strong>
+            <span class="master-kpi-sub" id="master_kpi_vendas_volume">R$ 0 em volume vendido</span>
           </div>
           <div class="master-kpi-card">
             <span class="master-kpi-label">Prejuízo Médio / Cliente</span>
@@ -911,21 +959,26 @@ function _criarModalUsabilidadeMasterDOM() {
 
         <!-- Abas de Navegação -->
         <div class="master-tabs-bar">
-          <button type="button" class="master-tab-btn active" id="tab_btn_master_usuarios" onclick="window.alternarAbaPainelMaster('usuarios')">
+          <button type="button" class="master-tab-btn active" id="tab_btn_master_usuarios" data-master-tab="usuarios">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            <span>Acessos & Produtividade por Usuário</span>
+            <span>Acessos &amp; Produtividade por Usuário</span>
           </button>
-          <button type="button" class="master-tab-btn" id="tab_btn_master_relatorios" onclick="window.alternarAbaPainelMaster('relatorios')">
+          <button type="button" class="master-tab-btn" id="tab_btn_master_relatorios" data-master-tab="relatorios">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
             <span>Todos os Relatórios dos Assessores</span>
+          </button>
+          <button type="button" class="master-tab-btn" id="tab_btn_master_vendas" data-master-tab="vendas">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/></svg>
+            <span>Vendas Realizadas</span>
+            <span class="master-tab-counter" id="master_tab_counter_vendas">0</span>
           </button>
         </div>
 
         <!-- ABA 1: USUÁRIOS E ACESSOS -->
         <div class="master-tab-content" id="master_section_usuarios">
           <div class="master-filters-row">
-            <input type="text" id="master_input_busca_usuario" class="master-filter-input" placeholder="Buscar usuário por nome ou e-mail..." oninput="window.renderizarTabelaUsuariosMaster()">
-            <select id="master_select_role_usuario" class="master-filter-select" onchange="window.renderizarTabelaUsuariosMaster()">
+            <input type="text" id="master_input_busca_usuario" class="master-filter-input" placeholder="Buscar usuário por nome ou e-mail...">
+            <select id="master_select_role_usuario" class="master-filter-select">
               <option value="todos">Todos os Perfis</option>
               <option value="assessor">Apenas Assessores</option>
               <option value="master">Apenas Masters</option>
@@ -938,13 +991,14 @@ function _criarModalUsabilidadeMasterDOM() {
                   <th>Usuário / Assessor</th>
                   <th>Perfil</th>
                   <th>Último Acesso</th>
-                  <th style="text-align: center;">Relatórios Gerados</th>
+                  <th style="text-align: center;">Relatórios</th>
+                  <th style="text-align: center;">Vendas</th>
                   <th>Patrimônio Mapeado</th>
                   <th style="text-align: right;">Ações</th>
                 </tr>
               </thead>
               <tbody id="master_tbody_usuarios">
-                <tr><td colspan="6" class="master-empty-cell">Carregando informações de usabilidade...</td></tr>
+                <tr><td colspan="7" class="master-empty-cell">Carregando informações de usabilidade...</td></tr>
               </tbody>
             </table>
           </div>
@@ -953,8 +1007,8 @@ function _criarModalUsabilidadeMasterDOM() {
         <!-- ABA 2: TODOS OS RELATÓRIOS DOS ASSESSORES -->
         <div class="master-tab-content" id="master_section_relatorios" style="display: none;">
           <div class="master-filters-row">
-            <input type="text" id="master_input_busca_relatorio" class="master-filter-input" placeholder="Buscar por nome do cliente ou assessor..." oninput="window.renderizarTabelaRelatoriosMaster()">
-            <select id="master_select_assessor_relatorio" class="master-filter-select" onchange="window.renderizarTabelaRelatoriosMaster()">
+            <input type="text" id="master_input_busca_relatorio" class="master-filter-input" placeholder="Buscar por nome do cliente ou assessor...">
+            <select id="master_select_assessor_relatorio" class="master-filter-select">
               <option value="todos">Todos os Assessores</option>
             </select>
           </div>
@@ -967,11 +1021,63 @@ function _criarModalUsabilidadeMasterDOM() {
                   <th>Data</th>
                   <th>Patrimônio Total</th>
                   <th>Prejuízo Sucessório</th>
-                  <th style="text-align: right;">Acesso Completo</th>
+                  <th style="text-align: right;">Ações</th>
                 </tr>
               </thead>
               <tbody id="master_tbody_relatorios">
                 <tr><td colspan="6" class="master-empty-cell">Carregando relatórios...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ABA 3: VENDAS REALIZADAS -->
+        <div class="master-tab-content" id="master_section_vendas" style="display: none;">
+          <div class="master-sales-toolbar">
+            <div class="master-filters-row master-sales-filters">
+              <input type="text" id="master_input_busca_venda" class="master-filter-input" placeholder="Buscar por cliente, produto, assessor ou observação...">
+              <select id="master_select_assessor_venda" class="master-filter-select">
+                <option value="todos">Todos os Assessores</option>
+              </select>
+              <select id="master_select_origem_venda" class="master-filter-select compact">
+                <option value="todas">Todas as Origens</option>
+                <option value="relatorio">Com Relatório</option>
+                <option value="avulsa">Avulsas</option>
+              </select>
+              <select id="master_select_periodo_venda" class="master-filter-select compact">
+                <option value="todos">Todo o Período</option>
+                <option value="mes_atual">Este Mês</option>
+                <option value="30d">Últimos 30 dias</option>
+                <option value="90d">Últimos 90 dias</option>
+              </select>
+            </div>
+            <div class="master-sales-actions-bar">
+              <span class="master-sales-summary" id="master_vendas_resumo_filtrado">0 vendas • R$ 0</span>
+              <div class="master-sales-actions-right">
+                <button type="button" class="master-btn-table-action" id="btn_master_limpar_filtro_relatorio" style="display: none;">
+                  Limpar filtro do relatório
+                </button>
+                <button type="button" class="master-btn-new-sale" id="btn_master_registrar_venda">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  <span>Registrar Venda</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="master-table-container">
+            <table class="master-table">
+              <thead>
+                <tr>
+                  <th>Cliente / Origem</th>
+                  <th>Produto / Serviço</th>
+                  <th>Assessor</th>
+                  <th>Data da Venda</th>
+                  <th>Valor</th>
+                  <th style="text-align: right;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="master_tbody_vendas">
+                <tr><td colspan="6" class="master-empty-cell">Carregando vendas realizadas...</td></tr>
               </tbody>
             </table>
           </div>
@@ -985,30 +1091,193 @@ function _criarModalUsabilidadeMasterDOM() {
         }
     });
 
+    // Bindings de navegação, filtros e delegação segura (anti-XSS)
+    overlay.querySelectorAll("[data-master-tab]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            window.alternarAbaPainelMaster(btn.getAttribute("data-master-tab"));
+        });
+    });
+
+    const cardVendasKpi = overlay.querySelector("#master_kpi_card_vendas");
+    if (cardVendasKpi) {
+        const abrirAbaVendas = () => {
+            window.__masterUsabilidadeCache.filtroRelatorioVendas = "";
+            window.alternarAbaPainelMaster("vendas");
+        };
+        cardVendasKpi.addEventListener("click", abrirAbaVendas);
+        cardVendasKpi.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                abrirAbaVendas();
+            }
+        });
+    }
+
+    overlay.querySelector("#master_input_busca_usuario")?.addEventListener("input", () => window.renderizarTabelaUsuariosMaster());
+    overlay.querySelector("#master_select_role_usuario")?.addEventListener("change", () => window.renderizarTabelaUsuariosMaster());
+    overlay.querySelector("#master_input_busca_relatorio")?.addEventListener("input", () => window.renderizarTabelaRelatoriosMaster());
+    overlay.querySelector("#master_select_assessor_relatorio")?.addEventListener("change", () => window.renderizarTabelaRelatoriosMaster());
+    overlay.querySelector("#master_input_busca_venda")?.addEventListener("input", () => window.renderizarTabelaVendasMaster());
+    overlay.querySelector("#master_select_assessor_venda")?.addEventListener("change", () => window.renderizarTabelaVendasMaster());
+    overlay.querySelector("#master_select_origem_venda")?.addEventListener("change", () => window.renderizarTabelaVendasMaster());
+    overlay.querySelector("#master_select_periodo_venda")?.addEventListener("change", () => window.renderizarTabelaVendasMaster());
+
+    overlay.querySelector("#btn_master_limpar_filtro_relatorio")?.addEventListener("click", () => {
+        window.__masterUsabilidadeCache.filtroRelatorioVendas = "";
+        window.renderizarTabelaVendasMaster();
+    });
+
+    overlay.querySelector("#btn_master_registrar_venda")?.addEventListener("click", () => {
+        window.abrirModalVenda({
+            isMaster: true,
+            usuariosDisponiveis: window.__masterUsabilidadeCache.usuarios || [],
+            relatoriosDisponiveis: window.__masterUsabilidadeCache.relatorios || [],
+            onSaved: async () => {
+                await window.recarregarDadosUsabilidadeMaster();
+                if (typeof window.carregarDashboard === "function") {
+                    window.carregarDashboard();
+                }
+            }
+        });
+    });
+
+    // Delegação segura: Tabela de Usuários
+    overlay.querySelector("#master_tbody_usuarios")?.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-action]");
+        if (!btn) return;
+        const action = btn.getAttribute("data-action");
+        const uid = btn.getAttribute("data-user-id") || "";
+        const nome = btn.getAttribute("data-user-name") || "";
+        if (action === "ver-relatorios-usuario") {
+            window.filtrarRelatoriosDoUsuarioNoPainelMaster(nome, uid);
+        } else if (action === "ver-vendas-usuario") {
+            window.filtrarVendasDoUsuarioNoPainelMaster(nome, uid);
+        }
+    });
+
+    // Delegação segura: Tabela de Relatórios
+    overlay.querySelector("#master_tbody_relatorios")?.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-action]");
+        if (!btn) return;
+        const action = btn.getAttribute("data-action");
+        const repId = btn.getAttribute("data-relatorio-id") || "";
+        if (!repId) return;
+
+        if (action === "abrir-relatorio-editar") {
+            window.abrirRelatorioPeloPainelMaster(repId, "editar");
+        } else if (action === "abrir-relatorio-pdf") {
+            window.abrirRelatorioPeloPainelMaster(repId, "pdf");
+        } else if (action === "nova-venda-relatorio") {
+            const rep = (window.__masterUsabilidadeCache.relatorios || []).find(r => String(r.id) === String(repId));
+            window.abrirModalVenda({
+                relatorio: rep || null,
+                isMaster: true,
+                usuariosDisponiveis: window.__masterUsabilidadeCache.usuarios || [],
+                relatoriosDisponiveis: window.__masterUsabilidadeCache.relatorios || [],
+                onSaved: async () => {
+                    await window.recarregarDadosUsabilidadeMaster();
+                    if (typeof window.carregarDashboard === "function") {
+                        window.carregarDashboard();
+                    }
+                }
+            });
+        } else if (action === "filtrar-vendas-relatorio") {
+            window.__masterUsabilidadeCache.filtroRelatorioVendas = repId;
+            const selectAssessorVenda = document.getElementById("master_select_assessor_venda");
+            const inputBuscaVenda = document.getElementById("master_input_busca_venda");
+            if (selectAssessorVenda) selectAssessorVenda.value = "todos";
+            if (inputBuscaVenda) inputBuscaVenda.value = "";
+            window.alternarAbaPainelMaster("vendas");
+        }
+    });
+
+    // Delegação segura: Tabela de Vendas
+    overlay.querySelector("#master_tbody_vendas")?.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-action]");
+        if (!btn) return;
+        const action = btn.getAttribute("data-action");
+        const vendaId = btn.getAttribute("data-venda-id") || "";
+        if (!vendaId) return;
+        const venda = (window.__masterUsabilidadeCache.vendas || []).find(v => String(v.id) === String(vendaId));
+        if (!venda) return;
+
+        if (action === "editar-venda") {
+            window.abrirModalVenda({
+                venda,
+                isMaster: true,
+                usuariosDisponiveis: window.__masterUsabilidadeCache.usuarios || [],
+                relatoriosDisponiveis: window.__masterUsabilidadeCache.relatorios || [],
+                onSaved: async () => {
+                    await window.recarregarDadosUsabilidadeMaster();
+                    if (typeof window.carregarDashboard === "function") {
+                        window.carregarDashboard();
+                    }
+                }
+            });
+        } else if (action === "excluir-venda") {
+            window.confirmarExclusaoVenda(venda, async () => {
+                await window.recarregarDadosUsabilidadeMaster();
+                if (typeof window.carregarDashboard === "function") {
+                    window.carregarDashboard();
+                }
+            });
+        }
+    });
+
     document.body.appendChild(overlay);
     return overlay;
 }
 
 window.alternarAbaPainelMaster = function(aba) {
-    window.__masterUsabilidadeCache.abaAtiva = aba;
-    const btnUsuarios = document.getElementById("tab_btn_master_usuarios");
-    const btnRelatorios = document.getElementById("tab_btn_master_relatorios");
-    const secUsuarios = document.getElementById("master_section_usuarios");
-    const secRelatorios = document.getElementById("master_section_relatorios");
+    const abaNormalizada = (aba === "relatorios" || aba === "vendas") ? aba : "usuarios";
+    window.__masterUsabilidadeCache.abaAtiva = abaNormalizada;
 
-    if (aba === "relatorios") {
-        btnUsuarios?.classList.remove("active");
-        btnRelatorios?.classList.add("active");
-        if (secUsuarios) secUsuarios.style.display = "none";
-        if (secRelatorios) secRelatorios.style.display = "block";
+    const abas = [
+        { id: "usuarios", btn: "tab_btn_master_usuarios", sec: "master_section_usuarios" },
+        { id: "relatorios", btn: "tab_btn_master_relatorios", sec: "master_section_relatorios" },
+        { id: "vendas", btn: "tab_btn_master_vendas", sec: "master_section_vendas" }
+    ];
+
+    abas.forEach(item => {
+        const ativo = item.id === abaNormalizada;
+        document.getElementById(item.btn)?.classList.toggle("active", ativo);
+        const secEl = document.getElementById(item.sec);
+        if (secEl) {
+            secEl.style.display = ativo ? "block" : "none";
+            if (ativo) secEl.scrollTop = 0;
+        }
+    });
+
+    if (abaNormalizada === "relatorios") {
         window.renderizarTabelaRelatoriosMaster();
+    } else if (abaNormalizada === "vendas") {
+        window.renderizarTabelaVendasMaster();
     } else {
-        btnRelatorios?.classList.remove("active");
-        btnUsuarios?.classList.add("active");
-        if (secRelatorios) secRelatorios.style.display = "none";
-        if (secUsuarios) secUsuarios.style.display = "block";
         window.renderizarTabelaUsuariosMaster();
     }
+};
+
+window.filtrarVendasDoUsuarioNoPainelMaster = function(nomeAssessor, userId) {
+    window.__masterUsabilidadeCache.filtroRelatorioVendas = "";
+    const select = document.getElementById("master_select_assessor_venda");
+    const buscaInput = document.getElementById("master_input_busca_venda");
+    if (buscaInput) buscaInput.value = "";
+    if (select) {
+        const targetId = String(userId || "").trim();
+        const targetNome = String(nomeAssessor || "").toLowerCase().trim();
+        const matchOption = Array.from(select.options).find(opt =>
+            (targetId && opt.value === targetId) ||
+            (targetNome && opt.value.toLowerCase() === `nome:${targetNome}`) ||
+            (targetNome && opt.textContent.toLowerCase().trim() === targetNome)
+        );
+        if (matchOption) {
+            select.value = matchOption.value;
+        } else {
+            select.value = "todos";
+            if (buscaInput && nomeAssessor) buscaInput.value = nomeAssessor;
+        }
+    }
+    window.alternarAbaPainelMaster("vendas");
 };
 
 window.filtrarRelatoriosDoUsuarioNoPainelMaster = function(nomeAssessor, userId) {
@@ -1050,7 +1319,7 @@ window.renderizarTabelaUsuariosMaster = function() {
     });
 
     if (filtrados.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="master-empty-cell">Nenhum usuário encontrado para os filtros selecionados.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="master-empty-cell">Nenhum usuário encontrado para os filtros selecionados.</td></tr>`;
         return;
     }
 
@@ -1068,9 +1337,11 @@ window.renderizarTabelaUsuariosMaster = function() {
 
         const infoAcesso = _formatarDataHoraAcessoMaster(u.ultimo_acesso);
         const qtdRelatorios = Number(u.total_relatorios) || 0;
-        const patTotal = "R$ " + (Number(u.total_patrimonio) || 0).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
-        const safeNomeJs = esc(nome).replace(/'/g, "\\'");
-        const safeIdJs = esc(u.id || "").replace(/'/g, "\\'");
+        const qtdVendas = Number(u.total_vendas) || 0;
+        const volVendas = _formatarMoedaBRLVenda(u.valor_total_vendas || 0, 0);
+        const patTotal = _formatarMoedaBRLVenda(u.total_patrimonio || 0, 0);
+        const safeNomeAttr = esc(nome);
+        const safeIdAttr = esc(u.id || "");
 
         html += `
           <tr>
@@ -1097,9 +1368,15 @@ window.renderizarTabelaUsuariosMaster = function() {
             <td style="text-align: center;">
               <span class="master-report-count-badge ${qtdRelatorios > 0 ? 'has-reports' : ''}">${qtdRelatorios}</span>
             </td>
-            <td style="font-weight: 600; color: #09090b;">${patTotal}</td>
+            <td style="text-align: center;">
+              <button type="button" class="master-sale-count-btn ${qtdVendas > 0 ? 'has-sales' : ''}" data-action="ver-vendas-usuario" data-user-id="${safeIdAttr}" data-user-name="${safeNomeAttr}" title="Filtrar vendas de ${safeNomeAttr}">
+                <span class="master-sale-count-num">${qtdVendas}</span>
+                ${qtdVendas > 0 ? `<span class="master-sale-count-vol">${esc(volVendas)}</span>` : ""}
+              </button>
+            </td>
+            <td style="font-weight: 600; color: #09090b;">${esc(patTotal)}</td>
             <td style="text-align: right;">
-              <button type="button" class="master-btn-table-action" onclick="window.filtrarRelatoriosDoUsuarioNoPainelMaster('${safeNomeJs}', '${safeIdJs}')">
+              <button type="button" class="master-btn-table-action" data-action="ver-relatorios-usuario" data-user-id="${safeIdAttr}" data-user-name="${safeNomeAttr}">
                 Ver Relatórios (${qtdRelatorios})
               </button>
             </td>
@@ -1116,6 +1393,7 @@ window.renderizarTabelaRelatoriosMaster = function() {
 
     const usuarios = window.__masterUsabilidadeCache.usuarios || [];
     const relatorios = window.__masterUsabilidadeCache.relatorios || [];
+    const vendas = window.__masterUsabilidadeCache.vendas || [];
     const busca = document.getElementById("master_input_busca_relatorio")?.value || "";
     const filtroAssessor = document.getElementById("master_select_assessor_relatorio")?.value || "todos";
 
@@ -1133,6 +1411,11 @@ window.renderizarTabelaRelatoriosMaster = function() {
         return;
     }
 
+    const metricasVendas = typeof window.calcularMetricasVendas === "function"
+        ? window.calcularMetricasVendas(vendas, relatorios)
+        : { porRelatorio: {} };
+    const vendasPorRelatorio = metricasVendas.porRelatorio || {};
+
     const esc = window.escapeHTML;
     let html = "";
     const usuariosById = new Map();
@@ -1148,8 +1431,13 @@ window.renderizarTabelaRelatoriosMaster = function() {
         const nomeAssessor = (nomeRaw && nomeRaw.toLowerCase() !== "assessor")
             ? nomeRaw
             : (donoUsuario?.full_name || "Assessor");
-        const pat = "R$ " + (Number(rep.totalPatrimonio) || 0).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
-        const prej = "R$ " + (Number(rep.prejuizoTributario) || 0).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+        const pat = _formatarMoedaBRLVenda(rep.totalPatrimonio || 0, 0);
+        const prej = _formatarMoedaBRLVenda(rep.prejuizoTributario || 0, 0);
+
+        const statsVenda = vendasPorRelatorio[String(rep.id)] || null;
+        const badgeVendaHtml = statsVenda && statsVenda.quantidade > 0
+            ? `<button type="button" class="master-report-sale-pill" data-action="filtrar-vendas-relatorio" data-relatorio-id="${esc(safeId)}" title="Ver vendas vinculadas a este planejamento">✓ ${statsVenda.quantidade} ${statsVenda.quantidade === 1 ? 'venda' : 'vendas'} • ${esc(_formatarMoedaBRLVenda(statsVenda.valorTotal, 0))}</button>`
+            : "";
 
         let dataStr = rep.dataReuniao || "";
         if (rep.dataCriacao) {
@@ -1161,18 +1449,115 @@ window.renderizarTabelaRelatoriosMaster = function() {
 
         html += `
           <tr>
-            <td><strong style="color: #09090b;">${esc(nomeCliente)}</strong></td>
+            <td>
+              <div class="master-client-cell-wrap">
+                <strong style="color: #09090b;">${esc(nomeCliente)}</strong>
+                ${badgeVendaHtml}
+              </div>
+            </td>
             <td><span class="master-advisor-pill">${esc(nomeAssessor)}</span></td>
             <td style="color: #64748b; font-size: 12.5px;">${esc(dataStr || "—")}</td>
-            <td style="font-weight: 600; color: #09090b;">${pat}</td>
-            <td style="font-weight: 600; color: #dc2626;">${prej}</td>
+            <td style="font-weight: 600; color: #09090b;">${esc(pat)}</td>
+            <td style="font-weight: 600; color: #dc2626;">${esc(prej)}</td>
             <td style="text-align: right;">
               <div class="master-report-actions">
-                <button type="button" class="master-btn-table-action" onclick="window.abrirRelatorioPeloPainelMaster('${safeId}', 'editar')">
+                <button type="button" class="master-btn-table-action sale-accent" data-action="nova-venda-relatorio" data-relatorio-id="${esc(safeId)}" title="Registrar venda para este planejamento">
+                  + Venda
+                </button>
+                <button type="button" class="master-btn-table-action" data-action="abrir-relatorio-editar" data-relatorio-id="${esc(safeId)}">
                   Abrir Simulação
                 </button>
-                <button type="button" class="master-btn-table-action primary" onclick="window.abrirRelatorioPeloPainelMaster('${safeId}', 'pdf')">
+                <button type="button" class="master-btn-table-action primary" data-action="abrir-relatorio-pdf" data-relatorio-id="${esc(safeId)}">
                   Ver PDF
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+};
+
+window.renderizarTabelaVendasMaster = function() {
+    const tbody = document.getElementById("master_tbody_vendas");
+    if (!tbody) return;
+
+    const usuarios = window.__masterUsabilidadeCache.usuarios || [];
+    const vendas = window.__masterUsabilidadeCache.vendas || [];
+    const busca = document.getElementById("master_input_busca_venda")?.value || "";
+    const filtroAssessor = document.getElementById("master_select_assessor_venda")?.value || "todos";
+    const origem = document.getElementById("master_select_origem_venda")?.value || "todas";
+    const periodo = document.getElementById("master_select_periodo_venda")?.value || "todos";
+    const relatorioIdFiltro = window.__masterUsabilidadeCache.filtroRelatorioVendas || "";
+
+    const btnLimparRel = document.getElementById("btn_master_limpar_filtro_relatorio");
+    if (btnLimparRel) {
+        btnLimparRel.style.display = relatorioIdFiltro ? "inline-flex" : "none";
+    }
+
+    const filtradas = (typeof window.filtrarVendasPainel === "function")
+        ? window.filtrarVendasPainel(vendas, usuarios, {
+            busca,
+            filtroAssessor,
+            origem,
+            periodo,
+            relatorioId: relatorioIdFiltro
+        })
+        : vendas;
+
+    const volumeFiltrado = filtradas.reduce((acc, v) => acc + (Number(v.valorVenda) || 0), 0);
+    const resumoEl = document.getElementById("master_vendas_resumo_filtrado");
+    if (resumoEl) {
+        const sufixoRel = relatorioIdFiltro ? " (filtrado por relatório)" : "";
+        resumoEl.textContent = `${filtradas.length} ${filtradas.length === 1 ? 'venda' : 'vendas'} • ${_formatarMoedaBRLVenda(volumeFiltrado, 0)}${sufixoRel}`;
+    }
+
+    if (filtradas.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="master-empty-cell">Nenhuma venda registrada para os critérios selecionados.</td></tr>`;
+        return;
+    }
+
+    const esc = window.escapeHTML;
+    const usuariosById = new Map();
+    usuarios.forEach(u => {
+        if (u && u.id) usuariosById.set(String(u.id), u);
+    });
+
+    let html = "";
+    filtradas.forEach(v => {
+        const safeId = String(v.id || "").replace(/[^a-zA-Z0-9_-]/g, "");
+        const donoUsuario = v.userId ? usuariosById.get(String(v.userId)) : null;
+        const nomeRaw = String(v.nomeAssessor || "").trim();
+        const nomeAssessor = (nomeRaw && nomeRaw.toLowerCase() !== "assessor")
+            ? nomeRaw
+            : (donoUsuario?.full_name || "Assessor");
+        const isVinculada = Boolean(v.relatorioId);
+        const obsTrim = String(v.observacao || "").trim();
+        const obsCurta = obsTrim.length > 68 ? `${obsTrim.slice(0, 65)}...` : obsTrim;
+
+        html += `
+          <tr>
+            <td>
+              <div class="master-client-cell-wrap">
+                <strong style="color: #09090b;">${esc(v.nomeCliente || "Cliente")}</strong>
+                <span class="master-origin-pill ${isVinculada ? 'is-report' : 'is-standalone'}">
+                  ${isVinculada ? 'Relatório' : 'Avulsa'}
+                </span>
+              </div>
+              ${obsCurta ? `<div class="master-sale-obs-preview" title="${esc(obsTrim)}">${esc(obsCurta)}</div>` : ""}
+            </td>
+            <td><span class="master-product-tag">${esc(v.produto || "—")}</span></td>
+            <td><span class="master-advisor-pill">${esc(nomeAssessor)}</span></td>
+            <td class="master-nowrap" style="color: #64748b; font-size: 12.5px;">${esc(_formatarDataBRVenda(v.dataVenda))}</td>
+            <td class="master-nowrap" style="font-weight: 700; color: #059669;">${esc(_formatarMoedaBRLVenda(v.valorVenda, 2))}</td>
+            <td style="text-align: right;">
+              <div class="master-report-actions">
+                <button type="button" class="master-btn-table-action" data-action="editar-venda" data-venda-id="${esc(safeId)}">
+                  Editar
+                </button>
+                <button type="button" class="master-btn-table-action danger" data-action="excluir-venda" data-venda-id="${esc(safeId)}">
+                  Excluir
                 </button>
               </div>
             </td>
@@ -1276,19 +1661,21 @@ window.abrirRelatorioPeloPainelMaster = async function(repId, modo = "editar") {
 window.recarregarDadosUsabilidadeMaster = async function() {
     const tbodyU = document.getElementById("master_tbody_usuarios");
     if (tbodyU) {
-        tbodyU.innerHTML = `<tr><td colspan="6" class="master-empty-cell">Sincronizando dados de usabilidade e relatórios...</td></tr>`;
+        tbodyU.innerHTML = `<tr><td colspan="7" class="master-empty-cell">Sincronizando dados de usabilidade, relatórios e vendas...</td></tr>`;
     }
 
     try {
         const res = typeof window.dbObterUsabilidadeUsuarios === "function"
             ? await window.dbObterUsabilidadeUsuarios()
-            : { usuarios: [], relatorios: [] };
+            : { usuarios: [], relatorios: [], vendas: [] };
 
         const usuarios = res.usuarios || [];
         const relatorios = res.relatorios || [];
+        const vendas = res.vendas || [];
 
         window.__masterUsabilidadeCache.usuarios = usuarios;
         window.__masterUsabilidadeCache.relatorios = relatorios;
+        window.__masterUsabilidadeCache.vendas = vendas;
 
         // Atualiza KPIs
         const totalUsuarios = usuarios.length;
@@ -1297,24 +1684,36 @@ window.recarregarDadosUsabilidadeMaster = async function() {
         const prejuizoTotal = relatorios.reduce((acc, r) => acc + (Number(r.prejuizoTributario) || 0), 0);
         const prejuizoMedio = totalRelatorios > 0 ? Math.round(prejuizoTotal / totalRelatorios) : 0;
 
+        const metricasVendas = typeof window.calcularMetricasVendas === "function"
+            ? window.calcularMetricasVendas(vendas, relatorios)
+            : { totalVendas: vendas.length, valorTotalVendas: 0, taxaConversao: 0 };
+
         const elTotalU = document.getElementById("master_kpi_total_usuarios");
         const elTotalR = document.getElementById("master_kpi_total_relatorios");
+        const elTotalV = document.getElementById("master_kpi_total_vendas");
+        const elVolV = document.getElementById("master_kpi_vendas_volume");
+        const elConvV = document.getElementById("master_kpi_vendas_conv");
+        const elTabCounterV = document.getElementById("master_tab_counter_vendas");
         const elPrejMedio = document.getElementById("master_kpi_prejuizo_medio");
         const elPrejTotal = document.getElementById("master_kpi_prejuizo_total");
         const elPatTotal = document.getElementById("master_kpi_patrimonio_total");
 
         if (elTotalU) elTotalU.textContent = String(totalUsuarios);
         if (elTotalR) elTotalR.textContent = String(totalRelatorios);
-        
+        if (elTotalV) elTotalV.textContent = String(metricasVendas.totalVendas);
+        if (elVolV) elVolV.textContent = `${_formatarMoedaBRLVenda(metricasVendas.valorTotalVendas, 0)} em volume vendido`;
+        if (elConvV) elConvV.textContent = `${String(metricasVendas.taxaConversao).replace(".", ",")}% conv.`;
+        if (elTabCounterV) elTabCounterV.textContent = String(metricasVendas.totalVendas);
+
         // Formatação unificada para garantir alinhamento visual
         if (elPrejMedio) elPrejMedio.innerHTML = `<span>R$</span> <span>${prejuizoMedio.toLocaleString("pt-BR")}</span>`;
         if (elPrejTotal) elPrejTotal.innerHTML = `<span>R$</span> <span>${Math.round(prejuizoTotal).toLocaleString("pt-BR")}</span>`;
         if (elPatTotal) elPatTotal.innerHTML = `<span>R$</span> <span>${Math.round(patrimonioTotal).toLocaleString("pt-BR")}</span>`;
 
-        // Popula select de assessores na aba de relatórios usando userId canonico (com fallback por nome para legados sem user_id)
-        const selectAssessor = document.getElementById("master_select_assessor_relatorio");
-        if (selectAssessor) {
-            const valorAnterior = selectAssessor.value || "todos";
+        // Popula selects de assessores nas abas de relatórios e vendas usando userId canônico
+        const popularSelectAssessores = (selectEl, totalItens, registrosExtras) => {
+            if (!selectEl) return;
+            const valorAnterior = selectEl.value || "todos";
             const opcoesSelect = [];
             const idsMapeados = new Set();
 
@@ -1329,7 +1728,7 @@ window.recarregarDadosUsabilidadeMaster = async function() {
                 });
 
             const nomesOrfaos = new Set();
-            relatorios.forEach(r => {
+            (registrosExtras || []).forEach(r => {
                 if (!r) return;
                 const uidStr = r.userId ? String(r.userId) : "";
                 if (!uidStr || !idsMapeados.has(uidStr)) {
@@ -1341,22 +1740,26 @@ window.recarregarDadosUsabilidadeMaster = async function() {
                 }
             });
 
-            let opts = `<option value="todos">Todos os Assessores (${relatorios.length})</option>`;
+            let opts = `<option value="todos">Todos os Assessores (${totalItens})</option>`;
             opcoesSelect.forEach(opt => {
                 opts += `<option value="${window.escapeHTML(opt.value)}">${window.escapeHTML(opt.label)}</option>`;
             });
-            selectAssessor.innerHTML = opts;
+            selectEl.innerHTML = opts;
             if (opcoesSelect.some(o => o.value === valorAnterior)) {
-                selectAssessor.value = valorAnterior;
+                selectEl.value = valorAnterior;
             }
-        }
+        };
+
+        popularSelectAssessores(document.getElementById("master_select_assessor_relatorio"), relatorios.length, relatorios);
+        popularSelectAssessores(document.getElementById("master_select_assessor_venda"), vendas.length, vendas);
 
         window.renderizarTabelaUsuariosMaster();
         window.renderizarTabelaRelatoriosMaster();
+        window.renderizarTabelaVendasMaster();
     } catch (e) {
         console.error("[recarregarDadosUsabilidadeMaster] Erro:", e);
         if (tbodyU) {
-            tbodyU.innerHTML = `<tr><td colspan="6" class="master-empty-cell">Não foi possível carregar os dados no momento.</td></tr>`;
+            tbodyU.innerHTML = `<tr><td colspan="7" class="master-empty-cell">Não foi possível carregar os dados no momento.</td></tr>`;
         }
     }
 };
@@ -1393,6 +1796,647 @@ window.abrirPainelUsabilidadeMaster = async function() {
 
 window.fecharPainelUsabilidadeMaster = function() {
     const overlay = document.getElementById("modal_usabilidade_master_overlay");
+    if (overlay) {
+        overlay.classList.add("hidden");
+        overlay.style.display = "none";
+    }
+};
+
+// =========================================================================
+// MODAIS REUTILIZÁVEIS DE VENDAS (CADASTRO / EDIÇÃO E LISTAGEM DO ASSESSOR)
+// =========================================================================
+
+window.__paceVendaModalState = {
+    vendaId: null,
+    isMaster: false,
+    onSaved: null,
+    relatoriosMap: new Map(),
+    usuariosMap: new Map()
+};
+
+function _criarModalVendaDOM() {
+    let overlay = document.getElementById("modal_venda_pace_overlay");
+    if (overlay) return overlay;
+
+    overlay = document.createElement("div");
+    overlay.id = "modal_venda_pace_overlay";
+    overlay.className = "pace-venda-overlay hidden";
+    overlay.style.display = "none";
+
+    const datalistOptions = PACE_PRODUTOS_VENDA_SUGESTOES
+        .map(item => `<option value="${window.escapeHTML(item)}"></option>`)
+        .join("");
+
+    overlay.innerHTML = `
+      <div class="pace-venda-modal" role="dialog" aria-modal="true" aria-labelledby="pace_venda_modal_title">
+        <div class="pace-venda-header">
+          <div>
+            <span class="pace-venda-badge" id="pace_venda_modal_badge">NOVA VENDA</span>
+            <h3 id="pace_venda_modal_title">Registrar Venda Realizada</h3>
+            <p id="pace_venda_modal_subtitle">Vincule a um planejamento patrimonial ou registre uma venda avulsa.</p>
+          </div>
+          <button type="button" class="master-btn-close" id="btn_fechar_modal_venda" aria-label="Fechar janela de venda">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <form id="form_pace_venda" class="pace-venda-form" novalidate>
+          <div class="pace-venda-alert" id="pace_venda_alert" style="display: none;"></div>
+
+          <div class="pace-venda-field">
+            <label for="venda_input_relatorio">Planejamento Vinculado (Opcional)</label>
+            <select id="venda_input_relatorio" class="pace-venda-control">
+              <option value="">Venda avulsa (sem relatório vinculado)</option>
+            </select>
+          </div>
+
+          <div class="pace-venda-grid-2">
+            <div class="pace-venda-field">
+              <label for="venda_input_cliente">Nome do Cliente *</label>
+              <input type="text" id="venda_input_cliente" class="pace-venda-control" maxlength="200" placeholder="Ex.: Família Oliveira" required>
+            </div>
+            <div class="pace-venda-field">
+              <label for="venda_input_produto">Produto / Serviço *</label>
+              <input type="text" id="venda_input_produto" class="pace-venda-control" list="pace_produtos_venda_datalist" maxlength="120" placeholder="Ex.: Seguro de Vida, Holding..." required autocomplete="off">
+              <datalist id="pace_produtos_venda_datalist">${datalistOptions}</datalist>
+            </div>
+          </div>
+
+          <div class="pace-venda-grid-2">
+            <div class="pace-venda-field">
+              <label for="venda_input_valor">Valor da Venda (R$) *</label>
+              <input type="text" id="venda_input_valor" class="pace-venda-control" inputmode="decimal" placeholder="Ex.: R$ 250.000,00" required>
+            </div>
+            <div class="pace-venda-field">
+              <label for="venda_input_data">Data da Venda *</label>
+              <input type="date" id="venda_input_data" class="pace-venda-control" required>
+            </div>
+          </div>
+
+          <div class="pace-venda-field" id="venda_group_assessor" style="display: none;">
+            <label for="venda_input_assessor">Assessor Responsável</label>
+            <select id="venda_input_assessor" class="pace-venda-control"></select>
+          </div>
+
+          <div class="pace-venda-field">
+            <label for="venda_input_observacao">Observações (Opcional)</label>
+            <textarea id="venda_input_observacao" class="pace-venda-control pace-venda-textarea" maxlength="1000" rows="3" placeholder="Detalhes comerciais, seguradora/instituição, condição fechada..."></textarea>
+          </div>
+
+          <div class="pace-venda-footer">
+            <button type="button" class="master-btn-table-action" id="btn_cancelar_modal_venda">Cancelar</button>
+            <button type="submit" class="master-btn-new-sale" id="btn_salvar_modal_venda">Salvar Venda</button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) window.fecharModalVenda();
+    });
+    overlay.querySelector("#btn_fechar_modal_venda")?.addEventListener("click", () => window.fecharModalVenda());
+    overlay.querySelector("#btn_cancelar_modal_venda")?.addEventListener("click", () => window.fecharModalVenda());
+
+    const selectRel = overlay.querySelector("#venda_input_relatorio");
+    const inputCliente = overlay.querySelector("#venda_input_cliente");
+    const selectAssessor = overlay.querySelector("#venda_input_assessor");
+
+    selectRel?.addEventListener("change", () => {
+        const rep = window.__paceVendaModalState.relatoriosMap.get(selectRel.value);
+        if (rep) {
+            if (inputCliente && (!inputCliente.value.trim() || inputCliente.dataset.autofilled === "true")) {
+                inputCliente.value = rep.nomeCliente || "";
+                inputCliente.dataset.autofilled = "true";
+            }
+            if (selectAssessor && rep.userId && Array.from(selectAssessor.options).some(o => o.value === String(rep.userId))) {
+                selectAssessor.value = String(rep.userId);
+            }
+        }
+    });
+
+    inputCliente?.addEventListener("input", () => {
+        inputCliente.dataset.autofilled = "false";
+    });
+
+    const inputValor = overlay.querySelector("#venda_input_valor");
+    inputValor?.addEventListener("blur", () => {
+        const num = typeof window.sanitizarNumero === "function"
+            ? window.sanitizarNumero(inputValor.value, 0)
+            : (parseFloat(String(inputValor.value || "").replace(/[^\d,.-]/g, "").replace(",", ".")) || 0);
+        const seguro = Math.max(0, num);
+        inputValor.value = _formatarMoedaBRLVenda(seguro, 2);
+    });
+
+    overlay.querySelector("#form_pace_venda")?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        await _submeterFormularioVenda();
+    });
+
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+            const ov = document.getElementById("modal_venda_pace_overlay");
+            if (ov && !ov.classList.contains("hidden")) {
+                window.fecharModalVenda();
+            }
+        }
+    });
+
+    document.body.appendChild(overlay);
+    return overlay;
+}
+
+async function _submeterFormularioVenda() {
+    const alertEl = document.getElementById("pace_venda_alert");
+    const btnSalvar = document.getElementById("btn_salvar_modal_venda");
+    const mostrarErro = (msg) => {
+        if (!alertEl) return;
+        alertEl.textContent = msg;
+        alertEl.className = "pace-venda-alert error";
+        alertEl.style.display = "block";
+    };
+
+    if (alertEl) alertEl.style.display = "none";
+
+    const state = window.__paceVendaModalState;
+    const relatorioId = document.getElementById("venda_input_relatorio")?.value || "";
+    const nomeCliente = (document.getElementById("venda_input_cliente")?.value || "").trim();
+    const produto = (document.getElementById("venda_input_produto")?.value || "").trim();
+    const valorRaw = document.getElementById("venda_input_valor")?.value || "0";
+    const dataVenda = document.getElementById("venda_input_data")?.value || _obterDataHojeISO();
+    const observacao = (document.getElementById("venda_input_observacao")?.value || "").trim();
+    const selectAssessor = document.getElementById("venda_input_assessor");
+
+    if (!nomeCliente) {
+        mostrarErro("Informe o nome do cliente.");
+        return;
+    }
+    if (!produto) {
+        mostrarErro("Informe o produto ou serviço vendido.");
+        return;
+    }
+
+    let userId = null;
+    let nomeAssessor = "";
+    if (state.isMaster && selectAssessor && selectAssessor.value) {
+        userId = selectAssessor.value;
+        const userObj = state.usuariosMap.get(String(userId));
+        nomeAssessor = userObj?.full_name || selectAssessor.options[selectAssessor.selectedIndex]?.textContent || "Assessor";
+    } else {
+        try {
+            if (typeof window.authObterUsuario === "function") {
+                const u = await window.authObterUsuario();
+                if (u) {
+                    userId = u.id || null;
+                    nomeAssessor = u.full_name || u.user_metadata?.full_name || u.email || "Assessor";
+                }
+            }
+        } catch (_) {}
+    }
+
+    if (btnSalvar) {
+        btnSalvar.disabled = true;
+        btnSalvar.textContent = "Salvando...";
+    }
+
+    try {
+        if (typeof window.dbSalvarVenda !== "function") {
+            throw new Error("Serviço de vendas indisponível nesta página.");
+        }
+
+        const vendaSalva = await window.dbSalvarVenda({
+            id: state.vendaId || null,
+            userId,
+            relatorioId: relatorioId || null,
+            nomeCliente,
+            nomeAssessor,
+            produto,
+            valorVenda: valorRaw,
+            dataVenda,
+            observacao
+        });
+
+        window.fecharModalVenda();
+        if (typeof window.PaceUI?.mostrarToast === "function") {
+            window.PaceUI.mostrarToast(
+                state.vendaId ? "Venda atualizada com sucesso!" : "Venda registrada com sucesso!",
+                "sucesso"
+            );
+        }
+        if (typeof state.onSaved === "function") {
+            await state.onSaved(vendaSalva);
+        }
+    } catch (err) {
+        console.error("[_submeterFormularioVenda] Erro ao salvar venda:", err);
+        mostrarErro(err?.message || "Não foi possível salvar a venda. Verifique sua conexão e se a migration de vendas foi aplicada no Supabase.");
+    } finally {
+        if (btnSalvar) {
+            btnSalvar.disabled = false;
+            btnSalvar.textContent = state.vendaId ? "Atualizar Venda" : "Salvar Venda";
+        }
+    }
+}
+
+window.abrirModalVenda = async function(opcoes = {}) {
+    const overlay = _criarModalVendaDOM();
+    const state = window.__paceVendaModalState;
+
+    const venda = opcoes.venda || null;
+    const relatorioPre = opcoes.relatorio || null;
+    const isMaster = Boolean(opcoes.isMaster);
+    const relatorios = Array.isArray(opcoes.relatoriosDisponiveis) ? opcoes.relatoriosDisponiveis : [];
+    const usuarios = Array.isArray(opcoes.usuariosDisponiveis) ? opcoes.usuariosDisponiveis : [];
+
+    state.vendaId = venda?.id || null;
+    state.isMaster = isMaster;
+    state.onSaved = typeof opcoes.onSaved === "function" ? opcoes.onSaved : null;
+    state.relatoriosMap = new Map();
+    state.usuariosMap = new Map();
+
+    const alertEl = document.getElementById("pace_venda_alert");
+    if (alertEl) alertEl.style.display = "none";
+
+    const badgeEl = document.getElementById("pace_venda_modal_badge");
+    const titleEl = document.getElementById("pace_venda_modal_title");
+    const btnSalvar = document.getElementById("btn_salvar_modal_venda");
+    if (badgeEl) badgeEl.textContent = venda ? "EDITAR VENDA" : "NOVA VENDA";
+    if (titleEl) titleEl.textContent = venda ? "Editar Venda Realizada" : "Registrar Venda Realizada";
+    if (btnSalvar) btnSalvar.textContent = venda ? "Atualizar Venda" : "Salvar Venda";
+
+    // Popular relatórios disponíveis
+    const selectRel = document.getElementById("venda_input_relatorio");
+    if (selectRel) {
+        const esc = window.escapeHTML;
+        let opts = `<option value="">Venda avulsa (sem relatório vinculado)</option>`;
+        relatorios.forEach(r => {
+            if (!r || !r.id) return;
+            state.relatoriosMap.set(String(r.id), r);
+            const labelPat = _formatarMoedaBRLVenda(r.totalPatrimonio || 0, 0);
+            opts += `<option value="${esc(r.id)}">${esc(r.nomeCliente || "Cliente")} — ${esc(labelPat)}</option>`;
+        });
+        if (relatorioPre && relatorioPre.id && !state.relatoriosMap.has(String(relatorioPre.id))) {
+            state.relatoriosMap.set(String(relatorioPre.id), relatorioPre);
+            opts += `<option value="${esc(relatorioPre.id)}">${esc(relatorioPre.nomeCliente || "Cliente")}</option>`;
+        }
+        selectRel.innerHTML = opts;
+        selectRel.value = venda?.relatorioId || relatorioPre?.id || "";
+    }
+
+    // Popular assessores (apenas para Master) — resolve owner antes de liberar o modal
+    const groupAssessor = document.getElementById("venda_group_assessor");
+    const selectAssessor = document.getElementById("venda_input_assessor");
+    let currentUserFallbackId = "";
+    const ownerTarget = venda?.userId || relatorioPre?.userId || "";
+    if (isMaster && !ownerTarget && typeof window.authObterUsuario === "function") {
+        try {
+            const uAtual = await window.authObterUsuario();
+            if (uAtual?.id) currentUserFallbackId = String(uAtual.id);
+        } catch (_) {}
+    }
+
+    if (groupAssessor && selectAssessor) {
+        if (isMaster && usuarios.length > 0) {
+            groupAssessor.style.display = "flex";
+            const esc = window.escapeHTML;
+            let optsU = "";
+            usuarios
+                .slice()
+                .sort((a, b) => String(a.full_name || "").localeCompare(String(b.full_name || ""), "pt-BR"))
+                .forEach(u => {
+                    if (!u || !u.id) return;
+                    state.usuariosMap.set(String(u.id), u);
+                    optsU += `<option value="${esc(u.id)}">${esc(u.full_name || u.email || "Assessor")}</option>`;
+                });
+            selectAssessor.innerHTML = optsU;
+            if (ownerTarget && state.usuariosMap.has(String(ownerTarget))) {
+                selectAssessor.value = String(ownerTarget);
+            } else if (currentUserFallbackId && state.usuariosMap.has(currentUserFallbackId)) {
+                selectAssessor.value = currentUserFallbackId;
+            }
+        } else {
+            groupAssessor.style.display = "none";
+        }
+    }
+
+    const inputCliente = document.getElementById("venda_input_cliente");
+    const inputProduto = document.getElementById("venda_input_produto");
+    const inputValor = document.getElementById("venda_input_valor");
+    const inputData = document.getElementById("venda_input_data");
+    const inputObs = document.getElementById("venda_input_observacao");
+
+    if (inputCliente) {
+        inputCliente.value = venda?.nomeCliente || relatorioPre?.nomeCliente || "";
+        inputCliente.dataset.autofilled = (!venda && relatorioPre) ? "true" : "false";
+    }
+    if (inputProduto) inputProduto.value = venda?.produto || "";
+    if (inputValor) {
+        inputValor.value = venda ? _formatarMoedaBRLVenda(venda.valorVenda || 0, 2) : "";
+    }
+    if (inputData) inputData.value = venda?.dataVenda || _obterDataHojeISO();
+    if (inputObs) inputObs.value = venda?.observacao || "";
+
+    overlay.classList.remove("hidden");
+    overlay.style.display = "flex";
+    setTimeout(() => (inputCliente?.value ? inputProduto : inputCliente)?.focus(), 50);
+};
+
+window.fecharModalVenda = function() {
+    const overlay = document.getElementById("modal_venda_pace_overlay");
+    if (overlay) {
+        overlay.classList.add("hidden");
+        overlay.style.display = "none";
+    }
+};
+
+window.confirmarExclusaoVenda = function(venda, onDeleted) {
+    if (!venda || !venda.id) return;
+    const executar = async () => {
+        try {
+            await window.dbExcluirVenda(venda.id);
+            if (typeof window.PaceUI?.mostrarToast === "function") {
+                window.PaceUI.mostrarToast("Venda excluída com sucesso.", "info");
+            }
+            if (typeof onDeleted === "function") {
+                await onDeleted();
+            }
+        } catch (err) {
+            console.error("[confirmarExclusaoVenda] Erro ao excluir venda:", err);
+            if (typeof window.PaceUI?.mostrarToast === "function") {
+                window.PaceUI.mostrarToast(err?.message || "Erro ao excluir venda.", "erro");
+            }
+        }
+    };
+
+    const descricao = `${venda.produto || "Venda"} — ${venda.nomeCliente || "Cliente"} (${_formatarMoedaBRLVenda(venda.valorVenda || 0, 2)})`;
+    if (typeof window.confirmarAcaoCustom === "function") {
+        window.confirmarAcaoCustom({
+            titulo: "Excluir Venda",
+            mensagem: `Tem certeza que deseja excluir permanentemente o registro "${descricao}"?`,
+            textoConfirmar: "Sim, Excluir",
+            onConfirm: executar
+        });
+    } else if (confirm(`Excluir a venda "${descricao}"?`)) {
+        executar();
+    }
+};
+
+// Modal "Minhas Vendas" (Dashboard do Assessor / Master)
+window.__paceListaVendasState = {
+    vendas: [],
+    relatorios: [],
+    usuarios: [],
+    isMaster: false,
+    relatorioFiltro: null,
+    onChanged: null
+};
+
+function _criarModalListaVendasDOM() {
+    let overlay = document.getElementById("modal_lista_vendas_overlay");
+    if (overlay) return overlay;
+
+    overlay = document.createElement("div");
+    overlay.id = "modal_lista_vendas_overlay";
+    overlay.className = "master-usability-overlay hidden";
+    overlay.style.display = "none";
+
+    overlay.innerHTML = `
+      <div class="master-usability-modal pace-lista-vendas-modal" role="dialog" aria-modal="true" aria-labelledby="lista_vendas_modal_title">
+        <div class="master-usability-header">
+          <div class="master-usability-title-wrap">
+            <div class="master-usability-badge-row">
+              <span class="master-pill-badge is-sales">VENDAS REALIZADAS</span>
+              <span class="master-subtitle-tag" id="lista_vendas_modal_subtag">Acompanhamento Comercial</span>
+            </div>
+            <h2 id="lista_vendas_modal_title">Minhas Vendas Realizadas</h2>
+            <p id="lista_vendas_modal_desc">Consulte, edite ou registre vendas vinculadas aos seus planejamentos ou avulsas.</p>
+          </div>
+          <div class="master-usability-header-actions">
+            <button type="button" class="master-btn-new-sale" id="btn_lista_vendas_nova">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span>Nova Venda</span>
+            </button>
+            <button type="button" class="master-btn-close" id="btn_fechar_lista_vendas" aria-label="Fechar">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="master-tab-content">
+          <div class="master-sales-actions-bar" style="margin-bottom: 14px;">
+            <span class="master-sales-summary" id="lista_vendas_resumo">0 vendas • R$ 0</span>
+            <button type="button" class="master-btn-table-action" id="btn_lista_vendas_ver_todas" style="display: none;">
+              Ver todas as vendas
+            </button>
+          </div>
+          <div class="master-filters-row">
+            <input type="text" id="lista_vendas_busca" class="master-filter-input" placeholder="Buscar por cliente, produto ou observação...">
+            <select id="lista_vendas_origem" class="master-filter-select compact">
+              <option value="todas">Todas as Origens</option>
+              <option value="relatorio">Com Relatório</option>
+              <option value="avulsa">Avulsas</option>
+            </select>
+          </div>
+          <div class="master-table-container">
+            <table class="master-table">
+              <thead>
+                <tr>
+                  <th>Cliente / Origem</th>
+                  <th>Produto / Serviço</th>
+                  <th>Data</th>
+                  <th>Valor</th>
+                  <th style="text-align: right;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="lista_vendas_tbody">
+                <tr><td colspan="5" class="master-empty-cell">Nenhuma venda registrada.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+
+    overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) window.fecharModalListaVendas();
+    });
+    overlay.querySelector("#btn_fechar_lista_vendas")?.addEventListener("click", () => window.fecharModalListaVendas());
+    overlay.querySelector("#lista_vendas_busca")?.addEventListener("input", () => _renderizarModalListaVendas());
+    overlay.querySelector("#lista_vendas_origem")?.addEventListener("change", () => _renderizarModalListaVendas());
+    overlay.querySelector("#btn_lista_vendas_ver_todas")?.addEventListener("click", () => {
+        window.__paceListaVendasState.relatorioFiltro = null;
+        _renderizarModalListaVendas();
+    });
+
+    overlay.querySelector("#btn_lista_vendas_nova")?.addEventListener("click", () => {
+        const st = window.__paceListaVendasState;
+        window.abrirModalVenda({
+            relatorio: st.relatorioFiltro || null,
+            isMaster: st.isMaster,
+            relatoriosDisponiveis: st.relatorios,
+            usuariosDisponiveis: st.usuarios,
+            onSaved: async () => {
+                if (typeof st.onChanged === "function") {
+                    const novosDados = await st.onChanged();
+                    if (novosDados && Array.isArray(novosDados.vendas)) {
+                        st.vendas = novosDados.vendas;
+                    }
+                }
+                _renderizarModalListaVendas();
+            }
+        });
+    });
+
+    overlay.querySelector("#lista_vendas_tbody")?.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-action]");
+        if (!btn) return;
+        const action = btn.getAttribute("data-action");
+        const vendaId = btn.getAttribute("data-venda-id") || "";
+        const st = window.__paceListaVendasState;
+        const venda = st.vendas.find(v => String(v.id) === String(vendaId));
+        if (!venda) return;
+
+        if (action === "editar-venda") {
+            window.abrirModalVenda({
+                venda,
+                isMaster: st.isMaster,
+                relatoriosDisponiveis: st.relatorios,
+                usuariosDisponiveis: st.usuarios,
+                onSaved: async () => {
+                    if (typeof st.onChanged === "function") {
+                        const novosDados = await st.onChanged();
+                        if (novosDados && Array.isArray(novosDados.vendas)) {
+                            st.vendas = novosDados.vendas;
+                        }
+                    }
+                    _renderizarModalListaVendas();
+                }
+            });
+        } else if (action === "excluir-venda") {
+            window.confirmarExclusaoVenda(venda, async () => {
+                if (typeof st.onChanged === "function") {
+                    const novosDados = await st.onChanged();
+                    if (novosDados && Array.isArray(novosDados.vendas)) {
+                        st.vendas = novosDados.vendas;
+                    }
+                } else {
+                    st.vendas = st.vendas.filter(v => String(v.id) !== String(vendaId));
+                }
+                _renderizarModalListaVendas();
+            });
+        }
+    });
+
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+            const ov = document.getElementById("modal_lista_vendas_overlay");
+            if (ov && !ov.classList.contains("hidden")) {
+                window.fecharModalListaVendas();
+            }
+        }
+    });
+
+    document.body.appendChild(overlay);
+    return overlay;
+}
+
+function _renderizarModalListaVendas() {
+    const st = window.__paceListaVendasState;
+    const tbody = document.getElementById("lista_vendas_tbody");
+    if (!tbody) return;
+
+    const busca = document.getElementById("lista_vendas_busca")?.value || "";
+    const origem = document.getElementById("lista_vendas_origem")?.value || "todas";
+    const relFiltro = st.relatorioFiltro;
+
+    const titleEl = document.getElementById("lista_vendas_modal_title");
+    const subtagEl = document.getElementById("lista_vendas_modal_subtag");
+    const btnVerTodas = document.getElementById("btn_lista_vendas_ver_todas");
+    if (titleEl) {
+        titleEl.textContent = relFiltro
+            ? `Vendas — ${relFiltro.nomeCliente || "Planejamento"}`
+            : "Vendas Realizadas";
+    }
+    if (subtagEl) {
+        subtagEl.textContent = relFiltro ? "Planejamento Vinculado" : "Acompanhamento Comercial";
+    }
+    if (btnVerTodas) {
+        btnVerTodas.style.display = relFiltro ? "inline-flex" : "none";
+    }
+
+    const filtradas = typeof window.filtrarVendasPainel === "function"
+        ? window.filtrarVendasPainel(st.vendas, st.usuarios, {
+            busca,
+            origem,
+            relatorioId: relFiltro?.id || ""
+        })
+        : st.vendas;
+
+    const totalVol = filtradas.reduce((acc, v) => acc + (Number(v.valorVenda) || 0), 0);
+    const resumoEl = document.getElementById("lista_vendas_resumo");
+    if (resumoEl) {
+        resumoEl.textContent = `${filtradas.length} ${filtradas.length === 1 ? 'venda' : 'vendas'} • ${_formatarMoedaBRLVenda(totalVol, 0)}`;
+    }
+
+    if (filtradas.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="master-empty-cell">Nenhuma venda registrada neste filtro.</td></tr>`;
+        return;
+    }
+
+    const esc = window.escapeHTML;
+    let html = "";
+    filtradas.forEach(v => {
+        const safeId = String(v.id || "").replace(/[^a-zA-Z0-9_-]/g, "");
+        const isVinculada = Boolean(v.relatorioId);
+        const obsTrim = String(v.observacao || "").trim();
+        const obsCurta = obsTrim.length > 68 ? `${obsTrim.slice(0, 65)}...` : obsTrim;
+
+        html += `
+          <tr>
+            <td>
+              <div class="master-client-cell-wrap">
+                <strong style="color: #09090b;">${esc(v.nomeCliente || "Cliente")}</strong>
+                <span class="master-origin-pill ${isVinculada ? 'is-report' : 'is-standalone'}">
+                  ${isVinculada ? 'Relatório' : 'Avulsa'}
+                </span>
+              </div>
+              ${obsCurta ? `<div class="master-sale-obs-preview" title="${esc(obsTrim)}">${esc(obsCurta)}</div>` : ""}
+            </td>
+            <td><span class="master-product-tag">${esc(v.produto || "—")}</span></td>
+            <td class="master-nowrap" style="color: #64748b; font-size: 12.5px;">${esc(_formatarDataBRVenda(v.dataVenda))}</td>
+            <td class="master-nowrap" style="font-weight: 700; color: #059669;">${esc(_formatarMoedaBRLVenda(v.valorVenda, 2))}</td>
+            <td style="text-align: right;">
+              <div class="master-report-actions">
+                <button type="button" class="master-btn-table-action" data-action="editar-venda" data-venda-id="${esc(safeId)}">Editar</button>
+                <button type="button" class="master-btn-table-action danger" data-action="excluir-venda" data-venda-id="${esc(safeId)}">Excluir</button>
+              </div>
+            </td>
+          </tr>
+        `;
+    });
+    tbody.innerHTML = html;
+}
+
+window.abrirModalListaVendas = function(opcoes = {}) {
+    const overlay = _criarModalListaVendasDOM();
+    const st = window.__paceListaVendasState;
+    st.vendas = Array.isArray(opcoes.vendas) ? opcoes.vendas : [];
+    st.relatorios = Array.isArray(opcoes.relatorios) ? opcoes.relatorios : [];
+    st.usuarios = Array.isArray(opcoes.usuarios) ? opcoes.usuarios : [];
+    st.isMaster = Boolean(opcoes.isMaster);
+    st.relatorioFiltro = opcoes.relatorio || null;
+    st.onChanged = typeof opcoes.onChanged === "function" ? opcoes.onChanged : null;
+
+    const buscaEl = document.getElementById("lista_vendas_busca");
+    const origemEl = document.getElementById("lista_vendas_origem");
+    if (buscaEl) buscaEl.value = "";
+    if (origemEl) origemEl.value = "todas";
+
+    _renderizarModalListaVendas();
+    overlay.classList.remove("hidden");
+    overlay.style.display = "flex";
+};
+
+window.fecharModalListaVendas = function() {
+    const overlay = document.getElementById("modal_lista_vendas_overlay");
     if (overlay) {
         overlay.classList.add("hidden");
         overlay.style.display = "none";

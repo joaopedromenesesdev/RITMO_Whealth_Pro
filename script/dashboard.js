@@ -1,9 +1,12 @@
 // ── CONTROLE DO DASHBOARD DE RELATÓRIOS ──
 
-// Cache em memória dos relatórios para filtragem rápida
+// Cache em memória dos relatórios e vendas para filtragem rápida
 let relatoriosCached = [];
 let relatoriosEquipeCached = [];
+let vendasCached = [];
+let vendasEquipeCached = [];
 let currentDashboardUserId = "";
+let currentDashboardIsMaster = false;
 
 document.addEventListener("DOMContentLoaded", () => {
   // Ao entrar no Dashboard, encerra qualquer simulação transitória pendente
@@ -14,6 +17,44 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("filtro_assessor")?.addEventListener("change", filtrarERenderizar);
   document.getElementById("filtro_patrimonio")?.addEventListener("change", filtrarERenderizar);
   document.getElementById("filtro_ordenacao")?.addEventListener("change", filtrarERenderizar);
+
+  // Botão "+ Registrar Venda" no header do Dashboard
+  document.getElementById("btn_registrar_venda_dashboard")?.addEventListener("click", () => {
+    abrirModalNovaVendaDashboard(null);
+  });
+
+  // 4º card KPI "Vendas Realizadas" clicável para abrir modal de gestão
+  const cardVendas = document.getElementById("card_metric_vendas");
+  if (cardVendas) {
+    const abrirLista = () => abrirModalListaVendasDashboard(null);
+    cardVendas.addEventListener("click", abrirLista);
+    cardVendas.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        abrirLista();
+      }
+    });
+  }
+
+  // Delegação de eventos segura para ações de venda nos cards de relatório
+  document.getElementById("reports_container")?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-action]");
+    if (!btn) return;
+    const action = btn.getAttribute("data-action");
+    const repId = btn.getAttribute("data-relatorio-id") || "";
+    if (!repId) return;
+
+    const relatorios = obterRelatorios();
+    const rep = relatorios.find(r => String(r.id) === String(repId))
+      || relatoriosEquipeCached.find(r => String(r.id) === String(repId))
+      || null;
+
+    if (action === "registrar-venda-relatorio") {
+      abrirModalNovaVendaDashboard(rep);
+    } else if (action === "ver-vendas-relatorio") {
+      abrirModalListaVendasDashboard(rep);
+    }
+  });
 
   // Criar ícones do Lucide
   if (window.lucide) {
@@ -76,6 +117,61 @@ function obterRelatorios() {
   return relatoriosCached;
 }
 
+function obterVendasDashboard() {
+  const filtroAssessor = document.getElementById("filtro_assessor")?.value || "meus";
+  if (filtroAssessor && filtroAssessor !== "meus" && currentDashboardIsMaster) {
+    return vendasEquipeCached;
+  }
+  return vendasCached;
+}
+
+function obterUsuariosParaModalVendaDashboard() {
+  if (Array.isArray(window.__masterUsabilidadeCache?.usuarios) && window.__masterUsabilidadeCache.usuarios.length > 0) {
+    return window.__masterUsabilidadeCache.usuarios;
+  }
+  const mapa = new Map();
+  relatoriosEquipeCached.forEach(r => {
+    if (r && r.userId && !mapa.has(String(r.userId))) {
+      mapa.set(String(r.userId), { id: String(r.userId), full_name: r.nomeAssessor || "Assessor" });
+    }
+  });
+  vendasEquipeCached.forEach(v => {
+    if (v && v.userId && !mapa.has(String(v.userId))) {
+      mapa.set(String(v.userId), { id: String(v.userId), full_name: v.nomeAssessor || "Assessor" });
+    }
+  });
+  return Array.from(mapa.values());
+}
+
+function abrirModalNovaVendaDashboard(relatorioPre = null) {
+  if (typeof window.abrirModalVenda !== "function") return;
+  window.abrirModalVenda({
+    relatorio: relatorioPre,
+    isMaster: currentDashboardIsMaster,
+    relatoriosDisponiveis: obterRelatorios(),
+    usuariosDisponiveis: obterUsuariosParaModalVendaDashboard(),
+    onSaved: async () => {
+      await carregarDashboard();
+    }
+  });
+}
+
+function abrirModalListaVendasDashboard(relatorioFiltro = null) {
+  if (typeof window.abrirModalListaVendas !== "function") return;
+  const vendasAtuais = filtrarVendasEscopoDashboard(obterVendasDashboard());
+  window.abrirModalListaVendas({
+    vendas: vendasAtuais,
+    relatorios: obterRelatorios(),
+    usuarios: obterUsuariosParaModalVendaDashboard(),
+    isMaster: currentDashboardIsMaster,
+    relatorio: relatorioFiltro,
+    onChanged: async () => {
+      await carregarDashboard();
+      return { vendas: filtrarVendasEscopoDashboard(obterVendasDashboard()) };
+    }
+  });
+}
+
 // Carregar todas as informações do Dashboard buscando do banco
 async function carregarDashboard() {
   // Exibe indicador visual de carregamento se desejado
@@ -84,9 +180,15 @@ async function carregarDashboard() {
     container.innerHTML = `<div style="text-align:center; padding: 2rem; color: var(--text-muted);"><p>Carregando relatórios...</p></div>`;
   }
 
-  // Por padrão, carrega estritamente os relatórios próprios do usuário logado
-  relatoriosCached = await dbObterRelatorios(false);
+  // Por padrão, carrega estritamente os relatórios e vendas próprios do usuário logado
+  const [relatoriosProprios, vendasProprias] = await Promise.all([
+    dbObterRelatorios(false),
+    typeof window.dbObterVendas === "function" ? window.dbObterVendas(false) : Promise.resolve([])
+  ]);
+  relatoriosCached = relatoriosProprios || [];
   relatoriosEquipeCached = [...relatoriosCached];
+  vendasCached = vendasProprias || [];
+  vendasEquipeCached = [...vendasCached];
 
   // Verifica se o usuário atual é Master estritamente via sessão autenticada (sem confiar em role em localStorage)
   let isMaster = false;
@@ -99,19 +201,23 @@ async function carregarDashboard() {
       if (u && typeof authIsMaster === "function" && authIsMaster(u)) isMaster = true;
     }
   } catch (e) { }
+  currentDashboardIsMaster = isMaster;
 
   const grupoAssessor = document.getElementById("grupo_filtro_assessor_master");
   const selectAssessor = document.getElementById("filtro_assessor");
   if (grupoAssessor && selectAssessor) {
     if (isMaster) {
       grupoAssessor.style.display = "flex";
-      if (typeof window.dbObterTodosRelatoriosEquipe === "function") {
-        try {
-          relatoriosEquipeCached = await window.dbObterTodosRelatoriosEquipe();
-        } catch (_) {
-          relatoriosEquipeCached = [...relatoriosCached];
-        }
-      }
+      const [relEquipe, vendEquipe] = await Promise.all([
+        typeof window.dbObterTodosRelatoriosEquipe === "function"
+          ? window.dbObterTodosRelatoriosEquipe().catch(() => [...relatoriosCached])
+          : Promise.resolve([...relatoriosCached]),
+        typeof window.dbObterTodasVendasEquipe === "function"
+          ? window.dbObterTodasVendasEquipe().catch(() => [...vendasCached])
+          : Promise.resolve([...vendasCached])
+      ]);
+      relatoriosEquipeCached = Array.isArray(relEquipe) ? relEquipe : [...relatoriosCached];
+      vendasEquipeCached = Array.isArray(vendEquipe) ? vendEquipe : [...vendasCached];
       const assessoresSet = new Set();
       relatoriosEquipeCached.forEach(rep => {
         const nome = (rep.nomeAssessor || "").trim();
@@ -142,6 +248,8 @@ async function carregarDashboard() {
   filtrarERenderizar();
 }
 
+window.carregarDashboard = carregarDashboard;
+
 // Função pública para filtrar diretamente por um assessor no Dashboard (acionada pelo Painel Master)
 window.filtrarDashboardPorAssessor = function (nomeAssessor, userId = "") {
   const selectAssessor = document.getElementById("filtro_assessor");
@@ -159,8 +267,34 @@ window.filtrarDashboardPorAssessor = function (nomeAssessor, userId = "") {
   filtrarERenderizar();
 };
 
+// Filtra vendas coerentes com os filtros ativos no Dashboard
+function filtrarVendasEscopoDashboard(vendas) {
+  const busca = document.getElementById("filtro_busca")?.value.toLowerCase().trim() || "";
+  const filtroAssessor = document.getElementById("filtro_assessor")?.value || "meus";
+
+  return (Array.isArray(vendas) ? vendas : []).filter(v => {
+    if (!v) return false;
+    const nomeCliente = (v.nomeCliente || "").toLowerCase();
+    const nomeAssessor = (v.nomeAssessor || "").toLowerCase();
+    const produto = (v.produto || "").toLowerCase();
+    const matchBusca = !busca || nomeCliente.includes(busca) || nomeAssessor.includes(busca) || produto.includes(busca);
+
+    let matchAssessor = true;
+    if (filtroAssessor === "meus") {
+      if (currentDashboardUserId && v.userId) {
+        matchAssessor = String(v.userId) === String(currentDashboardUserId);
+      }
+    } else if (filtroAssessor && filtroAssessor !== "todos") {
+      matchAssessor = (v.nomeAssessor || "").trim().toLowerCase() === filtroAssessor.trim().toLowerCase() ||
+        String(v.userId || "") === String(filtroAssessor);
+    }
+
+    return matchBusca && matchAssessor;
+  });
+}
+
 // Calcular as métricas acumuladas (KPIs)
-function calcularEExibirMetricas(relatorios) {
+function calcularEExibirMetricas(relatorios, vendas = []) {
   const totalRelatorios = relatorios.length;
   let patrimonioTotalMapeado = 0;
   let prejuizoAcumulado = 0;
@@ -171,20 +305,30 @@ function calcularEExibirMetricas(relatorios) {
   });
 
   const prejuizoMedio = totalRelatorios > 0 ? (prejuizoAcumulado / totalRelatorios) : 0;
+  const totalVendas = vendas.length;
+  const valorTotalVendas = vendas.reduce((acc, v) => acc + (Number(v.valorVenda) || 0), 0);
 
   // Atualizar DOM
   const elQtd = document.getElementById("metric_qtd_relatorios");
   const elPat = document.getElementById("metric_patrimonio_total");
   const elPrej = document.getElementById("metric_prejuizo_medio");
+  const elVendasQtd = document.getElementById("metric_qtd_vendas");
+  const elVendasVal = document.getElementById("metric_valor_vendas");
 
   if (elQtd) elQtd.innerText = totalRelatorios;
   if (elPat) elPat.innerText = "R$ " + patrimonioTotalMapeado.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
   if (elPrej) elPrej.innerText = "R$ " + prejuizoMedio.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+  if (elVendasQtd) elVendasQtd.innerText = totalVendas;
+  if (elVendasVal) {
+    const formattedVendas = "R$ " + valorTotalVendas.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+    elVendasVal.innerText = `${formattedVendas} • Ver detalhes`;
+  }
 }
 
 // Filtrar e renderizar dinamicamente em tempo real
 function filtrarERenderizar() {
   const relatorios = obterRelatorios();
+  const vendasEscopo = filtrarVendasEscopoDashboard(obterVendasDashboard());
   const busca = document.getElementById("filtro_busca")?.value.toLowerCase().trim() || "";
   const filtroAssessor = document.getElementById("filtro_assessor")?.value || "meus";
   const faixaPatrimonio = document.getElementById("filtro_patrimonio")?.value || "todos";
@@ -235,12 +379,12 @@ function filtrarERenderizar() {
     return 0;
   });
 
-  calcularEExibirMetricas(filtrados);
-  renderizarRelatorios(filtrados);
+  calcularEExibirMetricas(filtrados, vendasEscopo);
+  renderizarRelatorios(filtrados, vendasEscopo);
 }
 
 // Renderizar a lista de cards ou Empty State
-function renderizarRelatorios(relatorios) {
+function renderizarRelatorios(relatorios, vendasScope = []) {
   const container = document.getElementById("reports_container");
   if (!container) return;
 
@@ -263,6 +407,11 @@ function renderizarRelatorios(relatorios) {
     return;
   }
 
+  const metricasVendas = typeof window.calcularMetricasVendas === "function"
+    ? window.calcularMetricasVendas(vendasScope, relatorios)
+    : { porRelatorio: {} };
+  const vendasPorRelatorio = metricasVendas.porRelatorio || {};
+
   container.style.display = "grid";
   let html = "";
 
@@ -284,6 +433,14 @@ function renderizarRelatorios(relatorios) {
     const formattedPrej = "R$ " + totalPrej.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
     const safeId = String(rep.id || "").replace(/[^a-zA-Z0-9_-]/g, "");
     if (!safeId) return;
+
+    const statsVenda = vendasPorRelatorio[String(rep.id)] || null;
+    const saleBadgeHtml = statsVenda && statsVenda.quantidade > 0
+      ? `<button type="button" class="sale-badge" data-action="ver-vendas-relatorio" data-relatorio-id="${escapeHTML(safeId)}" title="Ver vendas vinculadas a este planejamento">
+          <i data-lucide="badge-check" style="width:14px;height:14px;"></i>
+          ${statsVenda.quantidade} ${statsVenda.quantidade === 1 ? "venda" : "vendas"} • R$ ${Number(statsVenda.valorTotal || 0).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+        </button>`
+      : "";
 
     let formattedDate = rep.dataReuniao || "";
     if (!formattedDate && rep.dataCriacao) {
@@ -324,11 +481,15 @@ function renderizarRelatorios(relatorios) {
                 <i data-lucide="check-circle" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i> Liquidez Adequada
               </div>`
       }
+            ${saleBadgeHtml}
           </div>
         </div>
         <div class="report-card-footer">
           <button class="btn-action danger-icon" onclick="excluirRelatorio('${safeId}')" title="Excluir Simulação">
             <i data-lucide="trash-2"></i>
+          </button>
+          <button type="button" class="btn-action sale" data-action="registrar-venda-relatorio" data-relatorio-id="${escapeHTML(safeId)}" title="Registrar venda para este planejamento">
+            <i data-lucide="badge-dollar-sign"></i> Venda
           </button>
           <button class="btn-action secondary" onclick="editarSimulacao('${safeId}')">
             <i data-lucide="edit-3"></i> Editar

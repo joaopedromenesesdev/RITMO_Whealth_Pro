@@ -14,20 +14,20 @@
     rel="stylesheet">
 
   <!-- Estilos Globais e Específicos -->
-  <link rel="stylesheet" href="style/style.css">
-  <link rel="stylesheet" href="style/dashboard.css">
+  <link rel="stylesheet" href="style/style.css?v=20261123a">
+  <link rel="stylesheet" href="style/dashboard.css?v=20261123a">
   <link rel="icon" type="image/png" href="img/RITMO.png">
 
   <!-- Lucide Icons & Global UI helpers -->
   <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js" integrity="sha384-hJnF5AwidE18GSWTAGHv3ByzzvfNZ1Tcx5y1UUV3WkauuMCEzBJBMSwSt/PUPXnM" crossorigin="anonymous"></script>
-  <script src="script/global_ui.js?v=20261111f"></script>
+  <script src="script/global_ui.js?v=20261123a"></script>
   <script src="script/state.js?v=20261111b"></script>
 
   <!-- Banco de Dados (Supabase + Local Fallback) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0" integrity="sha384-gnyZit14c5lnGcarmA166QQjjJXpucw25ogZXuwH3HxxY904zHkBqmxVpelsPorb" crossorigin="anonymous"></script>
   <script src="script/supabase_config.js?v=20261111c"></script>
   <script src="script/auth.js?v=20261111f"></script>
-  <script src="script/db.js?v=20261111f"></script>
+  <script src="script/db.js?v=20261123a"></script>
 </head>
 
 <body> <!-- NAVBAR -->
@@ -57,6 +57,10 @@
         <p>Acompanhe, gerencie e filtre as simulações e relatórios gerados para seus clientes.</p>
       </div>
       <div class="dashboard-header-actions">
+        <button type="button" id="btn_registrar_venda_dashboard" class="btn-register-sale">
+          <i data-lucide="badge-dollar-sign"></i>
+          Registrar Venda
+        </button>
         <a href="nova_simulacao.html" class="btn-new-report">
           <i data-lucide="plus-circle"></i>
           Novo Relatório
@@ -96,6 +100,18 @@
         <div class="metric-info">
           <label>Prejuízo Médio</label>
           <h2 id="metric_prejuizo_medio">R$ 0</h2>
+        </div>
+      </div>
+
+      <!-- Vendas Realizadas -->
+      <div class="metric-card clickable" id="card_metric_vendas" role="button" tabindex="0" aria-label="Visualizar e gerenciar vendas realizadas">
+        <div class="metric-icon emerald">
+          <i data-lucide="badge-dollar-sign"></i>
+        </div>
+        <div class="metric-info">
+          <label>Vendas Realizadas</label>
+          <h2 id="metric_qtd_vendas">0</h2>
+          <span class="metric-sub" id="metric_valor_vendas">R$ 0 • Ver detalhes</span>
         </div>
       </div>
     </div>
@@ -328,7 +344,7 @@
   </div>
 
   <!-- Scripts -->
-  <script src="script/dashboard.js?v=20261111f"></script>
+  <script src="script/dashboard.js?v=20261123a"></script>
 
 </body>
 

@@ -34,6 +34,44 @@
   margin: 0;
 }
 
+.dashboard-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-register-sale {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1.5px solid #a7f3d0;
+  padding: 13px 22px;
+  margin: 0;
+  border-radius: 100px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(5, 150, 105, 0.1);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-register-sale:hover {
+  transform: translateY(-2px);
+  background: #059669;
+  color: #ffffff;
+  border-color: #047857;
+  box-shadow: 0 8px 20px rgba(5, 150, 105, 0.25);
+}
+
+.btn-register-sale i {
+  width: 18px;
+  height: 18px;
+}
+
 .btn-new-report {
   display: flex;
   align-items: center;
@@ -66,7 +104,7 @@
 /* ── KPIs Grid ── */
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 20px;
   margin-bottom: 40px;
 }
@@ -87,6 +125,25 @@
   transform: translateY(-4px);
   box-shadow: var(--shadow-md);
   border-color: rgba(0, 0, 0, 0.15);
+}
+
+.metric-card.clickable {
+  cursor: pointer;
+  border-color: rgba(16, 185, 129, 0.28);
+}
+
+.metric-card.clickable:hover,
+.metric-card.clickable:focus-visible {
+  border-color: #059669;
+  box-shadow: 0 10px 24px rgba(5, 150, 105, 0.14);
+  outline: none;
+}
+
+.metric-sub {
+  font-size: 12px;
+  font-weight: 600;
+  color: #047857;
+  margin-top: 4px;
 }
 
 .metric-icon {
@@ -289,6 +346,46 @@
 .report-badge-container {
   grid-column: span 2;
   margin-top: 5px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.sale-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 11px;
+  margin: 0;
+  border-radius: 6px;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+  box-shadow: none;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.sale-badge:hover {
+  background: #d1fae5;
+  border-color: #059669;
+  transform: none;
+}
+
+.btn-action.sale {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.btn-action.sale:hover {
+  background: #059669;
+  color: #ffffff;
+  border-color: #047857;
+  transform: translateY(-1px);
 }
 
 .liquidity-badge {
@@ -430,6 +527,13 @@
     gap: 16px;
   }
 
+  .dashboard-header-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-register-sale,
   .btn-new-report {
     width: 100%;
     justify-content: center;

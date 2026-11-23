@@ -2543,6 +2543,181 @@
       );
     }
 
+    // =========================================================================
+    // TESTE 48: Sistema de Contabilização e Gestão de Vendas (Usabilidade + Dashboard)
+    // =========================================================================
+    console.log("\n-> Teste 48: Sistema de Vendas Realizadas (Domínio, Métricas, Filtros e Segurança SQL/DOM)");
+    if (_dbModNode && typeof _dbModNode.sanitizarEValidarVenda === "function") {
+      // 48.A — Sanitização e validação defensiva de vendas
+      const vOk = _dbModNode.sanitizarEValidarVenda({
+        nomeCliente: "  Família Oliveira  ",
+        nomeAssessor: "Carlos Mendes",
+        produto: "  Seguro de Vida  ",
+        valorVenda: "R$ 125.000,50",
+        dataVenda: "2026-11-20",
+        relatorioId: "11111111-1111-4111-8111-111111111111",
+        observacao: "Apólice vitalícia"
+      });
+      assert(
+        vOk.valido === true &&
+        vOk.vendaSanitizada.nomeCliente === "Família Oliveira" &&
+        vOk.vendaSanitizada.produto === "Seguro de Vida" &&
+        vOk.vendaSanitizada.valorVenda === 125000.5 &&
+        vOk.vendaSanitizada.relatorioId === "11111111-1111-4111-8111-111111111111",
+        "Vendas[Sanitização]: normaliza cliente, produto, moeda BR (125000.5) e UUID válido"
+      );
+
+      const vInvalida = _dbModNode.sanitizarEValidarVenda({
+        nomeCliente: "   ",
+        produto: "",
+        valorVenda: -500,
+        relatorioId: "nao-e-uuid-valido",
+        observacao: "X".repeat(1500)
+      });
+      assert(
+        vInvalida.valido === false &&
+        vInvalida.erros.length === 3 &&
+        vInvalida.vendaSanitizada.valorVenda === 0 &&
+        vInvalida.vendaSanitizada.relatorioId === null &&
+        vInvalida.vendaSanitizada.observacao.length === 1000,
+        "Vendas[Validação]: rejeita cliente/produto vazio, zera valor negativo, anula relatorioId inválido e trunca observação"
+      );
+
+      // 48.B — Métricas híbridas 1:N e taxa de conversão fiel sobre relatórios únicos
+      const relatoriosMock = [
+        { id: "11111111-1111-4111-8111-111111111111", userId: "u1", nomeCliente: "Cliente A", totalPatrimonio: 5000000 },
+        { id: "22222222-2222-4222-8222-222222222222", userId: "u2", nomeCliente: "Cliente B", totalPatrimonio: 8000000 }
+      ];
+      const vendasMock = [
+        {
+          id: "v1",
+          userId: "u1",
+          relatorioId: "11111111-1111-4111-8111-111111111111",
+          nomeCliente: "Cliente A",
+          nomeAssessor: "Ana Silva",
+          produto: "Seguro de Vida",
+          valorVenda: 150000,
+          dataVenda: "2026-11-18",
+          observacao: "Fechado na reunião 2"
+        },
+        {
+          id: "v2",
+          userId: "u1",
+          relatorioId: "11111111-1111-4111-8111-111111111111",
+          nomeCliente: "Cliente A",
+          nomeAssessor: "Ana Silva",
+          produto: "Previdência Privada (PGBL/VGBL)",
+          valorVenda: 350000,
+          dataVenda: "2026-11-21",
+          observacao: "Aporte adicional"
+        },
+        {
+          id: "v3",
+          userId: "u2",
+          relatorioId: null,
+          nomeCliente: "Cliente Avulso C",
+          nomeAssessor: "Bruno Costa",
+          produto: "Holding Patrimonial",
+          valorVenda: 80000,
+          dataVenda: "2026-09-01",
+          observacao: "Indicação externa"
+        }
+      ];
+
+      const metVendas = _dbModNode.calcularMetricasVendas(vendasMock, relatoriosMock);
+      assert(
+        metVendas.totalVendas === 3 &&
+        metVendas.valorTotalVendas === 580000 &&
+        metVendas.vendasVinculadas === 2 &&
+        metVendas.vendasAvulsas === 1 &&
+        metVendas.relatoriosConvertidos === 1 &&
+        metVendas.taxaConversao === 50 &&
+        metVendas.porRelatorio["11111111-1111-4111-8111-111111111111"].quantidade === 2 &&
+        metVendas.porRelatorio["11111111-1111-4111-8111-111111111111"].valorTotal === 500000,
+        "Vendas[Métricas 1:N]: contabiliza 3 vendas (R$ 580k), 2 vinculadas no mesmo relatório + 1 avulsa e conversão real de 50% sem estourar 100%"
+      );
+
+      // 48.C — Consolidação na equipe (retrocompatível + sem dupla contagem da RPC)
+      const perfisMock = [
+        { id: "u1", email: "ana@pace.com", full_name: "Ana Silva", role: "assessor" },
+        { id: "u2", email: "bruno@pace.com", full_name: "Bruno Costa", role: "assessor", total_vendas: 1, valor_total_vendas: 80000 }
+      ];
+      const equipeRetro = _dbModNode.calcularMetricasUsabilidadeEquipe(perfisMock, relatoriosMock, {}, false);
+      const equipeComVendas = _dbModNode.calcularMetricasUsabilidadeEquipe(perfisMock, relatoriosMock, {}, false, vendasMock);
+      const u1Res = equipeComVendas.find(u => u.id === "u1");
+      const u2Res = equipeComVendas.find(u => u.id === "u2");
+      assert(
+        equipeRetro.length === 2 &&
+        u1Res && u1Res.total_vendas === 2 && u1Res.valor_total_vendas === 500000 &&
+        u2Res && u2Res.total_vendas === 1 && u2Res.valor_total_vendas === 80000,
+        "Vendas[Usabilidade Equipe]: retrocompatível com 4 args e consolida vendas por assessor sem duplicar contagem da RPC"
+      );
+
+      // 48.D — Filtros do painel de vendas (busca sem acentos, origem, assessor, período e relatório)
+      const fBusca = _dbModNode.filtrarVendasPainel(vendasMock, perfisMock, { busca: "previdencia" });
+      const fAvulsas = _dbModNode.filtrarVendasPainel(vendasMock, perfisMock, { origem: "avulsa" });
+      const fMesAtual = _dbModNode.filtrarVendasPainel(vendasMock, perfisMock, { periodo: "mes_atual", referenciaData: "2026-11-23T12:00:00Z" });
+      const fAssessor = _dbModNode.filtrarVendasPainel(vendasMock, perfisMock, { filtroAssessor: "u1" });
+      const fRel = _dbModNode.filtrarVendasPainel(vendasMock, perfisMock, { relatorioId: "11111111-1111-4111-8111-111111111111" });
+      assert(
+        fBusca.length === 1 && fBusca[0].id === "v2" &&
+        fAvulsas.length === 1 && fAvulsas[0].id === "v3" &&
+        fMesAtual.length === 2 &&
+        fAssessor.length === 2 &&
+        fRel.length === 2,
+        "Vendas[Filtros]: busca sem acentos, origem (avulsa/relatório), período (mês atual), assessor e relatorioId funcionam corretamente"
+      );
+    }
+
+    // 48.E — Auditoria estática de segurança SQL (RLS, zero anon, anti-spoofing/IDOR) e UI/sintaxe JS
+    if (typeof require === "function") {
+      const fs48 = require("fs");
+      const path48 = require("path");
+      const vm48 = require("vm");
+
+      const sqlVendas = fs48.readFileSync(path48.join(__dirname, "../supabase/migrations/20261123_sistema_vendas_usabilidade.sql"), "utf8");
+      const sqlLower = sqlVendas.toLowerCase();
+      assert(
+        sqlLower.includes("create table if not exists public.vendas") &&
+        sqlLower.includes("alter table public.vendas enable row level security") &&
+        sqlLower.includes("revoke all on table public.vendas from public, anon") &&
+        sqlLower.includes("fn_vendas_blindagem") &&
+        sqlLower.includes("fn_vendas_audit_trigger") &&
+        sqlLower.includes("revoke execute on function public.fn_vendas_blindagem() from public, anon, authenticated") &&
+        sqlLower.includes("revoke execute on function public.fn_vendas_audit_trigger() from public, anon, authenticated") &&
+        !/using\s*\(\s*true\s*\)/i.test(sqlVendas) &&
+        !/with\s+check\s*\(\s*true\s*\)/i.test(sqlVendas),
+        "Vendas[SQL Security Gate]: RLS ativo, anon revogado, triggers blindados/revogados e zero USING(true)/WITH CHECK(true)"
+      );
+
+      const indexSrc48 = fs48.readFileSync(path48.join(__dirname, "../index.html"), "utf8");
+      const globalUiSrc48 = fs48.readFileSync(path48.join(__dirname, "../script/global_ui.js"), "utf8");
+      const dashSrc48 = fs48.readFileSync(path48.join(__dirname, "../script/dashboard.js"), "utf8");
+      const dbSrc48 = fs48.readFileSync(path48.join(__dirname, "../script/db.js"), "utf8");
+      const cssMain48 = fs48.readFileSync(path48.join(__dirname, "../style/style.css"), "utf8");
+
+      assert(
+        indexSrc48.includes('id="card_metric_vendas"') &&
+        indexSrc48.includes('id="btn_registrar_venda_dashboard"') &&
+        globalUiSrc48.includes('id="master_kpi_card_vendas"') &&
+        globalUiSrc48.includes('id="tab_btn_master_vendas"') &&
+        globalUiSrc48.includes('id="pace_produtos_venda_datalist"') &&
+        cssMain48.includes("grid-template-columns: repeat(3, 1fr);"),
+        "Vendas[UI]: 6º card KPI 3x2 + 3ª aba no Painel Master + datalist de produtos + 4º card e botão no Dashboard presentes"
+      );
+
+      let sintaxeOk48 = true;
+      try {
+        new vm48.Script(dbSrc48, { filename: "script/db.js" });
+        new vm48.Script(globalUiSrc48, { filename: "script/global_ui.js" });
+        new vm48.Script(dashSrc48, { filename: "script/dashboard.js" });
+      } catch (errSintaxe) {
+        sintaxeOk48 = false;
+        console.error("  [FAIL] Erro de sintaxe JS:", errSintaxe);
+      }
+      assert(sintaxeOk48, "Vendas[Sintaxe]: db.js, global_ui.js e dashboard.js compilam limpos via vm.Script");
+    }
+
     console.log("\n=================================================");
     console.log(`RESUMO DA SUÍTE DE TESTES:`);
     console.log(`   Total: ${totalTestes} | Passados: ${testesPassados} | Falhas: ${testesFalhados}`);

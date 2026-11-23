@@ -9,18 +9,22 @@
   <meta http-equiv="Content-Security-Policy"
     content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://dogyopoylekiqsahadlc.supabase.co https://*.supabase.co wss://*.supabase.co https://brasilapi.com.br https://olinda.bcb.gov.br https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self';">
 
-  <link rel="stylesheet" href="style/style.css">
+  <link rel="stylesheet" href="style/style.css?v=20261123a">
   <link rel="icon" type="image/png" href="img/RITMO.png">
   <!-- Icons (Versão Fixa) -->
-  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js" integrity="sha384-hJnF5AwidE18GSWTAGHv3ByzzvfNZ1Tcx5y1UUV3WkauuMCEzBJBMSwSt/PUPXnM" crossorigin="anonymous"></script>
-  <script src="script/global_ui.js?v=20261111f"></script>
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"
+    integrity="sha384-hJnF5AwidE18GSWTAGHv3ByzzvfNZ1Tcx5y1UUV3WkauuMCEzBJBMSwSt/PUPXnM"
+    crossorigin="anonymous"></script>
+  <script src="script/global_ui.js?v=20261123a"></script>
   <script src="script/state.js?v=20261111b"></script>
 
   <!-- Supabase & Autenticação -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0" integrity="sha384-gnyZit14c5lnGcarmA166QQjjJXpucw25ogZXuwH3HxxY904zHkBqmxVpelsPorb" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"
+    integrity="sha384-gnyZit14c5lnGcarmA166QQjjJXpucw25ogZXuwH3HxxY904zHkBqmxVpelsPorb"
+    crossorigin="anonymous"></script>
   <script src="script/supabase_config.js?v=20261111c"></script>
   <script src="script/auth.js?v=20261111f"></script>
-  <script src="script/db.js?v=20261111f"></script>
+  <script src="script/db.js?v=20261123a"></script>
   <link rel="stylesheet" href="style/familiar.css">
 
   <!-- Google Fonts -->
@@ -60,15 +64,18 @@
 
       <!-- BARRA DE NAVEGAÇÃO DE ABAS -->
       <div class="tabs-nav-familiar">
-        <button type="button" id="btn_tab_cliente" class="tab-btn-familiar active" onclick="trocarAbaFamiliar('tab_cliente')">
+        <button type="button" id="btn_tab_cliente" class="tab-btn-familiar active"
+          onclick="trocarAbaFamiliar('tab_cliente')">
           <span class="tab-btn-titulo">Dados do Cliente</span>
         </button>
 
-        <button type="button" id="btn_tab_sucessao" class="tab-btn-familiar" onclick="trocarAbaFamiliar('tab_sucessao')">
+        <button type="button" id="btn_tab_sucessao" class="tab-btn-familiar"
+          onclick="trocarAbaFamiliar('tab_sucessao')">
           <span class="tab-btn-titulo">Herança & Sucessão</span>
         </button>
 
-        <button type="button" id="btn_tab_organograma" class="tab-btn-familiar" onclick="trocarAbaFamiliar('tab_organograma')">
+        <button type="button" id="btn_tab_organograma" class="tab-btn-familiar"
+          onclick="trocarAbaFamiliar('tab_organograma')">
           <span class="tab-btn-titulo">Organograma Sucessório</span>
         </button>
       </div>
@@ -111,7 +118,8 @@
               <option value="sim">Sim, inventário finalizado</option>
               <option value="nao">Não, ainda em andamento / Não iniciado</option>
             </select>
-            <p style="font-size: 11px; margin-top: 5px; opacity: 0.7;">* Se não concluído, 50% do patrimônio pode pertencer aos herdeiros do falecido.</p>
+            <p style="font-size: 11px; margin-top: 5px; opacity: 0.7;">* Se não concluído, 50% do patrimônio pode
+              pertencer aos herdeiros do falecido.</p>
           </div>
 
           <!-- Pergunta Estratégica para Divorciados -->
@@ -162,7 +170,11 @@
           <div class="tab-pane-footer-nav" style="justify-content: flex-end;">
             <button type="button" class="btn-tab-nav primary" onclick="trocarAbaFamiliar('tab_sucessao')">
               <span>Próximo: Herança & Sucessão</span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
             </button>
           </div>
         </div>
@@ -268,13 +280,21 @@
 
           <div class="tab-pane-footer-nav" style="justify-content: space-between;">
             <button type="button" class="btn-tab-nav" onclick="trocarAbaFamiliar('tab_cliente')">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12" />
+                <polyline points="12 19 5 12 12 5" />
+              </svg>
               <span>Anterior: Dados do Cliente</span>
             </button>
 
             <button type="button" class="btn-tab-nav primary" onclick="trocarAbaFamiliar('tab_organograma')">
               <span>Próximo: Organograma Sucessório</span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
             </button>
           </div>
         </div>
@@ -304,13 +324,21 @@
           <!-- Navegação no rodapé da aba -->
           <div class="tab-pane-footer-nav" style="justify-content: space-between;">
             <button type="button" class="btn-tab-nav" onclick="trocarAbaFamiliar('tab_sucessao')">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12" />
+                <polyline points="12 19 5 12 12 5" />
+              </svg>
               <span>Anterior: Herança & Sucessão</span>
             </button>
 
             <a href="evolucao.html" class="btn-tab-nav primary" style="text-decoration: none;">
               <span>Próximo Passo: Evolução Patrimonial</span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
             </a>
           </div>
         </div>
@@ -332,7 +360,7 @@
     </div>
   </div>
 
-    <script src="script/familiar.js?v=20261111b"></script>
+  <script src="script/familiar.js?v=20261111b"></script>
 
 </body>
 

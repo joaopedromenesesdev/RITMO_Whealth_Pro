@@ -260,12 +260,16 @@ returns json as $$
 declare
   v_user_id uuid := auth.uid();
   v_relatorios_removidos integer := 0;
+  v_vendas_removidas integer := 0;
 begin
   if v_user_id is null then
     return json_build_object('success', false, 'message', 'Usuário não autenticado.');
   end if;
 
-  -- Remove todos os relatórios e simulações do titular
+  -- Remove todas as vendas e relatórios do titular
+  delete from public.vendas where user_id = v_user_id;
+  get diagnostics v_vendas_removidas = row_count;
+
   delete from public.relatorios where user_id = v_user_id;
   get diagnostics v_relatorios_removidos = row_count;
 
@@ -274,13 +278,18 @@ begin
   values (
     v_user_id,
     'EXCLUSAO_CONTA_LGPD',
-    json_build_object('relatorios_expurgados', v_relatorios_removidos, 'data', now())
+    json_build_object(
+      'relatorios_expurgados', v_relatorios_removidos,
+      'vendas_expurgadas', v_vendas_removidas,
+      'data', now()
+    )
   );
 
   return json_build_object(
     'success', true,
     'message', 'Dados expurgados com sucesso em conformidade com a LGPD.',
-    'relatorios_removidos', v_relatorios_removidos
+    'relatorios_removidos', v_relatorios_removidos,
+    'vendas_removidas', v_vendas_removidas
   );
 end;
 $$ language plpgsql security definer set search_path = public;
@@ -346,7 +355,57 @@ create policy "Master pode atualizar status dos chamados"
   with check (public.is_master());
 
 -- =============================================================================
--- 7. PAINEL DE USABILIDADE E MÉTRICAS MASTER (SISTEMA DE USUÁRIOS MASTER)
+-- 7. TABELA DE VENDAS REALIZADAS (MODELO HIBRIDO 1:N)
+-- =============================================================================
+create table if not exists public.vendas (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  relatorio_id uuid references public.relatorios(id) on delete set null,
+  nome_cliente text not null check (char_length(trim(nome_cliente)) between 1 and 200),
+  nome_assessor text check (nome_assessor is null or char_length(nome_assessor) <= 200),
+  produto text not null check (char_length(trim(produto)) between 1 and 120),
+  valor_venda numeric(18,2) not null default 0 check (valor_venda >= 0),
+  data_venda date not null default current_date,
+  observacao text check (observacao is null or char_length(observacao) <= 1000),
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_vendas_user_id on public.vendas(user_id);
+create index if not exists idx_vendas_relatorio_id on public.vendas(relatorio_id) where relatorio_id is not null;
+create index if not exists idx_vendas_data_venda on public.vendas(data_venda desc, created_at desc);
+create index if not exists idx_vendas_created_by on public.vendas(created_by) where created_by is not null;
+
+alter table public.vendas enable row level security;
+
+revoke all on table public.vendas from public, anon;
+grant select, insert, update, delete on table public.vendas to authenticated;
+revoke truncate, trigger, references, maintain on table public.vendas from authenticated;
+
+drop policy if exists "Usuarios podem ver suas proprias vendas ou master ve todas" on public.vendas;
+create policy "Usuarios podem ver suas proprias vendas ou master ve todas"
+  on public.vendas for select to authenticated
+  using ((select auth.uid()) = user_id or public.is_master() is true);
+
+drop policy if exists "Usuarios podem criar vendas proprias ou master cria para equipe" on public.vendas;
+create policy "Usuarios podem criar vendas proprias ou master cria para equipe"
+  on public.vendas for insert to authenticated
+  with check ((select auth.uid()) = user_id or public.is_master() is true);
+
+drop policy if exists "Usuarios podem atualizar suas proprias vendas ou master atualiza todas" on public.vendas;
+create policy "Usuarios podem atualizar suas proprias vendas ou master atualiza todas"
+  on public.vendas for update to authenticated
+  using ((select auth.uid()) = user_id or public.is_master() is true)
+  with check ((select auth.uid()) = user_id or public.is_master() is true);
+
+drop policy if exists "Usuarios podem excluir suas proprias vendas ou master exclui todas" on public.vendas;
+create policy "Usuarios podem excluir suas proprias vendas ou master exclui todas"
+  on public.vendas for delete to authenticated
+  using ((select auth.uid()) = user_id or public.is_master() is true);
+
+-- =============================================================================
+-- 8. PAINEL DE USABILIDADE E MÉTRICAS MASTER (SISTEMA DE USUÁRIOS MASTER)
 -- =============================================================================
 create or replace function public.registrar_acesso_usuario()
 returns void as $$
@@ -367,7 +426,7 @@ returns jsonb as $$
 declare
   v_res jsonb;
 begin
-  if not public.is_master() then
+  if auth.uid() is null or public.is_master() is not true then
     raise exception 'Acesso negado: apenas usuários Master podem consultar métricas de usabilidade.';
   end if;
 
@@ -381,7 +440,11 @@ begin
         initcap(replace(split_part(coalesce(p.email, u.email), '@', 1), '.', ' '))
       ),
       'role', case
-        when coalesce(p.id, u.id) = '130e3598-89b9-4702-a4cc-2c5923fa3a66'::uuid then 'master'
+        when coalesce(p.id, u.id) in (
+          '130e3598-89b9-4702-a4cc-2c5923fa3a66'::uuid,
+          '5ec2da93-ed07-43f8-9089-6d285a092156'::uuid,
+          '469dfeab-5fd6-4159-97a2-aa1fee6e7dcb'::uuid
+        ) then 'master'
         else coalesce(p.role, 'assessor')
       end,
       'created_at', coalesce(p.created_at, u.created_at),
@@ -390,7 +453,10 @@ begin
       'email_confirmed_at', u.email_confirmed_at,
       'total_relatorios', coalesce(r_stats.total_relatorios, 0),
       'total_patrimonio', coalesce(r_stats.total_patrimonio, 0),
-      'ultimo_relatorio_em', r_stats.ultimo_relatorio_em
+      'ultimo_relatorio_em', r_stats.ultimo_relatorio_em,
+      'total_vendas', coalesce(v_stats.total_vendas, 0),
+      'valor_total_vendas', coalesce(v_stats.valor_total_vendas, 0),
+      'ultima_venda_em', v_stats.ultima_venda_em
     )
     order by coalesce(p.ultimo_acesso, u.last_sign_in_at, p.created_at, u.created_at) desc nulls last
   ) into v_res
@@ -403,13 +469,21 @@ begin
       max(r.data_criacao) as ultimo_relatorio_em
     from public.relatorios r
     where r.user_id = coalesce(p.id, u.id)
-  ) r_stats on true;
+  ) r_stats on true
+  left join lateral (
+    select
+      count(v.id) as total_vendas,
+      coalesce(sum(v.valor_venda), 0) as valor_total_vendas,
+      max(v.created_at) as ultima_venda_em
+    from public.vendas v
+    where v.user_id = coalesce(p.id, u.id)
+  ) v_stats on true;
 
   return coalesce(v_res, '[]'::jsonb);
 end;
 $$ language plpgsql security definer set search_path = public;
 
-revoke execute on function public.obter_metricas_usabilidade_master() from anon;
+revoke all on function public.obter_metricas_usabilidade_master() from public, anon;
 grant execute on function public.obter_metricas_usabilidade_master() to authenticated;
 
 

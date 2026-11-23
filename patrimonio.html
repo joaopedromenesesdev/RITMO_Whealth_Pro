@@ -6,26 +6,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ritmo Wealth Pro — Patrimônio</title>
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://dogyopoylekiqsahadlc.supabase.co https://*.supabase.co wss://*.supabase.co https://brasilapi.com.br https://olinda.bcb.gov.br https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self';">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://dogyopoylekiqsahadlc.supabase.co https://*.supabase.co wss://*.supabase.co https://brasilapi.com.br https://olinda.bcb.gov.br https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self';">
 
   <link rel="stylesheet" href="style/patrimonio.css">
   <link rel="icon" type="image/png" href="img/RITMO.png">
-  <link rel="stylesheet" href="style/style.css">
+  <link rel="stylesheet" href="style/style.css?v=20261123a">
 
   <!-- Icons (Versão Fixa) -->
-  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js" integrity="sha384-hJnF5AwidE18GSWTAGHv3ByzzvfNZ1Tcx5y1UUV3WkauuMCEzBJBMSwSt/PUPXnM" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"
+    integrity="sha384-hJnF5AwidE18GSWTAGHv3ByzzvfNZ1Tcx5y1UUV3WkauuMCEzBJBMSwSt/PUPXnM"
+    crossorigin="anonymous"></script>
 
   <!-- Chart -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/chart.umd.min.js" integrity="sha384-Emf5ZVIUiarAdhkgtqK+5/Z5qIvM6QoVrS+qAVtfyZVuD5lIHrac0me485+Antp0" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0" integrity="sha384-y49Zu59jZHJL/PLKgZPv3k2WI9c0Yp3pWB76V8OBVCb0QBKS8l4Ff3YslzHVX76Y" crossorigin="anonymous"></script>
-  <script src="script/global_ui.js?v=20261111f"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/chart.umd.min.js"
+    integrity="sha384-Emf5ZVIUiarAdhkgtqK+5/Z5qIvM6QoVrS+qAVtfyZVuD5lIHrac0me485+Antp0"
+    crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"
+    integrity="sha384-y49Zu59jZHJL/PLKgZPv3k2WI9c0Yp3pWB76V8OBVCb0QBKS8l4Ff3YslzHVX76Y"
+    crossorigin="anonymous"></script>
+  <script src="script/global_ui.js?v=20261123a"></script>
   <script src="script/state.js?v=20261111b"></script>
 
   <!-- Supabase & Autenticação -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0" integrity="sha384-gnyZit14c5lnGcarmA166QQjjJXpucw25ogZXuwH3HxxY904zHkBqmxVpelsPorb" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"
+    integrity="sha384-gnyZit14c5lnGcarmA166QQjjJXpucw25ogZXuwH3HxxY904zHkBqmxVpelsPorb"
+    crossorigin="anonymous"></script>
   <script src="script/supabase_config.js?v=20261111c"></script>
   <script src="script/auth.js?v=20261111f"></script>
-  <script src="script/db.js?v=20261111f"></script>
+  <script src="script/db.js?v=20261123a"></script>
 
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -64,19 +73,23 @@
 
       <!-- BARRA DE NAVEGAÇÃO DE ABAS COM MÉTRICAS EM TEMPO REAL -->
       <div class="tabs-nav-patrimonio">
-        <button type="button" id="btn_tab_onshore" class="tab-btn-patrimonio active" onclick="trocarAbaPatrimonio('tab_onshore')">
+        <button type="button" id="btn_tab_onshore" class="tab-btn-patrimonio active"
+          onclick="trocarAbaPatrimonio('tab_onshore')">
           <span class="tab-btn-titulo">Aplicações Onshore</span>
         </button>
 
-        <button type="button" id="btn_tab_offshore" class="tab-btn-patrimonio" onclick="trocarAbaPatrimonio('tab_offshore')">
+        <button type="button" id="btn_tab_offshore" class="tab-btn-patrimonio"
+          onclick="trocarAbaPatrimonio('tab_offshore')">
           <span class="tab-btn-titulo">Aplicações Offshore</span>
         </button>
 
-        <button type="button" id="btn_tab_imoveis" class="tab-btn-patrimonio" onclick="trocarAbaPatrimonio('tab_imoveis')">
+        <button type="button" id="btn_tab_imoveis" class="tab-btn-patrimonio"
+          onclick="trocarAbaPatrimonio('tab_imoveis')">
           <span class="tab-btn-titulo">Bens Imóveis & Móveis</span>
         </button>
 
-        <button type="button" id="btn_tab_empresas" class="tab-btn-patrimonio" onclick="trocarAbaPatrimonio('tab_empresas')">
+        <button type="button" id="btn_tab_empresas" class="tab-btn-patrimonio"
+          onclick="trocarAbaPatrimonio('tab_empresas')">
           <span class="tab-btn-titulo">Empresas / Holding</span>
         </button>
       </div>
@@ -129,17 +142,24 @@
               <div id="barra_prev" class="insight-barra-segmento" style="width: 0%; background: #7c3aed;"></div>
             </div>
             <div class="insight-barra-legendas">
-              <div class="insight-legenda-item"><span class="insight-legenda-dot" style="background:#2563eb;"></span>RF: <strong id="pct_rf_val">0%</strong></div>
-              <div class="insight-legenda-item"><span class="insight-legenda-dot" style="background:#059669;"></span>RV: <strong id="pct_rv_val">0%</strong></div>
-              <div class="insight-legenda-item"><span class="insight-legenda-dot" style="background:#d97706;"></span>Fundos: <strong id="pct_inter_val">0%</strong></div>
-              <div class="insight-legenda-item"><span class="insight-legenda-dot" style="background:#7c3aed;"></span>Prev: <strong id="pct_prev_val">0%</strong></div>
+              <div class="insight-legenda-item"><span class="insight-legenda-dot" style="background:#2563eb;"></span>RF:
+                <strong id="pct_rf_val">0%</strong></div>
+              <div class="insight-legenda-item"><span class="insight-legenda-dot" style="background:#059669;"></span>RV:
+                <strong id="pct_rv_val">0%</strong></div>
+              <div class="insight-legenda-item"><span class="insight-legenda-dot"
+                  style="background:#d97706;"></span>Fundos: <strong id="pct_inter_val">0%</strong></div>
+              <div class="insight-legenda-item"><span class="insight-legenda-dot"
+                  style="background:#7c3aed;"></span>Prev: <strong id="pct_prev_val">0%</strong></div>
             </div>
           </div>
 
           <!-- BOX DE INTELIGÊNCIA SUCESSÓRIA: PREVIDÊNCIA PRIVADA -->
           <div class="card-inteligencia-sucessoria verde">
             <div class="card-inteligencia-titulo">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
               <span>Isenção de Inventário em Previdência</span>
             </div>
             <div>
@@ -154,7 +174,11 @@
             <div></div>
             <button type="button" class="btn-tab-nav primary" onclick="trocarAbaPatrimonio('tab_offshore')">
               <span>Próxima: Aplicações Offshore</span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
             </button>
           </div>
         </div>
@@ -204,7 +228,8 @@
           <!-- TIPOS DE CONTA EXTERIOR (BTG PACTUAL PÁG. 5) -->
           <div class="input-group" id="grupo_tipo_conta_exterior" style="margin-top: 14px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-              <label for="tipo_conta_exterior" style="margin: 0; font-weight: 500; font-size: 13px; color: #71717a;">Tipos de Conta</label>
+              <label for="tipo_conta_exterior"
+                style="margin: 0; font-weight: 500; font-size: 13px; color: #71717a;">Tipos de Conta</label>
             </div>
             <select id="tipo_conta_exterior" onchange="atualizarRegrasContaExterior(); salvarPatrimonio();"
               style="width: 100%; padding: 11px 14px; border-radius: 10px; border: 1px solid #e4e4e7; background: #fff; font-family: 'Outfit', sans-serif; font-size: 13.5px; color: #09090b; outline: none; cursor: pointer; margin-top: 0; margin-bottom: 8px;">
@@ -216,8 +241,10 @@
             </select>
 
             <!-- Cota do falecido em conta TIC (Joint Tenants in Common) -->
-            <div id="grupo_cota_tic" style="display: none; margin-bottom: 8px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
-              <label for="cota_falecido_tic" style="display: flex; justify-content: space-between; align-items: center; margin: 0 0 4px 0; font-weight: 500; font-size: 12.5px; color: #475569;">
+            <div id="grupo_cota_tic"
+              style="display: none; margin-bottom: 8px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+              <label for="cota_falecido_tic"
+                style="display: flex; justify-content: space-between; align-items: center; margin: 0 0 4px 0; font-weight: 500; font-size: 12.5px; color: #475569;">
                 <span>Cota-parte do titular falecido</span>
                 <span id="label_val_cota_tic" style="font-weight: 700; color: #0f172a;">50%</span>
               </label>
@@ -229,24 +256,29 @@
             <!-- Card de Regras Sucessórias da Conta no Exterior -->
             <div id="card_regras_conta_exterior"
               style="padding: 10px 12px; border-radius: 8px; background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.18); font-size: 12px; line-height: 1.45; color: #1e3a8a;">
-              <div id="regra_conta_titulo" style="font-weight: 700; color: #1d4ed8; margin-bottom: 3px;">Conta Individual</div>
+              <div id="regra_conta_titulo" style="font-weight: 700; color: #1d4ed8; margin-bottom: 3px;">Conta
+                Individual</div>
               <div id="regra_conta_detalhes" style="color: #334155;">
-                • <strong>Inventário:</strong> Conta é congelada e está sujeita a inventário nos EUA (Probate judicial)<br>
-                • <strong>Estate Tax:</strong> Sujeita ao US Estate Tax (18% a 40% sobre o excedente a USD 60k em US Situs Assets)<br>
-                • <strong>Forms IRS:</strong> Form 706-NA (apuração de estate tax) e Form 5173 (Transfer Certificate perante o IRS)
+                • <strong>Inventário:</strong> Conta é congelada e está sujeita a inventário nos EUA (Probate
+                judicial)<br>
+                • <strong>Estate Tax:</strong> Sujeita ao US Estate Tax (18% a 40% sobre o excedente a USD 60k em US
+                Situs Assets)<br>
+                • <strong>Forms IRS:</strong> Form 706-NA (apuração de estate tax) e Form 5173 (Transfer Certificate
+                perante o IRS)
               </div>
             </div>
 
             <!-- MAPEAMENTO DE ATIVOS SEM ESTATE TAX (BTG PACTUAL PÁG. 4) -->
-            <div id="bloco_ativos_sem_estate_tax" style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #e4e4e7;">
+            <div id="bloco_ativos_sem_estate_tax"
+              style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #e4e4e7;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <label for="qtd_ativos_sem_estate_tax" style="margin: 0; font-weight: 500; font-size: 13px; color: #71717a;">
+                <label for="qtd_ativos_sem_estate_tax"
+                  style="margin: 0; font-weight: 500; font-size: 13px; color: #71717a;">
                   Quantos ativos sem taxa de Estate Tax o usuário possui?
                 </label>
               </div>
               <div class="input-box" style="margin-bottom: 8px;">
-                <input type="number" id="qtd_ativos_sem_estate_tax" min="0" max="9" value="0"
-                  placeholder="0"
+                <input type="number" id="qtd_ativos_sem_estate_tax" min="0" max="9" value="0" placeholder="0"
                   oninput="window.renderizarInputsAtivosSemEstateTax(null, true); salvarPatrimonio();"
                   style="width: 100%; padding: 11px 14px; border-radius: 10px; border: 1px solid #e4e4e7; background: #fff; font-family: 'Outfit', sans-serif; font-size: 13.5px; color: #09090b; outline: none;">
               </div>
@@ -258,33 +290,45 @@
                     <span id="badge_qtd_ativos_isentos" class="badge-qtd-ativos-isentos">0 ativos</span>
                     <strong style="font-size: 12px; color: #0f172a;">Ativos Isentos Mapeados</strong>
                   </div>
-                  <div id="texto_resumo_ativos_isentos" style="font-size: 11.5px; color: #64748b; line-height: 1.35;">Nenhum ativo selecionado.</div>
+                  <div id="texto_resumo_ativos_isentos" style="font-size: 11.5px; color: #64748b; line-height: 1.35;">
+                    Nenhum ativo selecionado.</div>
                 </div>
                 <button type="button" class="btn-editar-ativos-isentos" onclick="window.abrirModalAtivosIsentos()">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
                   <span>Selecionar Ativos</span>
                 </button>
               </div>
 
               <!-- Rateio Proporcional em Ativos US Situs (Ações/ETFs EUA) -->
-              <div id="grupo_rateio_us_situs" style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #e4e4e7;">
+              <div id="grupo_rateio_us_situs"
+                style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #e4e4e7;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                  <label for="percentual_us_situs" style="margin: 0; font-weight: 500; font-size: 13px; color: #71717a;">
+                  <label for="percentual_us_situs"
+                    style="margin: 0; font-weight: 500; font-size: 13px; color: #71717a;">
                     Parcela em Ativos US Situs (Ações / ETFs nos EUA)
                   </label>
-                  <span id="label_val_perc_us_situs" style="font-size: 12px; font-weight: 700; color: #dc2626;">100% (Exposto)</span>
+                  <span id="label_val_perc_us_situs" style="font-size: 12px; font-weight: 700; color: #dc2626;">100%
+                    (Exposto)</span>
                 </div>
                 <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px;">
                   <div class="input-box" style="position: relative; flex: 1;">
                     <input type="number" id="percentual_us_situs" min="0" max="100" step="any" value="100"
-                      placeholder="100"
-                      oninput="window.definirPercentualUSSitus(this.value)"
+                      placeholder="100" oninput="window.definirPercentualUSSitus(this.value)"
                       style="width: 100%; padding: 8px 30px 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; font-family: 'Outfit', sans-serif; font-size: 13.5px; font-weight: 600; color: #09090b; outline: none;">
-                    <span style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 12.5px; font-weight: 700; color: #94a3b8; pointer-events: none;">%</span>
+                    <span
+                      style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 12.5px; font-weight: 700; color: #94a3b8; pointer-events: none;">%</span>
                   </div>
                   <div class="botoes-preset-situs" style="display: flex; gap: 6px;">
-                    <button type="button" class="btn-preset-situs" data-val="0" onclick="window.definirPercentualUSSitus(0)" title="0% em ativos americanos (Carteira 100% Isenta)">0% Isento</button>
-                    <button type="button" class="btn-preset-situs active" data-val="100" onclick="window.definirPercentualUSSitus(100)" title="100% em ativos americanos (Totalmente Exposto)">100% Exposto</button>
+                    <button type="button" class="btn-preset-situs" data-val="0"
+                      onclick="window.definirPercentualUSSitus(0)"
+                      title="0% em ativos americanos (Carteira 100% Isenta)">0% Isento</button>
+                    <button type="button" class="btn-preset-situs active" data-val="100"
+                      onclick="window.definirPercentualUSSitus(100)"
+                      title="100% em ativos americanos (Totalmente Exposto)">100% Exposto</button>
                   </div>
                 </div>
                 <div style="font-size: 11.5px; color: #64748b; line-height: 1.35;">
@@ -293,18 +337,28 @@
               </div>
 
               <!-- Card de diagnóstico dinâmico de Estate Tax -->
-              <div id="card_diagnostico_estate_tax" style="display: none; margin-top: 10px; padding: 10px 12px; border-radius: 8px; font-size: 12px; line-height: 1.45;"></div>
+              <div id="card_diagnostico_estate_tax"
+                style="display: none; margin-top: 10px; padding: 10px 12px; border-radius: 8px; font-size: 12px; line-height: 1.45;">
+              </div>
             </div>
           </div>
 
           <div class="tab-pane-footer-nav">
             <button type="button" class="btn-tab-nav" onclick="trocarAbaPatrimonio('tab_onshore')">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12" />
+                <polyline points="12 19 5 12 12 5" />
+              </svg>
               <span>Anterior: Onshore</span>
             </button>
             <button type="button" class="btn-tab-nav primary" onclick="trocarAbaPatrimonio('tab_imoveis')">
               <span>Próxima: Bens Imóveis & Móveis</span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
             </button>
           </div>
         </div>
@@ -350,7 +404,8 @@
             <div class="input-box"><span>R$</span><input type="text" id="bens_particulares"></div>
           </div>
 
-          <div class="input-group" style="padding-top: 10px; border-top: 1px dashed rgba(0,0,0,0.08); margin-top: 12px;">
+          <div class="input-group"
+            style="padding-top: 10px; border-top: 1px dashed rgba(0,0,0,0.08); margin-top: 12px;">
             <label>Bens Gerais (Veículos, Outros Móveis)</label>
             <div class="input-box"><span>R$</span><input type="text" id="bens"></div>
           </div>
@@ -369,25 +424,40 @@
           <!-- BOX DE INTELIGÊNCIA SUCESSÓRIA: TRANSMISSÃO IMOBILIÁRIA -->
           <div class="card-inteligencia-sucessoria azul">
             <div class="card-inteligencia-titulo">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><line x1="9" y1="22" x2="9" y2="2"/><line x1="15" y1="22" x2="15" y2="2"/><line x1="4" y1="12" x2="20" y2="12"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
+                <line x1="9" y1="22" x2="9" y2="2" />
+                <line x1="15" y1="22" x2="15" y2="2" />
+                <line x1="4" y1="12" x2="20" y2="12" />
+              </svg>
               <span>Atrito Sucessório Estimado em Bens Físicos</span>
             </div>
             <div>
               A transferência de imóveis na PF gera despesas com ITCMD e emolumentos de cartório (~8%):
               <div style="margin-top: 6px; font-weight: 700;">
-                Impacto sucessório estimado: <span id="custo_transmissao_imoveis_val" style="color: #0369a1;">R$ 0,00</span>
+                Impacto sucessório estimado: <span id="custo_transmissao_imoveis_val" style="color: #0369a1;">R$
+                  0,00</span>
               </div>
             </div>
           </div>
 
           <div class="tab-pane-footer-nav">
             <button type="button" class="btn-tab-nav" onclick="trocarAbaPatrimonio('tab_offshore')">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12" />
+                <polyline points="12 19 5 12 12 5" />
+              </svg>
               <span>Anterior: Offshore</span>
             </button>
             <button type="button" class="btn-tab-nav primary" onclick="trocarAbaPatrimonio('tab_empresas')">
               <span>Próxima: Empresas / Holding</span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
             </button>
           </div>
         </div>
@@ -406,8 +476,10 @@
               </p>
             </div>
             <div class="empresas-toggle-wrapper">
-              <label for="tem_empresas" style="margin: 0; font-weight: 600; font-size: 13px; color: #09090b;">Possui empresas?</label>
-              <select id="tem_empresas" style="min-width: 120px; padding: 8px 12px; border-radius: 10px; border: 1px solid #e4e4e7; background: #fff; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer;">
+              <label for="tem_empresas" style="margin: 0; font-weight: 600; font-size: 13px; color: #09090b;">Possui
+                empresas?</label>
+              <select id="tem_empresas"
+                style="min-width: 120px; padding: 8px 12px; border-radius: 10px; border: 1px solid #e4e4e7; background: #fff; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer;">
                 <option value="">Selecione</option>
                 <option value="nao">Não</option>
                 <option value="sim">Sim</option>
@@ -417,12 +489,28 @@
 
           <!-- Placeholder card elegante quando 'Não' ou 'Selecione' -->
           <div id="empresas_placeholder_info" class="empresas-placeholder-card">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
+              stroke="#a1a1aa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
+              <path d="M9 22v-4h6v4" />
+              <path d="M8 6h.01" />
+              <path d="M16 6h.01" />
+              <path d="M12 6h.01" />
+              <path d="M12 10h.01" />
+              <path d="M12 14h.01" />
+              <path d="M16 10h.01" />
+              <path d="M16 14h.01" />
+              <path d="M8 10h.01" />
+              <path d="M8 14h.01" />
+            </svg>
             <p>Nenhuma empresa ou holding vinculada</p>
-            <span>Alterne "Possui empresas?" para "Sim" para cadastrar participações societárias e apurar o patrimônio empresarial.</span>
+            <span>Alterne "Possui empresas?" para "Sim" para cadastrar participações societárias e apurar o patrimônio
+              empresarial.</span>
           </div>
 
-          <div id="area_empresas" style="display:none; margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(0,0,0,0.06);" class="area-empresas-container">
+          <div id="area_empresas"
+            style="display:none; margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(0,0,0,0.06);"
+            class="area-empresas-container">
             <div class="empresas-resumo-card" id="empresas_resumo_card">
               <div class="empresas-resumo-info">
                 <span class="empresas-resumo-label">Total em Participações Societárias</span>
@@ -445,7 +533,11 @@
 
           <div class="tab-pane-footer-nav">
             <button type="button" class="btn-tab-nav" onclick="trocarAbaPatrimonio('tab_imoveis')">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12" />
+                <polyline points="12 19 5 12 12 5" />
+              </svg>
               <span>Anterior: Bens Imóveis</span>
             </button>
             <div></div>
@@ -463,7 +555,8 @@
 
     <!-- AÇÕES E NAVEGAÇÃO -->
     <div class="patrimonio-acoes">
-      <button type="button" id="btn_toggle_graficos" class="btn-toggle-graficos" onclick="window.alternarVisualizacaoGraficos()">
+      <button type="button" id="btn_toggle_graficos" class="btn-toggle-graficos"
+        onclick="window.alternarVisualizacaoGraficos()">
         <i data-lucide="pie-chart"></i>
         <span id="btn_toggle_graficos_label">Ver Gráficos do Patrimônio</span>
         <i data-lucide="chevron-down" class="btn-toggle-icon"></i>
@@ -505,35 +598,47 @@
   </div>
 
   <!-- MODAL POP-UP: SELEÇÃO DE ATIVOS ISENTOS DE ESTATE TAX -->
-  <div id="modal_ativos_sem_estate_tax" class="modal-ativos-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="modal_ativos_titulo">
+  <div id="modal_ativos_sem_estate_tax" class="modal-ativos-overlay" style="display: none;" role="dialog"
+    aria-modal="true" aria-labelledby="modal_ativos_titulo">
     <div class="modal-ativos-card">
       <div class="modal-ativos-header">
         <div>
-          <h3 id="modal_ativos_titulo" style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a; font-family: 'Outfit', sans-serif;">
+          <h3 id="modal_ativos_titulo"
+            style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a; font-family: 'Outfit', sans-serif;">
             Ativos Isentos de US Estate Tax
           </h3>
           <p style="margin: 3px 0 0 0; font-size: 12px; color: #64748b;">
             Classificação oficial de ativos fora da tributação de herança americana (BTG Pactual Pág. 4)
           </p>
         </div>
-        <button type="button" class="modal-ativos-close" onclick="window.fecharModalAtivosIsentos()" aria-label="Fechar">&times;</button>
+        <button type="button" class="modal-ativos-close" onclick="window.fecharModalAtivosIsentos()"
+          aria-label="Fechar">&times;</button>
       </div>
 
       <div class="modal-ativos-body">
         <div class="modal-ativos-callout">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            style="flex-shrink:0; margin-top:2px;">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+          </svg>
           <div>
-            Você registrou <strong id="modal_qtd_info">0 ativo(s)</strong>. Selecione abaixo a classificação de cada um deles conforme sua alocação no exterior:
+            Você registrou <strong id="modal_qtd_info">0 ativo(s)</strong>. Selecione abaixo a classificação de cada um
+            deles conforme sua alocação no exterior:
           </div>
         </div>
 
         <!-- Container dinâmico com os selects dos ativos isentos dentro do modal -->
-        <div id="modal_lista_ativos_sem_estate_tax" style="display: flex; flex-direction: column; gap: 10px; margin-top: 14px;"></div>
+        <div id="modal_lista_ativos_sem_estate_tax"
+          style="display: flex; flex-direction: column; gap: 10px; margin-top: 14px;"></div>
       </div>
 
       <div class="modal-ativos-footer">
         <button type="button" class="btn-modal-cancelar" onclick="window.fecharModalAtivosIsentos()">Cancelar</button>
-        <button type="button" class="btn-modal-salvar" onclick="window.confirmarAtivosIsentosModal()">Confirmar Seleção</button>
+        <button type="button" class="btn-modal-salvar" onclick="window.confirmarAtivosIsentosModal()">Confirmar
+          Seleção</button>
       </div>
     </div>
   </div>

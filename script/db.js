@@ -634,7 +634,10 @@ async function dbAutoSalvarExecutar() {
 
 // Exporta todos os dados do titular em JSON estruturado legível por máquina (Portabilidade)
 async function dbExportarDadosCompletos() {
-  const relatorios = await dbObterRelatorios();
+  const [relatorios, vendas] = await Promise.all([
+    dbObterRelatorios(false),
+    dbObterVendas(false)
+  ]);
   const session = await aguardarSessao();
   const userId = session?.user?.id || "anonimo";
   const userEmail = session?.user?.email || "desconhecido";
@@ -648,7 +651,9 @@ async function dbExportarDadosCompletos() {
       role: session?.user?.role || "assessor"
     },
     total_relatorios_mapeados: relatorios.length,
-    relatorios: relatorios
+    total_vendas_registradas: vendas.length,
+    relatorios: relatorios,
+    vendas: vendas
   };
 }
 
@@ -663,12 +668,14 @@ async function dbSolicitarExclusaoConta() {
     // Tenta via RPC seguro do Supabase
     const { error: rpcErr } = await window.supabaseClient.rpc("solicitar_exclusao_meus_dados");
     if (rpcErr) {
-      // Fallback: remove relatórios diretamente via RLS
+      // Fallback: remove vendas e relatórios diretamente via RLS
+      await window.supabaseClient.from("vendas").delete().eq("user_id", userId);
       await window.supabaseClient.from("relatorios").delete().eq("user_id", userId);
     }
 
     // Limpa backups locais e sessões do navegador
     localStorage.removeItem(`relatorios_backup_${userId}`);
+    localStorage.removeItem(`vendas_backup_${userId}`);
     sessionStorage.clear();
     return true;
   } catch (e) {
@@ -753,6 +760,435 @@ if (typeof window !== "undefined") {
   window.dbRegistrarChamadoSuporte = dbRegistrarChamadoSuporte;
 }
 
+// ─── Sistema de Contabilização e Gestão de Vendas (Modelo Híbrido 1:N) ────────
+
+function _normalizarDataISOVenda(dataRaw) {
+  if (typeof dataRaw === "string") {
+    const limpa = dataRaw.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(limpa)) {
+      const parsed = new Date(`${limpa}T12:00:00Z`);
+      if (!isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === limpa) {
+        return limpa;
+      }
+    }
+    const parsedIso = new Date(limpa);
+    if (!isNaN(parsedIso.getTime())) {
+      return parsedIso.toISOString().slice(0, 10);
+    }
+  } else if (dataRaw instanceof Date && !isNaN(dataRaw.getTime())) {
+    return dataRaw.toISOString().slice(0, 10);
+  }
+  return new Date().toISOString().slice(0, 10);
+}
+
+// Sanitiza e valida os dados de uma venda antes de persistir no Supabase ou cache local
+function sanitizarEValidarVenda(vendaEntrada) {
+  const erros = [];
+  const src = (vendaEntrada && typeof vendaEntrada === "object") ? vendaEntrada : {};
+
+  const nomeCliente = String(src.nomeCliente ?? src.nome_cliente ?? "").trim().slice(0, 200);
+  const nomeAssessor = String(src.nomeAssessor ?? src.nome_assessor ?? "").trim().slice(0, 200);
+  const produto = String(src.produto ?? "").trim().slice(0, 120);
+  const observacao = String(src.observacao ?? "").trim().slice(0, 1000);
+  let valorVenda = sanitizarNumero(src.valorVenda ?? src.valor_venda, 0);
+  const dataVenda = _normalizarDataISOVenda(src.dataVenda ?? src.data_venda);
+
+  const rawRelId = String(src.relatorioId ?? src.relatorio_id ?? "").trim();
+  const relatorioId = isUUID(rawRelId) ? rawRelId : null;
+
+  const rawUserId = String(src.userId ?? src.user_id ?? "").trim();
+  const userId = isUUID(rawUserId) ? rawUserId : null;
+
+  const rawId = String(src.id ?? "").trim();
+  const id = rawId || null;
+
+  if (!nomeCliente) {
+    erros.push("Informe o nome do cliente.");
+  }
+  if (!produto) {
+    erros.push("Informe o produto ou serviço vendido.");
+  }
+  if (valorVenda < 0) {
+    valorVenda = 0;
+    erros.push("O valor da venda não pode ser negativo.");
+  }
+
+  return {
+    vendaSanitizada: {
+      id,
+      userId,
+      relatorioId,
+      nomeCliente,
+      nomeAssessor: nomeAssessor || "Assessor",
+      produto,
+      valorVenda: Math.round(valorVenda * 100) / 100,
+      dataVenda,
+      observacao
+    },
+    valido: erros.length === 0,
+    erros
+  };
+}
+
+// Mapeia linha da tabela public.vendas para objeto padronizado
+function _mapearLinhaVendaSupabase(item, fallbackUserId = null) {
+  if (!item || typeof item !== "object") return null;
+  return {
+    id: item.id,
+    userId: item.user_id || fallbackUserId || null,
+    relatorioId: item.relatorio_id || null,
+    nomeCliente: item.nome_cliente || "Cliente",
+    nomeAssessor: item.nome_assessor || "Assessor",
+    produto: item.produto || "",
+    valorVenda: Number(item.valor_venda) || 0,
+    dataVenda: _normalizarDataISOVenda(item.data_venda || item.created_at),
+    observacao: item.observacao || "",
+    createdBy: item.created_by || null,
+    createdAt: item.created_at || null,
+    updatedAt: item.updated_at || null
+  };
+}
+
+// Funções auxiliares de backup local de vendas (isolado estritamente por userId)
+function _limparBackupsVendasDeOutrosUsuarios(userIdAtivo) {
+  if (typeof localStorage === "undefined" || !userIdAtivo) return;
+  try {
+    const chaveAtiva = `vendas_backup_${userIdAtivo}`;
+    Object.keys(localStorage)
+      .filter(k => k.startsWith("vendas_backup_") && k !== chaveAtiva)
+      .forEach(k => localStorage.removeItem(k));
+  } catch (e) { }
+}
+
+function _obterBackupLocalVendas(userId) {
+  if (typeof localStorage === "undefined" || !userId) return [];
+  try {
+    const raw = localStorage.getItem(`vendas_backup_${userId}`);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    console.warn("[_obterBackupLocalVendas] Erro ao ler cache local de vendas:", e);
+    return [];
+  }
+}
+
+function _salvarBackupLocalVendas(userId, vendas) {
+  if (typeof localStorage === "undefined" || !userId) return;
+  try {
+    _limparBackupsVendasDeOutrosUsuarios(userId);
+    localStorage.setItem(`vendas_backup_${userId}`, JSON.stringify(Array.isArray(vendas) ? vendas : []));
+  } catch (e) {
+    console.warn("[_salvarBackupLocalVendas] Erro ao salvar cache local de vendas:", e);
+  }
+}
+
+function _salvarOuAtualizarVendaBackup(userId, venda) {
+  if (!userId || !venda || !venda.id) return;
+  const lista = _obterBackupLocalVendas(userId);
+  const idx = lista.findIndex(v => String(v.id) === String(venda.id));
+  if (idx !== -1) {
+    lista[idx] = venda;
+  } else {
+    lista.unshift(venda);
+  }
+  _salvarBackupLocalVendas(userId, lista);
+}
+
+function _removerVendaBackup(userId, vendaId) {
+  if (!userId || !vendaId) return;
+  const lista = _obterBackupLocalVendas(userId);
+  _salvarBackupLocalVendas(userId, lista.filter(v => String(v.id) !== String(vendaId)));
+}
+
+// Consolida métricas de vendas e taxa de conversão real sobre relatórios únicos (modelo híbrido 1:N)
+function calcularMetricasVendas(vendas = [], relatorios = []) {
+  const listaVendas = Array.isArray(vendas) ? vendas.filter(Boolean) : [];
+  const listaRelatorios = Array.isArray(relatorios) ? relatorios.filter(Boolean) : [];
+
+  const porRelatorio = {};
+  const porUsuario = {};
+  const relatorioIdsPresentes = new Set(listaRelatorios.map(r => String(r.id || "")).filter(Boolean));
+  const relatoriosConvertidosSet = new Set();
+
+  let valorTotalVendas = 0;
+  let vendasVinculadas = 0;
+  let vendasAvulsas = 0;
+
+  listaVendas.forEach(v => {
+    const valor = Math.max(0, Number(v.valorVenda ?? v.valor_venda) || 0);
+    valorTotalVendas += valor;
+
+    const relId = v.relatorioId ? String(v.relatorioId) : (v.relatorio_id ? String(v.relatorio_id) : "");
+    if (relId) {
+      vendasVinculadas += 1;
+      if (!porRelatorio[relId]) {
+        porRelatorio[relId] = { quantidade: 0, valorTotal: 0, vendas: [] };
+      }
+      porRelatorio[relId].quantidade += 1;
+      porRelatorio[relId].valorTotal += valor;
+      porRelatorio[relId].vendas.push(v);
+
+      if (relatorioIdsPresentes.size === 0 || relatorioIdsPresentes.has(relId)) {
+        relatoriosConvertidosSet.add(relId);
+      }
+    } else {
+      vendasAvulsas += 1;
+    }
+
+    const uid = v.userId ? String(v.userId) : (v.user_id ? String(v.user_id) : "");
+    if (uid) {
+      if (!porUsuario[uid]) {
+        porUsuario[uid] = { quantidade: 0, valorTotal: 0, ultimaVendaEm: null };
+      }
+      porUsuario[uid].quantidade += 1;
+      porUsuario[uid].valorTotal += valor;
+      const dt = v.dataVenda || v.createdAt || null;
+      if (dt && (!porUsuario[uid].ultimaVendaEm || String(dt) > String(porUsuario[uid].ultimaVendaEm))) {
+        porUsuario[uid].ultimaVendaEm = dt;
+      }
+    }
+  });
+
+  const totalRelatorios = listaRelatorios.length;
+  const relatoriosConvertidos = relatoriosConvertidosSet.size;
+  const taxaConversao = totalRelatorios > 0
+    ? Math.min(100, Math.round((relatoriosConvertidos / totalRelatorios) * 1000) / 10)
+    : 0;
+
+  return {
+    totalVendas: listaVendas.length,
+    valorTotalVendas: Math.round(valorTotalVendas * 100) / 100,
+    vendasVinculadas,
+    vendasAvulsas,
+    relatoriosConvertidos,
+    taxaConversao,
+    porRelatorio,
+    porUsuario
+  };
+}
+
+// Filtra vendas para o Painel Master e Modal de Vendas (busca sem acentos, assessor, origem, período e relatório)
+function filtrarVendasPainel(vendas = [], usuarios = [], opcoes = {}) {
+  const lista = Array.isArray(vendas) ? vendas : [];
+  const listaUsuarios = Array.isArray(usuarios) ? usuarios : [];
+  const buscaRaw = opcoes && typeof opcoes.busca === "string" ? opcoes.busca : "";
+  const filtroAssessor = opcoes && opcoes.filtroAssessor ? String(opcoes.filtroAssessor).trim() : "todos";
+  const origem = opcoes && opcoes.origem ? String(opcoes.origem).trim() : "todas";
+  const periodo = opcoes && opcoes.periodo ? String(opcoes.periodo).trim() : "todos";
+  const relatorioIdFiltro = opcoes && opcoes.relatorioId ? String(opcoes.relatorioId).trim() : "";
+
+  const norm = (s) => String(s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+  const buscaNorm = norm(buscaRaw);
+  const usuariosById = new Map();
+  listaUsuarios.forEach(u => {
+    if (u && u.id) usuariosById.set(String(u.id), u);
+  });
+
+  const usuarioSelecionado = (filtroAssessor !== "todos" && !filtroAssessor.startsWith("nome:"))
+    ? usuariosById.get(filtroAssessor) || null
+    : null;
+
+  const refDate = opcoes && opcoes.referenciaData ? new Date(opcoes.referenciaData) : new Date();
+  const refMs = isNaN(refDate.getTime()) ? Date.now() : refDate.getTime();
+  const refAnoMes = new Date(refMs).toISOString().slice(0, 7);
+
+  return lista.filter(v => {
+    if (!v) return false;
+
+    if (relatorioIdFiltro && String(v.relatorioId || "") !== relatorioIdFiltro) {
+      return false;
+    }
+
+    if (origem === "relatorio" && !v.relatorioId) return false;
+    if (origem === "avulsa" && v.relatorioId) return false;
+
+    if (periodo !== "todos") {
+      const dataStr = _normalizarDataISOVenda(v.dataVenda || v.createdAt);
+      if (periodo === "mes_atual") {
+        if (!dataStr.startsWith(refAnoMes)) return false;
+      } else if (periodo === "30d" || periodo === "90d") {
+        const dias = periodo === "30d" ? 30 : 90;
+        const vendaMs = new Date(`${dataStr}T12:00:00Z`).getTime();
+        if (isNaN(vendaMs) || (refMs - vendaMs) > dias * 86400000) return false;
+      }
+    }
+
+    const cliente = norm(v.nomeCliente);
+    const produto = norm(v.produto);
+    const assessor = norm(v.nomeAssessor);
+    const obs = norm(v.observacao);
+    const donoUsuario = v.userId ? (usuariosById.get(String(v.userId)) || null) : null;
+    const nomeDono = norm(donoUsuario?.full_name || "");
+
+    const matchBusca = !buscaNorm ||
+      cliente.includes(buscaNorm) ||
+      produto.includes(buscaNorm) ||
+      assessor.includes(buscaNorm) ||
+      nomeDono.includes(buscaNorm) ||
+      obs.includes(buscaNorm);
+    if (!matchBusca) return false;
+
+    if (filtroAssessor === "todos") return true;
+
+    if (filtroAssessor.startsWith("nome:")) {
+      return assessor === norm(filtroAssessor.slice(5));
+    }
+
+    if (v.userId) {
+      return String(v.userId) === filtroAssessor;
+    }
+
+    if (usuarioSelecionado) {
+      const alvoFullName = norm(usuarioSelecionado.full_name);
+      const alvoEmail = norm(usuarioSelecionado.email);
+      const alvoAlias = alvoEmail.split("@")[0].replace(/[._-]/g, " ").trim();
+      return Boolean(assessor && (
+        assessor === alvoFullName ||
+        assessor === alvoEmail ||
+        (alvoAlias && assessor === alvoAlias)
+      ));
+    }
+
+    return assessor === norm(filtroAssessor);
+  });
+}
+
+// Consulta vendas do usuário autenticado ou de toda a equipe (Exclusivo Master quando incluirTodosEquipe = true)
+async function dbObterVendas(incluirTodosEquipe = false) {
+  if (typeof window !== "undefined" && window.supabaseClient) {
+    try {
+      const session = await aguardarSessao();
+      if (session) {
+        const isMaster = incluirTodosEquipe ? await _verificarUsuarioMasterAsync(session) : false;
+        const fetchRemote = async () => {
+          let query = window.supabaseClient
+            .from("vendas")
+            .select("*")
+            .order("data_venda", { ascending: false })
+            .order("created_at", { ascending: false });
+          if (!isMaster || !incluirTodosEquipe) {
+            query = query.eq("user_id", session.user.id);
+          }
+          const { data, error } = await query;
+          if (error) throw error;
+          return data;
+        };
+
+        const data = await executarComRetry(fetchRemote, 2, 250);
+        const fallbackId = incluirTodosEquipe ? null : session.user.id;
+        const mapeadas = (data || []).map(item => _mapearLinhaVendaSupabase(item, fallbackId)).filter(Boolean);
+
+        const apenasProprias = incluirTodosEquipe
+          ? mapeadas.filter(v => String(v.userId || "") === String(session.user.id))
+          : mapeadas;
+        _salvarBackupLocalVendas(session.user.id, apenasProprias);
+        return mapeadas;
+      }
+    } catch (e) {
+      console.warn("[dbObterVendas] Aviso ao consultar public.vendas no Supabase (verifique se a migration foi executada):", e?.message || e);
+      const session = await aguardarSessao(1000);
+      if (session?.user?.id) {
+        return _obterBackupLocalVendas(session.user.id);
+      }
+    }
+  }
+  return [];
+}
+
+async function dbObterTodasVendasEquipe() {
+  return await dbObterVendas(true);
+}
+
+// Salva (cria ou atualiza) uma venda no Supabase respeitando RLS e ownership
+async function dbSalvarVenda(vendaEntrada) {
+  const { vendaSanitizada, valido, erros } = sanitizarEValidarVenda(vendaEntrada);
+  if (!valido) {
+    throw new Error(erros.join(" "));
+  }
+
+  if (typeof window === "undefined" || !window.supabaseClient) {
+    throw new Error("Conexão com o banco indisponível no momento.");
+  }
+
+  const session = await aguardarSessao();
+  const currentUserId = session?.user?.id;
+  if (!currentUserId) {
+    throw new Error("Usuário não autenticado.");
+  }
+
+  const isMaster = await _verificarUsuarioMasterAsync(session);
+  const targetUserId = (isMaster && vendaSanitizada.userId)
+    ? vendaSanitizada.userId
+    : currentUserId;
+
+  const payload = {
+    user_id: targetUserId,
+    relatorio_id: vendaSanitizada.relatorioId || null,
+    nome_cliente: vendaSanitizada.nomeCliente,
+    nome_assessor: vendaSanitizada.nomeAssessor || null,
+    produto: vendaSanitizada.produto,
+    valor_venda: vendaSanitizada.valorVenda,
+    data_venda: vendaSanitizada.dataVenda,
+    observacao: vendaSanitizada.observacao || null
+  };
+
+  let savedRow = null;
+  if (isUUID(vendaSanitizada.id)) {
+    const { data, error } = await window.supabaseClient
+      .from("vendas")
+      .update(payload)
+      .eq("id", vendaSanitizada.id)
+      .select()
+      .single();
+    if (error) throw error;
+    savedRow = data;
+  } else {
+    const { data, error } = await window.supabaseClient
+      .from("vendas")
+      .insert([payload])
+      .select()
+      .single();
+    if (error) throw error;
+    savedRow = data;
+  }
+
+  const vendaMapeada = _mapearLinhaVendaSupabase(savedRow, targetUserId);
+  if (String(targetUserId) === String(currentUserId)) {
+    _salvarOuAtualizarVendaBackup(currentUserId, vendaMapeada);
+  }
+  return vendaMapeada;
+}
+
+// Exclui uma venda no Supabase respeitando RLS (dono ou Master)
+async function dbExcluirVenda(id) {
+  if (!isUUID(id)) {
+    throw new Error("Identificador de venda inválido.");
+  }
+  if (typeof window === "undefined" || !window.supabaseClient) {
+    throw new Error("Conexão com o banco indisponível no momento.");
+  }
+
+  const session = await aguardarSessao();
+  const currentUserId = session?.user?.id;
+  if (!currentUserId) {
+    throw new Error("Usuário não autenticado.");
+  }
+
+  const { error } = await window.supabaseClient
+    .from("vendas")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+
+  _removerVendaBackup(currentUserId, id);
+  return true;
+}
+
 // ─── Sistema de Usuários Master: Consolidação de Usabilidade & Relatórios ─────
 
 // Diretório carregado dinamicamente via Supabase RPC (Zero-Leakage: nenhum e-mail ou nome real fica hardcoded no código)
@@ -774,7 +1210,7 @@ function _formatarNomePorEmail(email, nomeAtual) {
 
 function _normalizarRoleUsuarioMaster(id, roleOriginal) {
   const idStr = String(id || "").trim();
-  const listaMasterUids = Array.isArray(window.MASTER_UIDS_AUTORIZADOS)
+  const listaMasterUids = (typeof window !== "undefined" && Array.isArray(window.MASTER_UIDS_AUTORIZADOS))
     ? window.MASTER_UIDS_AUTORIZADOS
     : [
       "130e3598-89b9-4702-a4cc-2c5923fa3a66",
@@ -787,8 +1223,8 @@ function _normalizarRoleUsuarioMaster(id, roleOriginal) {
   return String(roleOriginal || "assessor").toLowerCase();
 }
 
-// Função pura para consolidar métricas de usabilidade de usuários e relatórios
-function calcularMetricasUsabilidadeEquipe(perfis = [], relatorios = [], acessosExtras = {}, incluirDiretorioPadrao = false) {
+// Função pura para consolidar métricas de usabilidade de usuários, relatórios e vendas
+function calcularMetricasUsabilidadeEquipe(perfis = [], relatorios = [], acessosExtras = {}, incluirDiretorioPadrao = false, vendas = []) {
   const mapaUsuarios = new Map();
   const indicePorEmail = new Map();
 
@@ -843,7 +1279,11 @@ function calcularMetricasUsabilidadeEquipe(perfis = [], relatorios = [], acessos
         total_relatorios: Math.max(existente.total_relatorios || 0, Number(p.total_relatorios) || 0),
         total_patrimonio: Math.max(existente.total_patrimonio || 0, Number(p.total_patrimonio) || 0),
         ultimo_relatorio_em: escolherDataMaisRecente(existente.ultimo_relatorio_em, p.ultimo_relatorio_em),
-        _contabilizadoDaRpc: Boolean(existente._contabilizadoDaRpc || (!ehDiretorioPadrao && p.total_relatorios !== undefined && p.total_relatorios !== null))
+        total_vendas: Math.max(existente.total_vendas || 0, Number(p.total_vendas) || 0),
+        valor_total_vendas: Math.max(existente.valor_total_vendas || 0, Number(p.valor_total_vendas) || 0),
+        ultima_venda_em: escolherDataMaisRecente(existente.ultima_venda_em, p.ultima_venda_em),
+        _contabilizadoDaRpc: Boolean(existente._contabilizadoDaRpc || (!ehDiretorioPadrao && p.total_relatorios !== undefined && p.total_relatorios !== null)),
+        _vendasContabilizadasDaRpc: Boolean(existente._vendasContabilizadasDaRpc || (!ehDiretorioPadrao && p.total_vendas !== undefined && p.total_vendas !== null))
       };
 
       if (idFinal !== chaveAlvo) {
@@ -870,7 +1310,11 @@ function calcularMetricasUsabilidadeEquipe(perfis = [], relatorios = [], acessos
       total_relatorios: Number(p.total_relatorios) || 0,
       total_patrimonio: Number(p.total_patrimonio) || 0,
       ultimo_relatorio_em: p.ultimo_relatorio_em || null,
-      _contabilizadoDaRpc: !ehDiretorioPadrao && p.total_relatorios !== undefined && p.total_relatorios !== null
+      total_vendas: Number(p.total_vendas) || 0,
+      valor_total_vendas: Number(p.valor_total_vendas) || 0,
+      ultima_venda_em: p.ultima_venda_em || null,
+      _contabilizadoDaRpc: !ehDiretorioPadrao && p.total_relatorios !== undefined && p.total_relatorios !== null,
+      _vendasContabilizadasDaRpc: !ehDiretorioPadrao && p.total_vendas !== undefined && p.total_vendas !== null
     };
 
     mapaUsuarios.set(idOriginal, novoUsuario);
@@ -923,7 +1367,11 @@ function calcularMetricasUsabilidadeEquipe(perfis = [], relatorios = [], acessos
         total_relatorios: 0,
         total_patrimonio: 0,
         ultimo_relatorio_em: null,
-        _contabilizadoDaRpc: false
+        total_vendas: 0,
+        valor_total_vendas: 0,
+        ultima_venda_em: null,
+        _contabilizadoDaRpc: false,
+        _vendasContabilizadasDaRpc: false
       };
       mapaUsuarios.set(rep.userId, alvo);
     }
@@ -938,9 +1386,59 @@ function calcularMetricasUsabilidadeEquipe(perfis = [], relatorios = [], acessos
     }
   });
 
+  // 4. Associa vendas por user_id (ou nome/e-mail do assessor como fallback)
+  (Array.isArray(vendas) ? vendas : []).forEach(v => {
+    if (!v) return;
+    const uid = v.userId || v.user_id || null;
+    let alvo = uid ? mapaUsuarios.get(uid) : null;
+
+    if (!alvo && (v.nomeAssessor || v.nome_assessor)) {
+      const nomeBusca = String(v.nomeAssessor || v.nome_assessor).toLowerCase().trim();
+      for (const u of mapaUsuarios.values()) {
+        if (
+          (u.full_name || "").toLowerCase().trim() === nomeBusca ||
+          (u.email || "").toLowerCase().trim() === nomeBusca ||
+          (u.email || "").toLowerCase().split("@")[0] === nomeBusca
+        ) {
+          alvo = u;
+          break;
+        }
+      }
+    }
+
+    if (!alvo && uid) {
+      alvo = {
+        id: uid,
+        email: "",
+        full_name: v.nomeAssessor || v.nome_assessor || "Assessor",
+        role: "assessor",
+        created_at: v.createdAt || v.dataVenda || null,
+        ultimo_acesso: v.createdAt || v.dataVenda || null,
+        total_relatorios: 0,
+        total_patrimonio: 0,
+        ultimo_relatorio_em: null,
+        total_vendas: 0,
+        valor_total_vendas: 0,
+        ultima_venda_em: null,
+        _contabilizadoDaRpc: false,
+        _vendasContabilizadasDaRpc: false
+      };
+      mapaUsuarios.set(uid, alvo);
+    }
+
+    if (alvo) {
+      if (!alvo._vendasContabilizadasDaRpc) {
+        alvo.total_vendas += 1;
+        alvo.valor_total_vendas += Math.max(0, Number(v.valorVenda ?? v.valor_venda) || 0);
+      }
+      alvo.ultima_venda_em = escolherDataMaisRecente(alvo.ultima_venda_em, v.createdAt || v.dataVenda);
+    }
+  });
+
   const listaUsuarios = Array.from(mapaUsuarios.values()).map(u => {
     const copia = { ...u };
     delete copia._contabilizadoDaRpc;
+    delete copia._vendasContabilizadasDaRpc;
     return copia;
   });
 
@@ -957,7 +1455,7 @@ function calcularMetricasUsabilidadeEquipe(perfis = [], relatorios = [], acessos
   return listaUsuarios;
 }
 
-// Consulta métricas de usabilidade de todos os usuários e todos os relatórios (Exclusivo Master)
+// Consulta métricas de usabilidade de todos os usuários, relatórios e vendas (Exclusivo Master)
 async function dbObterUsabilidadeUsuarios() {
   let acessosLocais = {};
   try {
@@ -965,7 +1463,10 @@ async function dbObterUsabilidadeUsuarios() {
     if (raw) acessosLocais = JSON.parse(raw) || {};
   } catch (e) { }
 
-  const relatorios = await dbObterTodosRelatoriosEquipe();
+  const [relatorios, vendas] = await Promise.all([
+    dbObterTodosRelatoriosEquipe(),
+    dbObterTodasVendasEquipe()
+  ]);
   const client = typeof getSupabase === "function" ? getSupabase() : window.supabaseClient;
 
   if (client) {
@@ -977,8 +1478,8 @@ async function dbObterUsabilidadeUsuarios() {
         try { listaRpc = JSON.parse(listaRpc); } catch (_) { listaRpc = null; }
       }
       if (!rpcErr && Array.isArray(listaRpc) && listaRpc.length > 0) {
-        const usuarios = calcularMetricasUsabilidadeEquipe(listaRpc, relatorios, acessosLocais, true);
-        return { usuarios, relatorios };
+        const usuarios = calcularMetricasUsabilidadeEquipe(listaRpc, relatorios, acessosLocais, true, vendas);
+        return { usuarios, relatorios, vendas };
       }
       if (rpcErr) {
         console.warn("[dbObterUsabilidadeUsuarios] RPC obter_metricas_usabilidade_master indisponível ou pendente de execução no Supabase SQL Editor:", rpcErr.message || rpcErr);
@@ -1049,16 +1550,16 @@ async function dbObterUsabilidadeUsuarios() {
         }
       } catch (logErr) { }
 
-      const usuarios = calcularMetricasUsabilidadeEquipe(perfisCombinados, relatorios, acessosLocais, true);
-      return { usuarios, relatorios };
+      const usuarios = calcularMetricasUsabilidadeEquipe(perfisCombinados, relatorios, acessosLocais, true, vendas);
+      return { usuarios, relatorios, vendas };
     } catch (err) {
       console.warn("[dbObterUsabilidadeUsuarios] Aviso ao consultar Supabase:", err);
     }
   }
 
   // 3. Fallback offline / cache local (inclui diretório oficial da equipe)
-  const usuariosFallback = calcularMetricasUsabilidadeEquipe([], relatorios, acessosLocais, true);
-  return { usuarios: usuariosFallback, relatorios };
+  const usuariosFallback = calcularMetricasUsabilidadeEquipe([], relatorios, acessosLocais, true, vendas);
+  return { usuarios: usuariosFallback, relatorios, vendas };
 }
 
 // Filtra relatórios da aba Master usando userId como chave primária (imune a divergência entre nomeAssessor e full_name)
@@ -1126,6 +1627,13 @@ if (typeof window !== "undefined") {
   window.filtrarRelatoriosPainelMaster = filtrarRelatoriosPainelMaster;
   window.dbObterUsabilidadeUsuarios = dbObterUsabilidadeUsuarios;
   window.dbObterRelatorios = dbObterRelatorios;
+  window.sanitizarEValidarVenda = sanitizarEValidarVenda;
+  window.calcularMetricasVendas = calcularMetricasVendas;
+  window.filtrarVendasPainel = filtrarVendasPainel;
+  window.dbObterVendas = dbObterVendas;
+  window.dbObterTodasVendasEquipe = dbObterTodasVendasEquipe;
+  window.dbSalvarVenda = dbSalvarVenda;
+  window.dbExcluirVenda = dbExcluirVenda;
 }
 
 if (typeof module !== "undefined" && module.exports) {
@@ -1134,11 +1642,15 @@ if (typeof module !== "undefined" && module.exports) {
     filtrarRelatoriosPainelMaster,
     sanitizarNumero,
     sanitizarEValidarSimulacao,
+    sanitizarEValidarVenda,
+    calcularMetricasVendas,
+    filtrarVendasPainel,
     executarComRetry,
     _gerarChaveCriptografia,
     _criptografarPayload,
     _descriptografarPayload,
-    _limparBackupsDeOutrosUsuarios
+    _limparBackupsDeOutrosUsuarios,
+    _limparBackupsVendasDeOutrosUsuarios
   };
 }
 
