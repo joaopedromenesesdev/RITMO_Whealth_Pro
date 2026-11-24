@@ -2817,11 +2817,11 @@
     }
 
     // =========================================================================
-    // TESTE 50: 5ª Estratégia — Seguro sem Formação de Reserva (Motor Puro)
+    // TESTE 51: 5ª Estratégia — Seguro sem Formação de Reserva (Motor Puro)
     // =========================================================================
-    console.log("\n-> Teste 50: 5ª Estratégia — Seguro sem Formação de Reserva (Temporário e Vitalício)");
+    console.log("\n-> Teste 51: 5ª Estratégia — Seguro sem Formação de Reserva (Temporário e Vitalício)");
 
-    // 50.A — Modalidade Temporário com prêmio explícito e comparativo vs Estratégia 4
+    // 51.A — Modalidade Temporário com prêmio explícito e comparativo vs Estratégia 4
     const ssrTemp = engine.calcularSeguroSemReserva({
       capitalSegurado: 1000000,
       modalidade: "temporario",
@@ -2851,7 +2851,7 @@
       "SeguroSemReserva[Temporário]: calcula desembolso R$ 120k, alavancagem 8,33x, eficiência 88%, resgate 0 e avisos obrigatórios"
     );
 
-    // 50.B — Modalidade Vitalício sem Resgate com expectativa de vida editável e estimativa automática pela idade
+    // 51.B — Modalidade Vitalício sem Resgate com expectativa de vida editável e estimativa automática pela idade
     const ssrVit = engine.calcularSeguroSemReserva({
       custoInventario: 1000000,
       modalidade: "vitalicio",
@@ -2882,7 +2882,7 @@
       "SeguroSemReserva[Vitalício]: deriva prazo da expectativa de vida (40 anos), estima prêmio pela idade, aplica fallback seguro (5 anos) e mantém resgate 0"
     );
 
-    // 50.C — Reajuste etário anual composto e impacto em desembolso/eficiência/alavancagem
+    // 51.C — Reajuste etário anual composto e impacto em desembolso/eficiência/alavancagem
     const ssrReaj = engine.calcularSeguroSemReserva({
       capitalSegurado: 1000000,
       modalidade: "temporario",
@@ -2912,7 +2912,7 @@
       "SeguroSemReserva[Reajuste Etário]: aplica progressão anual composta exata, reduz alavancagem/eficiência e emite alertas de custo"
     );
 
-    // 50.D — Taxa anual parametrizável e casos de borda anti-NaN (null, undefined, zeros, negativos, strings e Infinity)
+    // 51.D — Taxa anual parametrizável e casos de borda anti-NaN (null, undefined, zeros, negativos, strings e Infinity)
     const ssrTaxaCustom = engine.calcularSeguroSemReserva({
       capitalSegurado: 600000,
       modalidade: "temporario",
@@ -2953,7 +2953,7 @@
       "SeguroSemReserva[Anti-NaN]: trata taxa customizada e sanitiza null/undefined/zeros/negativos/strings/Infinity sem NaN"
     );
 
-    // 50.E — Retrocompatibilidade do AppState (relatórios antigos sem 5ª estratégia + persistência no snapshot)
+    // 51.E — Retrocompatibilidade do AppState (relatórios antigos sem 5ª estratégia + persistência no snapshot)
     if (appStateRef && typeof appStateRef.importSnapshot === "function") {
       const okLegado = appStateRef.importSnapshot({
         tributario: {
@@ -2999,7 +2999,7 @@
       );
     }
 
-    // 50.F — Auditoria estrutural de UI, CSP (zero handlers inline no card 5) e PDF (ON/OFF preservado)
+    // 51.F — Auditoria estrutural de UI, CSP (zero handlers inline no card 5) e PDF (ON/OFF preservado)
     if (typeof require === "function") {
       const fs50 = require("fs");
       const path50 = require("path");
