@@ -31,6 +31,9 @@ tmp/
 *.tmp
 *.bak
 
+# Code Guardian (relatorios e estado noturno persistentes entre branches)
+docs/morning-brief/
+
 # Build / Deploy (Cloudflare Pages)
 dist/
 
