@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="style/style.css?v=20261123a">
 
   <!-- CSS SOMENTE DESSA PÁGINA -->
-  <link rel="stylesheet" href="style/tributario.css?v=20261123c">
+  <link rel="stylesheet" href="style/tributario.css?v=20261124a">
   <link rel="icon" type="image/png" href="img/RITMO.png">
 
   <!-- PDF -->
@@ -547,13 +547,183 @@
             </div>
           </div>
 
-          <!-- OPÇÃO 5: Estrutura base (sem inputs/lógica) -->
-          <div class="reducao-card reducao-card-5">
-            <div class="reducao-col">
-              <span class="input-title">5</span>
+          <!-- OPÇÃO 5: Seguro sem Formação de Reserva -->
+          <div class="reducao-card reducao-card-5 reducao-card-sem-reserva" id="card_estrategia_sem_reserva">
+            <div class="seguro-sr-layout">
+              <div class="reducao-col">
+                <div class="seguro-sr-header">
+                  <span class="input-title">5 - Seguro sem Formação de Reserva</span>
+                  <div class="modalidade-toggle-group" role="group" aria-label="Modalidade do Seguro sem Formação de Reserva">
+                    <button type="button" class="btn-modalidade-sr ativo" id="btn_modalidade_sr_temporario"
+                      data-modalidade="temporario" aria-pressed="true">Temporário</button>
+                    <button type="button" class="btn-modalidade-sr" id="btn_modalidade_sr_vitalicio"
+                      data-modalidade="vitalicio" aria-pressed="false">Vitalício sem Resgate</button>
+                  </div>
+                </div>
+                <p class="seguro-descricao" id="seguro_sr_descricao">
+                  Proteção de puro risco voltada à liquidez imediata no inventário com menor parcela mensal e
+                  <strong>sem formação de reserva resgatável</strong>. Alterne entre cobertura por prazo determinado
+                  (Temporário) ou por toda a vida (Vitalício sem Resgate).
+                </p>
+
+                <div class="seguro-sr-inputs-grid">
+                  <div class="seguro-sr-field">
+                    <label for="input_seguro_sr_idade">Idade do Titular</label>
+                    <div class="input-wrapper" style="margin-bottom: 0;">
+                      <input type="number" id="input_seguro_sr_idade" placeholder="Ex: 45" min="18" max="99"
+                        autocomplete="off" class="input-no-prefix">
+                    </div>
+                  </div>
+
+                  <div class="seguro-sr-field">
+                    <label for="input_seguro_sr_capital">Capital Segurado</label>
+                    <div class="input-wrapper" style="margin-bottom: 0;">
+                      <span class="currency-symbol">R$</span>
+                      <input type="text" id="input_seguro_sr_capital" placeholder="Padrão: custo do inventário"
+                        autocomplete="off">
+                    </div>
+                  </div>
+
+                  <div class="seguro-sr-field">
+                    <div class="seguro-sr-label-row">
+                      <label for="input_seguro_sr_premio">Parcela Mensal</label>
+                      <span class="badge-estimativa-sr" id="badge_seguro_sr_premio_origem">Estimativa editável</span>
+                    </div>
+                    <div class="input-wrapper" style="margin-bottom: 0;">
+                      <span class="currency-symbol">R$</span>
+                      <input type="text" id="input_seguro_sr_premio" placeholder="Estimativa automática"
+                        autocomplete="off">
+                    </div>
+                    <span class="seguro-sr-hint" id="seguro_sr_premio_hint">Estimativa automática pela idade (editável pelo assessor)</span>
+                  </div>
+
+                  <div class="seguro-sr-field" id="campo_seguro_sr_prazo">
+                    <label for="input_seguro_sr_prazo">Prazo da Cobertura (anos)</label>
+                    <div class="input-wrapper" style="margin-bottom: 0;">
+                      <input type="number" id="input_seguro_sr_prazo" value="20" min="1" max="60"
+                        autocomplete="off" class="input-no-prefix">
+                    </div>
+                  </div>
+
+                  <div class="seguro-sr-field" id="campo_seguro_sr_expectativa" style="display: none;">
+                    <div class="seguro-sr-label-row">
+                      <label for="input_seguro_sr_expectativa">Expectativa de Vida (anos)</label>
+                      <span class="badge-estimativa-sr badge-horizonte-sr" id="seguro_sr_horizonte_badge">Horizonte: 45 anos</span>
+                    </div>
+                    <div class="input-wrapper" style="margin-bottom: 0;">
+                      <input type="number" id="input_seguro_sr_expectativa" value="85" min="50" max="120"
+                        autocomplete="off" class="input-no-prefix">
+                    </div>
+                  </div>
+
+                  <div class="seguro-sr-field">
+                    <label for="input_seguro_sr_reajuste">Reajuste Etário (% a.a.)</label>
+                    <div class="input-wrapper" style="margin-bottom: 0;">
+                      <input type="number" id="input_seguro_sr_reajuste" value="0" min="0" max="50" step="0.5"
+                        autocomplete="off" class="input-no-prefix">
+                    </div>
+                    <span class="seguro-sr-hint">0% = prêmio nivelado</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="reducao-col results-col">
+                <div class="results-title" id="seguro_sr_results_title">Simulação — Temporário (Sem Reserva):</div>
+                <div class="results-values">
+                  <div class="result-item">
+                    <span class="result-label">Capital Segurado:</span>
+                    <span class="result-badge" id="seguro_sr_resultado_capital">—</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label">Parcela Mensal Inicial:</span>
+                    <span class="result-badge" id="seguro_sr_resultado_parcela">—</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label" id="seguro_sr_label_desembolso">Desembolso Total (20 anos):</span>
+                    <span class="result-badge" id="seguro_sr_resultado_desembolso">—</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label">Alavancagem Patrimonial:</span>
+                    <span class="result-badge" id="seguro_sr_resultado_alavancagem">—</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label">Economia / Eficiência:</span>
+                    <span class="result-badge result-badge-total" id="seguro_sr_resultado_economia">—</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label">Valor de Resgate:</span>
+                    <span class="result-badge result-badge-danger" id="seguro_sr_resultado_resgate">R$ 0,00 (Sem reserva)</span>
+                  </div>
+                  <div class="result-item">
+                    <span class="result-label">Diferença Mensal vs. Estratégia 4:</span>
+                    <span class="result-badge" id="seguro_sr_resultado_diff_reserva">—</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div class="reducao-col results-col"></div>
+            <div class="seguro-sr-avisos-box" id="seguro_sr_avisos_box" aria-live="polite"></div>
+          </div>
+
+          <!-- RESUMO COMPARATIVO DAS 5 ESTRATÉGIAS -->
+          <div class="comparativo-estrategias-card" id="resumo_comparativo_estrategias">
+            <div class="comparativo-estrategias-header">
+              <div>
+                <h4 class="comparativo-estrategias-title">Resumo Comparativo das 5 Estratégias de Preservação</h4>
+                <p class="comparativo-estrategias-sub">Visão consolidada de desembolso, liquidez sucessória e formação de reserva.</p>
+              </div>
+              <span class="comparativo-estrategias-badge" id="comp_estrategias_modalidade_badge">5ª: Temporário</span>
+            </div>
+            <div class="comparativo-estrategias-table-wrap">
+              <table class="comparativo-estrategias-table">
+                <thead>
+                  <tr>
+                    <th>Estratégia</th>
+                    <th>Custo / Desembolso</th>
+                    <th>Prazo / Liquidez</th>
+                    <th>Reserva / Resgate</th>
+                    <th>Eficiência / Destaque</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>1. Doação Gradual</strong></td>
+                    <td id="comp_est1_custo">Isento (até R$ 96.050/ano)</td>
+                    <td id="comp_est1_prazo">—</td>
+                    <td>Transferência direta</td>
+                    <td id="comp_est1_destaque">Longo horizonte</td>
+                  </tr>
+                  <tr>
+                    <td><strong>2. Doação à Vista</strong></td>
+                    <td id="comp_est2_custo">—</td>
+                    <td id="comp_est2_prazo">Imediato (desembolso)</td>
+                    <td>Usufruto vitalício</td>
+                    <td id="comp_est2_destaque">—</td>
+                  </tr>
+                  <tr>
+                    <td><strong>3. Previdência Privada</strong></td>
+                    <td id="comp_est3_custo">—</td>
+                    <td id="comp_est3_prazo">Fora do inventário</td>
+                    <td>100% imobilizado</td>
+                    <td id="comp_est3_destaque">—</td>
+                  </tr>
+                  <tr>
+                    <td><strong>4. Seguro com Reserva</strong></td>
+                    <td id="comp_est4_custo">—</td>
+                    <td id="comp_est4_prazo">Liquidez imediata (120x)</td>
+                    <td>Com reserva resgatável</td>
+                    <td id="comp_est4_destaque">—</td>
+                  </tr>
+                  <tr class="comp-row-destaque-sr">
+                    <td><strong id="comp_est5_nome">5. Seguro sem Reserva (Temporário)</strong></td>
+                    <td id="comp_est5_custo">—</td>
+                    <td id="comp_est5_prazo">—</td>
+                    <td id="comp_est5_resgate">R$ 0,00 (Sem reserva)</td>
+                    <td id="comp_est5_destaque">—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
         </div>
@@ -807,57 +977,56 @@
 
     <!-- PÁGINA 5: ESTRATÉGIAS DE PRESERVAÇÃO PATRIMONIAL -->
     <div class="pagina nova-pagina" id="pagina_5" data-ocultar-modo-off="true">
-      <div class="header-relatorio">
+      <div class="header-relatorio" style="margin-bottom: 14px; padding-bottom: 10px;">
         <div class="logo-relatorio">Ritmo Wealth Pro</div>
         <div class="tag-relatorio">Estratégias de Preservação</div>
       </div>
 
-
-      <h3 style="color: var(--primary); margin-top: 0; font-size: 20px; text-align: center; margin-bottom: 20px;">
+      <h3 style="color: var(--primary); margin-top: 0; font-size: 18px; text-align: center; margin-bottom: 14px;">
         Estratégias de Preservação Patrimonial</h3>
 
-      <div class="preservacao-pdf-grid" style="display: flex; flex-direction: column; gap: 36px;">
+      <div class="preservacao-pdf-grid" style="display: flex; flex-direction: column; gap: 14px;">
 
         <!-- ESTRATÉGIA 1: Doação em Vida -->
         <div
-          style="background: #ffffff; border: 1px solid #e4e4e7; border-radius: 12px; padding: 16px; border-left: 4px solid #09090b;">
-          <h4 style="margin: 0 0 6px 0; color: #09090b; font-size: 15px;">1 - Doação Gradual de Ativos em Vida</h4>
-          <p style="margin: 0 0 10px 0; font-size: 12px; color: #475569; line-height: 1.4;">
+          style="background: #ffffff; border: 1px solid #e4e4e7; border-radius: 10px; padding: 12px 14px; border-left: 4px solid #09090b;">
+          <h4 style="margin: 0 0 4px 0; color: #09090b; font-size: 14px;">1 - Doação Gradual de Ativos em Vida</h4>
+          <p style="margin: 0 0 6px 0; font-size: 11px; color: #475569; line-height: 1.35;">
             Transmissão planejada de patrimônio em vida utilizando as faixas anuais de isenção do ITCMD (até R$
             96.050,00/ano).
           </p>
-          <ol style="margin: 0 0 12px 0; padding-left: 18px; font-size: 11.5px; color: #334155; line-height: 1.5;">
-            <li style="margin-bottom: 3px;"><strong>Isenção Fiscal Gradual:</strong> Transmissão com alíquota 0% de
+          <ol style="margin: 0 0 8px 0; padding-left: 16px; font-size: 10.5px; color: #334155; line-height: 1.4;">
+            <li style="margin-bottom: 2px;"><strong>Isenção Fiscal Gradual:</strong> Transmissão com alíquota 0% de
               imposto respeitando os limites anuais do Estado.</li>
-            <li style="margin-bottom: 3px;"><strong>Reserva de Usufruto Vitalício:</strong> O doador mantém o direito
+            <li style="margin-bottom: 2px;"><strong>Reserva de Usufruto Vitalício:</strong> O doador mantém o direito
               integral aos frutos, rendimentos e dividendos dos ativos.</li>
-            <li style="margin-bottom: 3px;"><strong>Horizonte Temporal:</strong> Por depender de teto anual, a conclusão
+            <li style="margin-bottom: 2px;"><strong>Horizonte Temporal:</strong> Por depender de teto anual, a conclusão
               pode exigir décadas, deixando o patrimônio exposto no curto prazo.</li>
           </ol>
           <div
-            style="font-size: 12.5px; background: #fff; padding: 10px 14px; border-radius: 8px; border: 1px solid #edf2f7;">
+            style="font-size: 11.5px; background: #fff; padding: 7px 12px; border-radius: 7px; border: 1px solid #edf2f7;">
             <div><strong>Cenário Atual:</strong> <span id="pdf_tempo_atual_doacao">—</span></div>
           </div>
         </div>
 
         <!-- ESTRATÉGIA 2: Doação à Vista -->
         <div
-          style="background: #fcfdfe; border: 1px solid #fecaca; border-radius: 12px; padding: 16px; border-left: 4px solid #E53935;">
-          <h4 style="margin: 0 0 6px 0; color: #991b1b; font-size: 15px;">2 - Doação à Vista (com Reserva de Usufruto)
+          style="background: #fcfdfe; border: 1px solid #fecaca; border-radius: 10px; padding: 12px 14px; border-left: 4px solid #E53935;">
+          <h4 style="margin: 0 0 4px 0; color: #991b1b; font-size: 14px;">2 - Doação à Vista (com Reserva de Usufruto)
           </h4>
-          <p style="margin: 0 0 10px 0; font-size: 12px; color: #475569; line-height: 1.4;">
+          <p style="margin: 0 0 6px 0; font-size: 11px; color: #475569; line-height: 1.35;">
             Antecipação imediata da legítima com pagamento antecipado do ITCMD sobre o valor presente dos ativos.
           </p>
-          <ol style="margin: 0 0 12px 0; padding-left: 18px; font-size: 11.5px; color: #334155; line-height: 1.5;">
-            <li style="margin-bottom: 3px;"><strong>Congelamento da Base de Cálculo:</strong> Paga o imposto sobre a
+          <ol style="margin: 0 0 8px 0; padding-left: 16px; font-size: 10.5px; color: #334155; line-height: 1.4;">
+            <li style="margin-bottom: 2px;"><strong>Congelamento da Base de Cálculo:</strong> Paga o imposto sobre a
               avaliação atual, travando a valorização futura.</li>
-            <li style="margin-bottom: 3px;"><strong>Cláusulas de Proteção Patrimonial:</strong> Inserção de
+            <li style="margin-bottom: 2px;"><strong>Cláusulas de Proteção Patrimonial:</strong> Inserção de
               Inalienabilidade, Impenhorabilidade e Incomunicabilidade.</li>
-            <li style="margin-bottom: 3px;"><strong>Desembolso de Caixa Imediato:</strong> Exige liquidez expressiva no
+            <li style="margin-bottom: 2px;"><strong>Desembolso de Caixa Imediato:</strong> Exige liquidez expressiva no
               presente para desquitar o ITCMD e custos cartorários.</li>
           </ol>
           <div
-            style="display: flex; justify-content: space-between; font-size: 12.5px; background: #fff; padding: 10px 14px; border-radius: 8px; border: 1px solid #edf2f7;">
+            style="display: flex; justify-content: space-between; font-size: 11.5px; background: #fff; padding: 7px 12px; border-radius: 7px; border: 1px solid #edf2f7;">
             <div><strong>ITCMD Incidente:</strong> <span id="pdf_avista_custo_itcmd"
                 style="color: #E53935; font-weight: 700;">—</span></div>
             <div><strong>Total (Doação + ITCMD):</strong> <span id="pdf_avista_custo_total"
@@ -865,9 +1034,38 @@
           </div>
         </div>
 
+        <!-- ESTRATÉGIA 3: Previdência -->
+        <div
+          style="background: #fcfdfe; border: 1px solid #e9d5ff; border-radius: 10px; padding: 12px 14px; border-left: 4px solid #6f42c1;">
+          <h4 style="margin: 0 0 4px 0; color: #581c87; font-size: 14px;">3 - Previdência Privada (VGBL / PGBL)</h4>
+          <p style="margin: 0 0 6px 0; font-size: 11px; color: #475569; line-height: 1.35;">
+            Estruturação de planos previdenciários com indicação direta de beneficiários para transmissão ágil.
+          </p>
+          <ol style="margin: 0 0 8px 0; padding-left: 16px; font-size: 10.5px; color: #334155; line-height: 1.4;">
+            <li style="margin-bottom: 2px;"><strong>Liquidez Direta em 30 Dias:</strong> Repasse rápido aos
+              beneficiários fora do processo de inventário (Art. 794 CC).</li>
+            <li style="margin-bottom: 2px;"><strong>Eficiência Fiscal de IR:</strong> Tabela regressiva caindo a 10% de
+              IR após 10 anos, sem come-cotas semestral.</li>
+            <li style="margin-bottom: 2px;"><strong>Imobilização de Capital:</strong> Exige alocar 100% do valor
+              pretendido antecipadamente do caixa da família.</li>
+          </ol>
+          <div
+            style="display: flex; justify-content: space-between; font-size: 11.5px; background: #fff; padding: 7px 12px; border-radius: 7px; border: 1px solid #edf2f7; margin-bottom: 7px;">
+            <div><strong>IOF sobre Excedente:</strong> <span id="pdf_previdencia_imposto"
+                style="font-weight: 700;">—</span></div>
+            <div><strong>Total (Aplicação + IOF):</strong> <span id="pdf_previdencia_custo_total"
+                style="color: #1D6F42; font-weight: 700;">—</span></div>
+          </div>
+          <div
+            style="padding: 7px 10px; background: rgba(229, 57, 53, 0.06); border-left: 3px solid #E53935; border-radius: 6px; font-size: 10px; color: #c62828; line-height: 1.35;">
+            <strong>Alerta Comportamental:</strong> Sem governança, os herdeiros podem resgatar os recursos para outros
+            fins antes de quitar as dívidas tributárias do inventário.
+          </div>
+        </div>
+
         <!-- CONTAINER NOTAS PÁGINA 5 -->
         <div class="container-notas-pagina" data-pagina="5"></div>
-        <div class="no-print text-center" style="margin-top: 15px;">
+        <div class="no-print text-center" style="margin-top: 8px;">
           <button type="button" class="btn-add-nota-pagina" onclick="adicionarObservacaoPagina(5)">+ Adicionar
             Observação
             nesta Página (Pág 5)</button>
@@ -884,76 +1082,32 @@
     <!-- PÁGINA 6: ESTRATÉGIAS DE PRESERVAÇÃO PATRIMONIAL (CONT.) -->
     <!-- ========================================== -->
     <div class="pagina nova-pagina" id="pagina_6" data-ocultar-modo-off="true">
-      <div class="header-relatorio">
+      <div class="header-relatorio" style="margin-bottom: 12px; padding-bottom: 8px;">
         <div class="logo-relatorio">Ritmo Wealth Pro</div>
         <div class="tag-relatorio">Estratégias de Preservação</div>
       </div>
 
-      <h3 style="color: var(--primary); margin-top: 0; font-size: 20px; text-align: center; margin-bottom: 20px;">
-        Estratégias de Preservação Patrimonial (Cont.)</h3>
+      <h3 style="color: var(--primary); margin-top: 0; font-size: 17px; text-align: center; margin-bottom: 10px;">
+        Estratégias de Liquidez via Seguro &amp; Comparativo</h3>
 
-      <div class="preservacao-pdf-grid" style="display: flex; flex-direction: column; gap: 36px;">
-
-        <!-- ESTRATÉGIA 3: Previdência -->
-        <div
-          style="background: #fcfdfe; border: 1px solid #e9d5ff; border-radius: 12px; padding: 16px; border-left: 4px solid #6f42c1;">
-          <h4 style="margin: 0 0 6px 0; color: #581c87; font-size: 15px;">3 - Previdência Privada (VGBL / PGBL)</h4>
-          <p style="margin: 0 0 10px 0; font-size: 12px; color: #475569; line-height: 1.4;">
-            Estruturação de planos previdenciários com indicação direta de beneficiários para transmissão ágil.
-          </p>
-          <ol style="margin: 0 0 10px 0; padding-left: 18px; font-size: 11.5px; color: #334155; line-height: 1.5;">
-            <li style="margin-bottom: 3px;"><strong>Liquidez Direta em 30 Dias:</strong> Repasse rápido aos
-              beneficiários
-              fora do processo de inventário (Art. 794 CC).</li>
-            <li style="margin-bottom: 3px;"><strong>Eficiência Fiscal de IR:</strong> Tabela regressiva caindo a 10% de
-              IR
-              após 10 anos, sem comer-cotas semestral.</li>
-            <li style="margin-bottom: 3px;"><strong>Imobilização de Capital:</strong> Exige alocar 100% do valor
-              pretendido antecipadamente do caixa da família.</li>
-          </ol>
-          <div
-            style="display: flex; justify-content: space-between; font-size: 12.5px; background: #fff; padding: 10px 14px; border-radius: 8px; border: 1px solid #edf2f7; margin-bottom: 10px;">
-            <div><strong>IOF sobre Excedente:</strong> <span id="pdf_previdencia_imposto"
-                style="font-weight: 700;">—</span></div>
-            <div><strong>Total (Aplicação + IOF):</strong> <span id="pdf_previdencia_custo_total"
-                style="color: #1D6F42; font-weight: 700;">—</span></div>
-          </div>
-          <div
-            style="padding: 10px 14px; background: rgba(229, 57, 53, 0.06); border-left: 4px solid #E53935; border-radius: 8px; font-size: 11.5px; color: #c62828; line-height: 1.4;">
-            <strong>Alerta Comportamental:</strong> Sem governança, os herdeiros podem resgatar os recursos para
-            outros
-            fins antes de quitar as dívidas tributárias do inventário.
-          </div>
-        </div>
+      <div class="preservacao-pdf-grid" style="display: flex; flex-direction: column; gap: 10px;">
 
         <!-- ESTRATÉGIA 4: Seguro Sucessão -->
         <div
-          style="background: #fcfdfe; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; border-left: 4px solid #16a34a; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.05);">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <h4 style="margin: 0; color: #14532d; font-size: 15px;">4 - Seguro Sucessão (Proteção Patrimonial
-              Resgatável)
-            </h4>
+          style="background: #fcfdfe; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 13px; border-left: 4px solid #16a34a;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <h4 style="margin: 0; color: #14532d; font-size: 13.5px;">4 - Seguro Sucessão (Com Formação de Reserva Resgatável)</h4>
             <span
-              style="font-size: 10px; font-weight: 800; color: #15803d; background: #dcfce7; padding: 3px 8px; border-radius: 12px; border: 1px solid #bbf7d0;">ALTA
+              style="font-size: 9px; font-weight: 800; color: #15803d; background: #dcfce7; padding: 2px 7px; border-radius: 10px; border: 1px solid #bbf7d0;">ALTA
               EFICIÊNCIA DE LIQUIDEZ</span>
           </div>
-          <p style="margin: 0 0 10px 0; font-size: 12px; color: #475569; line-height: 1.4;">
-            Solução analítica de custo-benefício para alavancagem de liquidez imediata com proteção integral do
-            patrimônio.
-          </p>
-          <ol style="margin: 0 0 10px 0; padding-left: 18px; font-size: 11.5px; color: #334155; line-height: 1.5;">
-            <li style="margin-bottom: 3px;"><strong>Custo Fracionado vs. Liquidez Total:</strong> Garante 100% dos
-              impostos desembolsando apenas pequenas parcelas mensais (~31% do valor total).</li>
-            <li style="margin-bottom: 3px;"><strong>Isenção Fiscal & Cível Absoluta:</strong> Capital 100% isento de
-              Imposto de Renda e ITCMD, impenhorável e fora do inventário.</li>
-            <li style="margin-bottom: 3px;"><strong>Proteção Contra Venda Forçada:</strong> Impede a venda com deságio
-              de
-              30% a 40% de imóveis/empresas para pagamento de custas.</li>
-            <li style="margin-bottom: 3px;"><strong>Reserva Financeira Resgatável:</strong> Formação de caixa resgatável
-              que retorna ao titular ao final do período acordado.</li>
+          <ol style="margin: 0 0 7px 0; padding-left: 16px; font-size: 10px; color: #334155; line-height: 1.35;">
+            <li style="margin-bottom: 2px;"><strong>Custo Fracionado &amp; Isenção Fiscal:</strong> Capital 100% isento de IR e ITCMD, impenhorável e fora do inventário (Art. 794 CC).</li>
+            <li style="margin-bottom: 2px;"><strong>Proteção Contra Venda Forçada:</strong> Evita deságio de 30% a 40% em imóveis/empresas para quitação de impostos.</li>
+            <li style="margin-bottom: 0;"><strong>Reserva Resgatável:</strong> Forma caixa resgatável vinculado à apólice com encerramento de aportes em 120 parcelas.</li>
           </ol>
           <div
-            style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12.5px; background: #fff; padding: 10px 14px; border-radius: 8px; border: 1px solid #edf2f7;">
+            style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px 10px; font-size: 11px; background: #fff; padding: 6px 10px; border-radius: 7px; border: 1px solid #edf2f7;">
             <div><strong>Capital Segurado:</strong> <span id="pdf_seguro_capital">—</span></div>
             <div><strong>Parcela Mensal:</strong> <span id="pdf_seguro_parcela">—</span></div>
             <div><strong>Encerramento (120x):</strong> <span id="pdf_seguro_quitar">—</span></div>
@@ -962,22 +1116,106 @@
           </div>
         </div>
 
+        <!-- ESTRATÉGIA 5: Seguro sem Formação de Reserva -->
+        <div
+          style="background: #f8fafc; border: 1px solid #bae6fd; border-radius: 10px; padding: 10px 13px; border-left: 4px solid #0284c7;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; gap: 8px;">
+            <h4 style="margin: 0; color: #0c4a6e; font-size: 13.5px;">5 - Seguro sem Formação de Reserva</h4>
+            <span id="pdf_seguro_sr_modalidade_badge"
+              style="font-size: 9px; font-weight: 800; color: #0369a1; background: #e0f2fe; padding: 2px 7px; border-radius: 10px; border: 1px solid #bae6fd;">TEMPORÁRIO</span>
+          </div>
+          <p id="pdf_seguro_sr_descricao" style="margin: 0 0 6px 0; font-size: 10px; color: #475569; line-height: 1.35;">
+            Seguro de puro risco focado em liquidez sucessória imediata com menor desembolso mensal e valor de resgate igual a R$ 0,00.
+          </p>
+          <div
+            style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px 8px; font-size: 10.5px; background: #fff; padding: 6px 10px; border-radius: 7px; border: 1px solid #e2e8f0; margin-bottom: 6px;">
+            <div><strong>Capital:</strong> <span id="pdf_seguro_sr_capital">—</span></div>
+            <div><strong>Parcela Inicial:</strong> <span id="pdf_seguro_sr_parcela">—</span></div>
+            <div><strong>Prazo:</strong> <span id="pdf_seguro_sr_prazo">—</span></div>
+            <div><strong>Desembolso:</strong> <span id="pdf_seguro_sr_desembolso">—</span></div>
+            <div><strong>Alavancagem:</strong> <span id="pdf_seguro_sr_alavancagem">—</span></div>
+            <div><strong>Eficiência:</strong> <span id="pdf_seguro_sr_economia" style="color: #1D6F42; font-weight: 700;">—</span></div>
+            <div><strong>Resgate:</strong> <span id="pdf_seguro_sr_resgate" style="color: #b91c1c; font-weight: 700;">R$ 0,00</span></div>
+            <div style="grid-column: span 2;"><strong>Vs. Estratégia 4:</strong> <span id="pdf_seguro_sr_diff_reserva">—</span></div>
+          </div>
+          <div id="pdf_seguro_sr_aviso"
+            style="padding: 5px 9px; background: rgba(245, 158, 11, 0.1); border-left: 3px solid #d97706; border-radius: 5px; font-size: 9.5px; color: #92400e; line-height: 1.3;">
+            Sem formação de reserva (resgate R$ 0,00).
+          </div>
+        </div>
+
+        <!-- QUADRO RESUMO COMPARATIVO NO PDF -->
+        <div id="pdf_resumo_comparativo_estrategias"
+          style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 11px;">
+          <div style="font-size: 11px; font-weight: 700; color: #0f172a; margin-bottom: 5px;">
+            Quadro Comparativo das 5 Estratégias de Preservação
+          </div>
+          <table class="pdf-comparativo-table">
+            <thead>
+              <tr>
+                <th>Estratégia</th>
+                <th>Desembolso / Custo</th>
+                <th>Prazo / Liquidez</th>
+                <th>Reserva</th>
+                <th>Destaque</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>1. Doação Gradual</strong></td>
+                <td id="pdf_comp_est1_custo">Isento (até R$ 96k/ano)</td>
+                <td id="pdf_comp_est1_prazo">—</td>
+                <td>Sem reserva</td>
+                <td id="pdf_comp_est1_destaque">Longo prazo</td>
+              </tr>
+              <tr>
+                <td><strong>2. Doação à Vista</strong></td>
+                <td id="pdf_comp_est2_custo">—</td>
+                <td id="pdf_comp_est2_prazo">Imediato</td>
+                <td>Usufruto</td>
+                <td id="pdf_comp_est2_destaque">—</td>
+              </tr>
+              <tr>
+                <td><strong>3. Previdência</strong></td>
+                <td id="pdf_comp_est3_custo">—</td>
+                <td id="pdf_comp_est3_prazo">Fora inventário</td>
+                <td>Imobilizado</td>
+                <td id="pdf_comp_est3_destaque">—</td>
+              </tr>
+              <tr>
+                <td><strong>4. Seguro c/ Reserva</strong></td>
+                <td id="pdf_comp_est4_custo">—</td>
+                <td id="pdf_comp_est4_prazo">Imediata (120x)</td>
+                <td>Resgatável</td>
+                <td id="pdf_comp_est4_destaque">—</td>
+              </tr>
+              <tr style="background: #f0f9ff;">
+                <td><strong id="pdf_comp_est5_nome">5. Seguro s/ Reserva</strong></td>
+                <td id="pdf_comp_est5_custo">—</td>
+                <td id="pdf_comp_est5_prazo">—</td>
+                <td id="pdf_comp_est5_resgate">R$ 0,00</td>
+                <td id="pdf_comp_est5_destaque">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
       </div>
 
       <!-- CONTAINER NOTAS PÁGINA 6 -->
       <div class="container-notas-pagina" data-pagina="6"></div>
-      <div class="no-print text-center" style="margin-top: 15px;">
+      <div class="no-print text-center" style="margin-top: 8px;">
         <button type="button" class="btn-add-nota-pagina" onclick="adicionarObservacaoPagina(6)">+ Adicionar Observação
           nesta Página (Pág 6)</button>
       </div>
 
       <!-- ASSINATURA / IDENTIFICAÇÃO DO ASSESSOR RESPONSÁVEL (FINAL DO RELATÓRIO) -->
       <div class="bloco-assessor-relatorio"
-        style="margin-top: 24px; padding: 16px 20px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
-        <div style="display: flex; align-items: center; gap: 14px;">
+        style="margin-top: 10px; padding: 10px 14px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 10px;">
           <div
-            style="width: 42px; height: 42px; border-radius: 50%; background: #0f172a; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; font-family: 'Outfit', sans-serif;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+            style="width: 34px; height: 34px; border-radius: 50%; background: #0f172a; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; font-family: 'Outfit', sans-serif;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
               <circle cx="12" cy="7" r="4" />
@@ -985,27 +1223,26 @@
           </div>
           <div>
             <div
-              style="font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.6px; color: #64748b; font-weight: 700; margin-bottom: 2px;">
+              style="font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.6px; color: #64748b; font-weight: 700;">
               Planejamento Elaborado por</div>
             <div id="relatorio_nome_assessor"
-              style="font-size: 16px; font-weight: 700; color: #0f172a; font-family: 'Outfit', 'Inter', sans-serif;">
+              style="font-size: 14px; font-weight: 700; color: #0f172a; font-family: 'Outfit', 'Inter', sans-serif;">
               Assessor Responsável</div>
-            <div style="font-size: 11.5px; color: #475569; margin-top: 2px;">Planejador Patrimonial &bull; Pace Capital
-            </div>
+            <div style="font-size: 10.5px; color: #475569;">Planejador Patrimonial &bull; Pace Capital</div>
           </div>
         </div>
         <div style="text-align: right;">
           <div
-            style="font-size: 10.5px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 2px;">
+            style="font-size: 9.5px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;">
             Data de Emissão</div>
           <div id="relatorio_data_emissao"
-            style="font-size: 13.5px; font-weight: 600; color: #0f172a; font-family: 'Outfit', sans-serif;">—</div>
+            style="font-size: 12.5px; font-weight: 600; color: #0f172a; font-family: 'Outfit', sans-serif;">—</div>
         </div>
       </div>
 
       <!-- AVISO LEGAL / DISCLAIMER INSTITUCIONAL -->
-      <div
-        style="margin-top: 20px; padding: 12px 16px; border-radius: 8px; background: #fef2f2; border: 1px solid #fecaca; font-size: 11px; color: #dc2626; text-align: center; line-height: 1.5; font-weight: 500;">
+      <div id="pdf_disclaimer_institucional"
+        style="margin-top: 8px; padding: 8px 12px; border-radius: 8px; background: #fef2f2; border: 1px solid #fecaca; font-size: 10px; color: #dc2626; text-align: center; line-height: 1.4; font-weight: 500;">
         Este serviço é oferecido por RITMO, uma empresa do grupo Pace Capital, não havendo qualquer vínculo de
         exclusividade com o BTG Pactual.
       </div>
@@ -1037,10 +1274,10 @@
     </div>
   </div>
 
-  <script src="script/state.js?v=20261111b"></script>
-  <script src="script/tributario_engine.js?v=20261123a"></script>
+  <script src="script/state.js?v=20261124a"></script>
+  <script src="script/tributario_engine.js?v=20261124a"></script>
   <script src="script/tributario_charts.js?v=20261123a"></script>
-  <script src="script/tributario.js?v=20261123e"></script>
+  <script src="script/tributario.js?v=20261124a"></script>
 </body>
 
 </html>

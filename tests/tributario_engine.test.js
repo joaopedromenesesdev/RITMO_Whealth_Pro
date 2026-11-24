@@ -2936,6 +2936,78 @@
       "SeguroSemReserva[Anti-NaN]: trata taxa customizada e sanitiza null/undefined/zeros/negativos/strings/Infinity sem NaN"
     );
 
+    // 50.E — Retrocompatibilidade do AppState (relatórios antigos sem 5ª estratégia + persistência no snapshot)
+    if (appStateRef && typeof appStateRef.importSnapshot === "function") {
+      const okLegado = appStateRef.importSnapshot({
+        tributario: {
+          inputs: {
+            uf: "RJ",
+            itcmd: 8,
+            honorarios: 6,
+            custas: 1,
+            seguro_idade: 52,
+            seguro_capital: 800000
+          }
+        }
+      });
+      const inpLegado = appStateRef.getTributarioInputs();
+      assert(
+        okLegado === true &&
+        inpLegado.uf === "RJ" &&
+        inpLegado.seguro_sem_reserva_modalidade === "temporario" &&
+        inpLegado.seguro_sem_reserva_idade === 52 &&
+        inpLegado.seguro_sem_reserva_prazo_anos === 20 &&
+        inpLegado.seguro_sem_reserva_expectativa_vida === 85 &&
+        inpLegado.seguro_sem_reserva_reajuste_pct === 0 &&
+        semNaN(inpLegado),
+        "SeguroSemReserva[State Retrocompat]: relatório antigo sem 5ª estratégia aplica defaults seguros e herda idade sem NaN"
+      );
+
+      appStateRef.setTributarioInputs({
+        uf: "SP",
+        seguro_sem_reserva_modalidade: "vitalicio",
+        seguro_sem_reserva_idade: 48,
+        seguro_sem_reserva_idade_manual: true,
+        seguro_sem_reserva_expectativa_vida: 90,
+        seguro_sem_reserva_reajuste_pct: 3.5
+      });
+      const snapCom5 = appStateRef.exportSnapshot();
+      assert(
+        snapCom5.tributario &&
+        snapCom5.tributario.inputs &&
+        snapCom5.tributario.inputs.seguro_sem_reserva_modalidade === "vitalicio" &&
+        snapCom5.tributario.inputs.seguro_sem_reserva_expectativa_vida === 90 &&
+        snapCom5.tributario.inputs.seguro_sem_reserva_reajuste_pct === 3.5,
+        "SeguroSemReserva[State Snapshot]: exportSnapshot persiste configuração completa da 5ª estratégia"
+      );
+    }
+
+    // 50.F — Auditoria estrutural de UI, CSP (zero handlers inline no card 5), Comparativo e PDF (ON/OFF preservado)
+    if (typeof require === "function") {
+      const fs50 = require("fs");
+      const path50 = require("path");
+      const html50 = fs50.readFileSync(path50.join(__dirname, "../tributario.html"), "utf8");
+      const css50 = fs50.readFileSync(path50.join(__dirname, "../style/tributario.css"), "utf8");
+      const card5Start = html50.indexOf('id="card_estrategia_sem_reserva"');
+      const card5End = html50.indexOf('id="resumo_comparativo_estrategias"');
+      const card5Snippet = card5Start >= 0 && card5End > card5Start ? html50.slice(card5Start, card5End) : "";
+
+      assert(
+        card5Snippet.includes('id="btn_modalidade_sr_temporario"') &&
+        card5Snippet.includes('id="btn_modalidade_sr_vitalicio"') &&
+        card5Snippet.includes('id="badge_seguro_sr_premio_origem"') &&
+        card5Snippet.includes('id="seguro_sr_avisos_box"') &&
+        !/\bon(?:click|input|change)\s*=/i.test(card5Snippet) &&
+        html50.includes('id="resumo_comparativo_estrategias"') &&
+        html50.includes('id="pdf_seguro_sr_modalidade_badge"') &&
+        html50.includes('id="pdf_resumo_comparativo_estrategias"') &&
+        html50.includes('id="pdf_disclaimer_institucional"') &&
+        css50.includes(".reducao-card-sem-reserva") &&
+        css50.includes(".pdf-comparativo-table"),
+        "SeguroSemReserva[UI/CSP/PDF]: 5º card sem handlers inline, badge de estimativa editável, resumo comparativo e PDF completos"
+      );
+    }
+
     console.log("\n=================================================");
     console.log(`RESUMO DA SUÍTE DE TESTES:`);
     console.log(`   Total: ${totalTestes} | Passados: ${testesPassados} | Falhas: ${testesFalhados}`);

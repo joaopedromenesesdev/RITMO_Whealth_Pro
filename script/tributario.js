@@ -985,11 +985,111 @@ function initPrejuizo() {
     });
   }
 
+  // Opção 5: Seguro sem Formação de Reserva (listeners sem handlers inline)
+  const btnSrTemp = document.getElementById("btn_modalidade_sr_temporario");
+  const btnSrVit = document.getElementById("btn_modalidade_sr_vitalicio");
+  if (btnSrTemp) {
+    btnSrTemp.addEventListener("click", function () {
+      definirModalidadeSeguroSemReservaUI("temporario");
+      salvarInputsTributario();
+    });
+  }
+  if (btnSrVit) {
+    btnSrVit.addEventListener("click", function () {
+      definirModalidadeSeguroSemReservaUI("vitalicio");
+      salvarInputsTributario();
+    });
+  }
+
+  const inputSrIdade = document.getElementById("input_seguro_sr_idade");
+  if (inputSrIdade) {
+    inputSrIdade.addEventListener("input", function () {
+      checkFilled(this);
+      marcarCampoManual(this, String(this.value || "").trim() !== "");
+      salvarInputsTributario();
+    });
+    inputSrIdade.addEventListener("blur", function () {
+      if (String(this.value || "").trim() === "") {
+        marcarCampoManual(this, false);
+        salvarInputsTributario();
+      }
+    });
+  }
+
+  const inputSrCapital = document.getElementById("input_seguro_sr_capital");
+  if (inputSrCapital) {
+    inputSrCapital.addEventListener("input", function () {
+      formatarMoeda(this);
+      checkFilled(this);
+      marcarCampoManual(this, obterValorInput(this) > 0);
+      salvarInputsTributario();
+    });
+    inputSrCapital.addEventListener("blur", function () {
+      if (obterValorInput(this) <= 0) {
+        marcarCampoManual(this, false);
+        salvarInputsTributario();
+      }
+    });
+  }
+
+  const inputSrPremio = document.getElementById("input_seguro_sr_premio");
+  if (inputSrPremio) {
+    inputSrPremio.addEventListener("input", function () {
+      formatarMoeda(this);
+      checkFilled(this);
+      marcarCampoManual(this, obterValorInput(this) > 0);
+      salvarInputsTributario();
+    });
+    inputSrPremio.addEventListener("blur", function () {
+      if (obterValorInput(this) <= 0) {
+        marcarCampoManual(this, false);
+        salvarInputsTributario();
+      }
+    });
+  }
+
+  const inputSrPrazo = document.getElementById("input_seguro_sr_prazo");
+  if (inputSrPrazo) {
+    inputSrPrazo.addEventListener("input", function () {
+      checkFilled(this);
+      salvarInputsTributario();
+    });
+  }
+
+  const inputSrExpectativa = document.getElementById("input_seguro_sr_expectativa");
+  if (inputSrExpectativa) {
+    inputSrExpectativa.addEventListener("input", function () {
+      checkFilled(this);
+      salvarInputsTributario();
+    });
+  }
+
+  const inputSrReajuste = document.getElementById("input_seguro_sr_reajuste");
+  if (inputSrReajuste) {
+    inputSrReajuste.addEventListener("input", function () {
+      checkFilled(this);
+      salvarInputsTributario();
+    });
+  }
+
   // Carrega os dados do resumo lateral
   carregarResumoSidebar();
 
-  // Carrega valores salvos de inputs
-  const salvos = JSON.parse(sessionStorage.getItem("tributario_inputs"));
+  // Carrega valores salvos de inputs (com retrocompatibilidade via AppState ou fallback)
+  let salvos = null;
+  try {
+    if (window.AppState && typeof window.AppState.getTributarioInputs === "function" && sessionStorage.getItem("tributario_inputs")) {
+      salvos = window.AppState.getTributarioInputs();
+    } else {
+      const rawSalvos = sessionStorage.getItem("tributario_inputs");
+      salvos = rawSalvos ? JSON.parse(rawSalvos) : null;
+    }
+  } catch (e) {
+    salvos = null;
+  }
+
+  definirModalidadeSeguroSemReservaUI(salvos?.seguro_sem_reserva_modalidade || "temporario");
+
   if (salvos) {
     if (salvos.uf) document.getElementById("uf_itcmd").value = salvos.uf;
     if (salvos.itcmd) document.getElementById("taxa_itcmd").value = salvos.itcmd;
@@ -1042,6 +1142,55 @@ function initPrejuizo() {
       } else {
         marcarCampoManual(inputSeguroCapital, false);
       }
+    }
+
+    // Restauração retrocompatível da 5ª estratégia (relatórios antigos recebem defaults seguros)
+    if (inputSrIdade) {
+      const srIdadeNum = Number(salvos.seguro_sem_reserva_idade);
+      if (salvos.seguro_sem_reserva_idade_manual === true && Number.isFinite(srIdadeNum) && srIdadeNum > 0) {
+        inputSrIdade.value = String(srIdadeNum);
+        checkFilled(inputSrIdade);
+        marcarCampoManual(inputSrIdade, true);
+      } else {
+        marcarCampoManual(inputSrIdade, false);
+      }
+    }
+    if (inputSrCapital) {
+      const srCapNum = Number(salvos.seguro_sem_reserva_capital) || 0;
+      if (salvos.seguro_sem_reserva_capital_manual === true && srCapNum > 0) {
+        inputSrCapital.value = Math.round(srCapNum * 100).toString();
+        formatarMoeda(inputSrCapital);
+        checkFilled(inputSrCapital);
+        marcarCampoManual(inputSrCapital, true);
+      } else {
+        marcarCampoManual(inputSrCapital, false);
+      }
+    }
+    if (inputSrPremio) {
+      const srPremioNum = Number(salvos.seguro_sem_reserva_premio_mensal) || 0;
+      if (salvos.seguro_sem_reserva_premio_manual === true && srPremioNum > 0) {
+        inputSrPremio.value = Math.round(srPremioNum * 100).toString();
+        formatarMoeda(inputSrPremio);
+        checkFilled(inputSrPremio);
+        marcarCampoManual(inputSrPremio, true);
+      } else {
+        marcarCampoManual(inputSrPremio, false);
+      }
+    }
+    if (inputSrPrazo) {
+      const srPrazoNum = Number(salvos.seguro_sem_reserva_prazo_anos);
+      inputSrPrazo.value = (Number.isFinite(srPrazoNum) && srPrazoNum >= 1) ? String(Math.round(srPrazoNum)) : "20";
+      checkFilled(inputSrPrazo);
+    }
+    if (inputSrExpectativa) {
+      const srExpNum = Number(salvos.seguro_sem_reserva_expectativa_vida);
+      inputSrExpectativa.value = (Number.isFinite(srExpNum) && srExpNum >= 50) ? String(Math.round(srExpNum)) : "85";
+      checkFilled(inputSrExpectativa);
+    }
+    if (inputSrReajuste) {
+      const srReajNum = Number(salvos.seguro_sem_reserva_reajuste_pct);
+      inputSrReajuste.value = (Number.isFinite(srReajNum) && srReajNum >= 0) ? String(srReajNum) : "0";
+      checkFilled(inputSrReajuste);
     }
   }
 
@@ -1104,6 +1253,82 @@ function sincronizarInputComPrejuizo(inputEl, prejuizoAtual) {
   return obterValorInput(inputEl);
 }
 
+let _modalidadeSeguroSemReservaAtual = "temporario";
+
+function normalizarModalidadeSeguroSemReserva(modalidade) {
+  return String(modalidade || "").toLowerCase().trim() === "vitalicio" ? "vitalicio" : "temporario";
+}
+
+function definirModalidadeSeguroSemReservaUI(modalidade) {
+  const mod = normalizarModalidadeSeguroSemReserva(modalidade);
+  _modalidadeSeguroSemReservaAtual = mod;
+
+  const btnTemp = document.getElementById("btn_modalidade_sr_temporario");
+  const btnVit = document.getElementById("btn_modalidade_sr_vitalicio");
+  const campoPrazo = document.getElementById("campo_seguro_sr_prazo");
+  const campoExpectativa = document.getElementById("campo_seguro_sr_expectativa");
+  const elResultsTitle = document.getElementById("seguro_sr_results_title");
+
+  if (btnTemp) {
+    btnTemp.classList.toggle("ativo", mod === "temporario");
+    btnTemp.setAttribute("aria-pressed", mod === "temporario" ? "true" : "false");
+  }
+  if (btnVit) {
+    btnVit.classList.toggle("ativo", mod === "vitalicio");
+    btnVit.setAttribute("aria-pressed", mod === "vitalicio" ? "true" : "false");
+  }
+  if (campoPrazo) campoPrazo.style.display = mod === "temporario" ? "flex" : "none";
+  if (campoExpectativa) campoExpectativa.style.display = mod === "vitalicio" ? "flex" : "none";
+  if (elResultsTitle) {
+    elResultsTitle.textContent = mod === "vitalicio"
+      ? "Simulação — Vitalício sem Resgate:"
+      : "Simulação — Temporário (Sem Reserva):";
+  }
+}
+
+function sincronizarIdadeSeguroSemReserva(inputSrIdade, inputSeguroIdade4) {
+  if (!inputSrIdade) return 40;
+  const estaEmFocoVazio = (typeof document !== "undefined" && document.activeElement === inputSrIdade) && String(inputSrIdade.value || "").trim() === "";
+  if (!isCampoManual(inputSrIdade) && !estaEmFocoVazio) {
+    const val4 = inputSeguroIdade4 ? String(inputSeguroIdade4.value || "").trim() : "";
+    if (val4 !== "") {
+      inputSrIdade.value = val4;
+      checkFilled(inputSrIdade);
+    } else if (String(inputSrIdade.value || "").trim() === "") {
+      inputSrIdade.value = "";
+      checkFilled(inputSrIdade);
+    }
+  }
+  const idadeParsed = parseInt(inputSrIdade.value, 10);
+  if (Number.isFinite(idadeParsed) && idadeParsed > 0) return idadeParsed;
+  const idade4Parsed = inputSeguroIdade4 ? parseInt(inputSeguroIdade4.value, 10) : NaN;
+  return (Number.isFinite(idade4Parsed) && idade4Parsed > 0) ? idade4Parsed : 40;
+}
+
+function renderizarAvisosSeguroSemReservaDOM(avisos) {
+  const box = document.getElementById("seguro_sr_avisos_box");
+  if (!box) return;
+  while (box.firstChild) {
+    box.removeChild(box.firstChild);
+  }
+  const lista = Array.isArray(avisos) ? avisos : [];
+  lista.forEach(texto => {
+    const item = document.createElement("div");
+    item.className = "seguro-sr-aviso-item";
+
+    const bullet = document.createElement("span");
+    bullet.className = "seguro-sr-aviso-bullet";
+    bullet.textContent = "•";
+
+    const spanTxt = document.createElement("span");
+    spanTxt.textContent = String(texto || "");
+
+    item.appendChild(bullet);
+    item.appendChild(spanTxt);
+    box.appendChild(item);
+  });
+}
+
 function persistirInputsTributarioNoSession() {
   const uf = document.getElementById("uf_itcmd")?.value;
   const itcmd = document.getElementById("taxa_itcmd")?.value;
@@ -1120,6 +1345,24 @@ function persistirInputsTributarioNoSession() {
   const seguro_capital = obterValorInput(inputSeguroCapital);
   const seguro_capital_manual = isCampoManual(inputSeguroCapital);
 
+  const inputSrIdade = document.getElementById("input_seguro_sr_idade");
+  const inputSrCapital = document.getElementById("input_seguro_sr_capital");
+  const inputSrPremio = document.getElementById("input_seguro_sr_premio");
+  const inputSrPrazo = document.getElementById("input_seguro_sr_prazo");
+  const inputSrExpectativa = document.getElementById("input_seguro_sr_expectativa");
+  const inputSrReajuste = document.getElementById("input_seguro_sr_reajuste");
+
+  const seguro_sem_reserva_modalidade = normalizarModalidadeSeguroSemReserva(_modalidadeSeguroSemReservaAtual);
+  const seguro_sem_reserva_idade = Number(inputSrIdade?.value) || Number(seguro_idade) || 40;
+  const seguro_sem_reserva_idade_manual = isCampoManual(inputSrIdade);
+  const seguro_sem_reserva_capital = obterValorInput(inputSrCapital);
+  const seguro_sem_reserva_capital_manual = isCampoManual(inputSrCapital);
+  const seguro_sem_reserva_premio_mensal = obterValorInput(inputSrPremio);
+  const seguro_sem_reserva_premio_manual = isCampoManual(inputSrPremio);
+  const seguro_sem_reserva_prazo_anos = Math.max(1, Math.round(Number(inputSrPrazo?.value) || 20));
+  const seguro_sem_reserva_expectativa_vida = Math.max(50, Math.round(Number(inputSrExpectativa?.value) || 85));
+  const seguro_sem_reserva_reajuste_pct = Math.max(0, Number(inputSrReajuste?.value) || 0);
+
   sessionStorage.setItem("tributario_inputs", JSON.stringify({
     uf,
     itcmd,
@@ -1131,7 +1374,17 @@ function persistirInputsTributarioNoSession() {
     previdencia,
     seguro_idade,
     seguro_capital,
-    seguro_capital_manual
+    seguro_capital_manual,
+    seguro_sem_reserva_modalidade,
+    seguro_sem_reserva_idade,
+    seguro_sem_reserva_idade_manual,
+    seguro_sem_reserva_capital,
+    seguro_sem_reserva_capital_manual,
+    seguro_sem_reserva_premio_mensal,
+    seguro_sem_reserva_premio_manual,
+    seguro_sem_reserva_prazo_anos,
+    seguro_sem_reserva_expectativa_vida,
+    seguro_sem_reserva_reajuste_pct
   }));
 }
 
@@ -1716,6 +1969,7 @@ function calcularPrejuizo() {
   const elSeguroEconomia = document.getElementById("seguro_resultado_economia");
 
   const fmt = (v) => "R$ " + v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  let parcelaMensalComReserva = 0;
 
   if (seguroCapitalVal > 0) {
     if (elSeguroCapital) elSeguroCapital.innerText = fmt(seguroCapitalVal);
@@ -1731,6 +1985,7 @@ function calcularPrejuizo() {
       if (taxaAnualPor100k) {
         const contribucaoAnualTotal = (seguroCapitalVal / 100000) * taxaAnualPor100k;
         const parcelaMensal = contribucaoAnualTotal / 12;
+        parcelaMensalComReserva = parcelaMensal;
         const valorQuitar = parcelaMensal * 120;
         const economia = seguroCapitalVal - valorQuitar;
         const pctEconomia = seguroCapitalVal > 0 ? (economia / seguroCapitalVal) * 100 : 0;
@@ -1769,17 +2024,239 @@ function calcularPrejuizo() {
     }
   }
 
+  // Opção 5: Seguro sem Formação de Reserva (Temporário / Vitalício sem Resgate)
+  const resultadoSeguroSemReserva = atualizarEstrategiaSeguroSemReservaUI(
+    prejuizoAtual,
+    inputSeguroIdade,
+    parcelaMensalComReserva,
+    fmt
+  );
+  atualizarResumoComparativoEstrategiasUI(resultadoSeguroSemReserva, fmt);
+
   gerarNarrativaIA(totalAtual, prejuizoAtual, regime);
   calcularPartilha(totalAtual, regime);
   calcularHolding(prejuizoAtual);
-  atualizarPreservacaoPDF();
+  atualizarPreservacaoPDF(resultadoSeguroSemReserva, fmt);
   persistirInputsTributarioNoSession();
 
   // Auto-save: persiste progressivamente no Supabase com debounce
   if (typeof dbAutoSalvar === "function") dbAutoSalvar();
 }
 
-function atualizarPreservacaoPDF() {
+function atualizarEstrategiaSeguroSemReservaUI(prejuizoAtual, inputSeguroIdade4, parcelaMensalComReserva, fmt) {
+  const inputSrIdade = document.getElementById("input_seguro_sr_idade");
+  const inputSrCapital = document.getElementById("input_seguro_sr_capital");
+  const inputSrPremio = document.getElementById("input_seguro_sr_premio");
+  const inputSrPrazo = document.getElementById("input_seguro_sr_prazo");
+  const inputSrExpectativa = document.getElementById("input_seguro_sr_expectativa");
+  const inputSrReajuste = document.getElementById("input_seguro_sr_reajuste");
+
+  const modalidade = normalizarModalidadeSeguroSemReserva(_modalidadeSeguroSemReservaAtual);
+  const idadeEfetiva = sincronizarIdadeSeguroSemReserva(inputSrIdade, inputSeguroIdade4);
+  const capitalVal = sincronizarInputComPrejuizo(inputSrCapital, prejuizoAtual);
+  const premioManual = isCampoManual(inputSrPremio) ? obterValorInput(inputSrPremio) : 0;
+  const prazoVal = inputSrPrazo ? Number(inputSrPrazo.value) : 20;
+  const expectativaVal = inputSrExpectativa ? Number(inputSrExpectativa.value) : 85;
+  const reajusteVal = inputSrReajuste ? Number(inputSrReajuste.value) : 0;
+
+  const resultado = (window.TributarioEngine && typeof window.TributarioEngine.calcularSeguroSemReserva === "function")
+    ? window.TributarioEngine.calcularSeguroSemReserva({
+      capitalSegurado: capitalVal,
+      custoInventario: prejuizoAtual,
+      modalidade,
+      idadeSegurado: idadeEfetiva,
+      premioMensal: premioManual > 0 ? premioManual : null,
+      prazoAnos: prazoVal,
+      expectativaVida: expectativaVal,
+      reajusteEtarioAnualPct: reajusteVal,
+      premioComReservaMensal: parcelaMensalComReserva > 0 ? parcelaMensalComReserva : 0
+    })
+    : {
+      modalidade,
+      capitalSegurado: capitalVal,
+      idadeSegurado: idadeEfetiva,
+      expectativaVida: 85,
+      taxaAnualEstimadaPct: 0,
+      premioEstimadoAutomaticamente: true,
+      premioMensal: 0,
+      premioAnualInicial: 0,
+      prazoAnos: 20,
+      reajusteEtarioAnualPct: 0,
+      desembolsoTotal: 0,
+      alavancagem: 0,
+      economiaLiquida: 0,
+      eficienciaPct: 0,
+      valorResgate: 0,
+      diferencaMensalVsReserva: 0,
+      avisos: ["Sem formação de reserva: valor de resgate igual a R$ 0,00."]
+    };
+
+  // Preenche o input de prêmio mensal com a estimativa automática quando não editado manualmente
+  if (inputSrPremio) {
+    const emFocoVazio = (typeof document !== "undefined" && document.activeElement === inputSrPremio) && obterValorInput(inputSrPremio) <= 0;
+    if (!isCampoManual(inputSrPremio) && !emFocoVazio) {
+      if (resultado.premioMensal > 0) {
+        inputSrPremio.value = Math.round(resultado.premioMensal * 100).toString();
+        formatarMoeda(inputSrPremio);
+      } else {
+        inputSrPremio.value = "";
+      }
+      checkFilled(inputSrPremio);
+    }
+  }
+
+  const badgeOrigem = document.getElementById("badge_seguro_sr_premio_origem");
+  const hintPremio = document.getElementById("seguro_sr_premio_hint");
+  if (badgeOrigem) {
+    if (resultado.premioEstimadoAutomaticamente) {
+      badgeOrigem.textContent = "Estimativa editável";
+      badgeOrigem.classList.remove("badge-manual-sr");
+    } else {
+      badgeOrigem.textContent = "Valor manual";
+      badgeOrigem.classList.add("badge-manual-sr");
+    }
+  }
+  if (hintPremio) {
+    hintPremio.textContent = resultado.premioEstimadoAutomaticamente
+      ? `Estimativa automática (~${resultado.taxaAnualEstimadaPct.toFixed(2).replace(".", ",")}% a.a. para ${resultado.idadeSegurado} anos — editável)`
+      : "Valor informado manualmente pelo assessor (limpe para restaurar a estimativa)";
+  }
+
+  const badgeHorizonte = document.getElementById("seguro_sr_horizonte_badge");
+  if (badgeHorizonte) {
+    badgeHorizonte.textContent = `Horizonte: ${resultado.prazoAnos} ${resultado.prazoAnos === 1 ? "ano" : "anos"}`;
+  }
+
+  const elCap = document.getElementById("seguro_sr_resultado_capital");
+  const elParc = document.getElementById("seguro_sr_resultado_parcela");
+  const elLabelDes = document.getElementById("seguro_sr_label_desembolso");
+  const elDes = document.getElementById("seguro_sr_resultado_desembolso");
+  const elAlav = document.getElementById("seguro_sr_resultado_alavancagem");
+  const elEco = document.getElementById("seguro_sr_resultado_economia");
+  const elResg = document.getElementById("seguro_sr_resultado_resgate");
+  const elDiff = document.getElementById("seguro_sr_resultado_diff_reserva");
+
+  if (elLabelDes) {
+    const rotuloPrazo = resultado.modalidade === "vitalicio"
+      ? `Desembolso Estimado (${resultado.prazoAnos} anos):`
+      : `Desembolso Total (${resultado.prazoAnos} ${resultado.prazoAnos === 1 ? "ano" : "anos"}):`;
+    elLabelDes.textContent = rotuloPrazo;
+  }
+
+  if (resultado.capitalSegurado > 0) {
+    if (elCap) elCap.textContent = fmt(resultado.capitalSegurado);
+    if (elParc) elParc.textContent = `${fmt(resultado.premioMensal)} / mês`;
+    if (elDes) elDes.textContent = fmt(resultado.desembolsoTotal);
+    if (elAlav) elAlav.textContent = resultado.alavancagem > 0 ? `${resultado.alavancagem.toFixed(2).replace(".", ",")}x` : "—";
+    if (elEco) {
+      const sinal = resultado.economiaLiquida < 0 ? "-" : "";
+      const absEco = Math.abs(resultado.economiaLiquida);
+      elEco.textContent = `${sinal}${fmt(absEco)} (${resultado.eficienciaPct.toFixed(1).replace(".", ",")}%)`;
+      if (resultado.economiaLiquida > 0) {
+        elEco.style.backgroundColor = "rgba(29, 111, 66, 0.1)";
+        elEco.style.color = "#1D6F42";
+      } else {
+        elEco.style.backgroundColor = "rgba(229, 57, 53, 0.1)";
+        elEco.style.color = "#E53935";
+      }
+    }
+    if (elResg) elResg.textContent = "R$ 0,00 (Sem reserva)";
+    if (elDiff) {
+      if (parcelaMensalComReserva > 0) {
+        const diff = resultado.diferencaMensalVsReserva;
+        if (diff < 0) {
+          elDiff.textContent = `${fmt(Math.abs(diff))} / mês menor`;
+          elDiff.style.backgroundColor = "rgba(29, 111, 66, 0.1)";
+          elDiff.style.color = "#1D6F42";
+        } else if (diff > 0) {
+          elDiff.textContent = `+${fmt(diff)} / mês maior`;
+          elDiff.style.backgroundColor = "rgba(229, 57, 53, 0.1)";
+          elDiff.style.color = "#E53935";
+        } else {
+          elDiff.textContent = "Equivalente à Estratégia 4";
+          elDiff.style.backgroundColor = "";
+          elDiff.style.color = "";
+        }
+      } else {
+        elDiff.textContent = "Informe a idade na Estratégia 4";
+        elDiff.style.backgroundColor = "";
+        elDiff.style.color = "";
+      }
+    }
+  } else {
+    if (elCap) elCap.textContent = "—";
+    if (elParc) elParc.textContent = "—";
+    if (elDes) elDes.textContent = "—";
+    if (elAlav) elAlav.textContent = "—";
+    if (elEco) {
+      elEco.textContent = "—";
+      elEco.style.backgroundColor = "";
+      elEco.style.color = "";
+    }
+    if (elResg) elResg.textContent = "R$ 0,00 (Sem reserva)";
+    if (elDiff) {
+      elDiff.textContent = "—";
+      elDiff.style.backgroundColor = "";
+      elDiff.style.color = "";
+    }
+  }
+
+  renderizarAvisosSeguroSemReservaDOM(resultado.avisos);
+  return resultado;
+}
+
+function atualizarResumoComparativoEstrategiasUI(resSeguroSR, fmt) {
+  const txt = (id) => {
+    const el = document.getElementById(id);
+    return el ? (el.textContent || el.innerText || "—").trim() : "—";
+  };
+  const setTxt = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  };
+
+  const tempoDoacao = txt("tempo_atual_doacao");
+  const avistaItcmd = txt("avista_custo_itcmd");
+  const avistaTotal = txt("avista_custo_total");
+  const prevIof = txt("previdencia_imposto");
+  const prevTotal = txt("previdencia_custo_total");
+  const seg4Parcela = txt("seguro_resultado_parcela");
+  const seg4Quitar = txt("seguro_resultado_quitar");
+  const seg4Eco = txt("seguro_resultado_economia");
+
+  const ehVitalicio = resSeguroSR && resSeguroSR.modalidade === "vitalicio";
+  const rotuloMod = ehVitalicio ? "Vitalício sem Resgate" : "Temporário";
+
+  setTxt("comp_estrategias_modalidade_badge", `5ª: ${rotuloMod}`);
+  setTxt("comp_est1_prazo", tempoDoacao);
+  setTxt("comp_est2_custo", avistaTotal);
+  setTxt("comp_est2_destaque", avistaItcmd === "—" ? "—" : `ITCMD: ${avistaItcmd}`);
+  setTxt("comp_est3_custo", prevTotal);
+  setTxt("comp_est3_destaque", prevIof === "—" ? "—" : `IOF: ${prevIof}`);
+  setTxt("comp_est4_custo", seg4Quitar === "—" || seg4Quitar === "Informe a idade" ? seg4Parcela : `${seg4Parcela} (${seg4Quitar})`);
+  setTxt("comp_est4_destaque", seg4Eco);
+
+  setTxt("comp_est5_nome", `5. Seguro sem Reserva (${rotuloMod})`);
+  if (resSeguroSR && resSeguroSR.capitalSegurado > 0) {
+    setTxt("comp_est5_custo", `${fmt(resSeguroSR.premioMensal)}/mês (${fmt(resSeguroSR.desembolsoTotal)})`);
+    setTxt(
+      "comp_est5_prazo",
+      ehVitalicio
+        ? `Vitalício (est. ${resSeguroSR.prazoAnos} anos)`
+        : `Temporário (${resSeguroSR.prazoAnos} ${resSeguroSR.prazoAnos === 1 ? "ano" : "anos"})`
+    );
+    setTxt("comp_est5_resgate", "R$ 0,00 (Sem reserva)");
+    const alavTxt = resSeguroSR.alavancagem > 0 ? `${resSeguroSR.alavancagem.toFixed(2).replace(".", ",")}x` : "—";
+    setTxt("comp_est5_destaque", `Alav. ${alavTxt} | Efic. ${resSeguroSR.eficienciaPct.toFixed(1).replace(".", ",")}%`);
+  } else {
+    setTxt("comp_est5_custo", "—");
+    setTxt("comp_est5_prazo", "—");
+    setTxt("comp_est5_resgate", "R$ 0,00 (Sem reserva)");
+    setTxt("comp_est5_destaque", "—");
+  }
+}
+
+function atualizarPreservacaoPDF(resSeguroSR, fmt) {
   const elTempoAtual = document.getElementById("tempo_atual_doacao");
   const elAvistaITCMD = document.getElementById("avista_custo_itcmd");
   const elAvistaTotal = document.getElementById("avista_custo_total");
@@ -1821,6 +2298,63 @@ function atualizarPreservacaoPDF() {
     pdfSeguroEconomia.innerText = elSeguroEconomia.innerText;
     pdfSeguroEconomia.style.color = elSeguroEconomia.style.color || "#1D6F42";
   }
+
+  // Sincroniza 5ª Estratégia e Quadro Comparativo na Página 6 do PDF (somente textContent)
+  const setPdfTxt = (id, valor) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = valor;
+  };
+  const lerTela = (id) => {
+    const el = document.getElementById(id);
+    return el ? (el.textContent || el.innerText || "—").trim() : "—";
+  };
+
+  const ehVit = resSeguroSR && resSeguroSR.modalidade === "vitalicio";
+  const badgeMod = ehVit ? "VITALÍCIO SEM RESGATE" : "TEMPORÁRIO";
+  setPdfTxt("pdf_seguro_sr_modalidade_badge", badgeMod);
+  setPdfTxt(
+    "pdf_seguro_sr_descricao",
+    ehVit
+      ? "Proteção vitalícia de puro risco sem formação de reserva resgatável (resgate R$ 0,00), com foco em liquidez sucessória permanente."
+      : "Proteção temporária de puro risco por prazo determinado, menor parcela mensal e sem formação de reserva (resgate R$ 0,00)."
+  );
+  setPdfTxt("pdf_seguro_sr_capital", lerTela("seguro_sr_resultado_capital"));
+  setPdfTxt("pdf_seguro_sr_parcela", lerTela("seguro_sr_resultado_parcela"));
+  setPdfTxt(
+    "pdf_seguro_sr_prazo",
+    resSeguroSR
+      ? (ehVit ? `Vitalício (~${resSeguroSR.prazoAnos}a)` : `${resSeguroSR.prazoAnos} ${resSeguroSR.prazoAnos === 1 ? "ano" : "anos"}`)
+      : "—"
+  );
+  setPdfTxt("pdf_seguro_sr_desembolso", lerTela("seguro_sr_resultado_desembolso"));
+  setPdfTxt("pdf_seguro_sr_alavancagem", lerTela("seguro_sr_resultado_alavancagem"));
+  setPdfTxt("pdf_seguro_sr_economia", lerTela("seguro_sr_resultado_economia"));
+  setPdfTxt("pdf_seguro_sr_resgate", "R$ 0,00");
+  setPdfTxt("pdf_seguro_sr_diff_reserva", lerTela("seguro_sr_resultado_diff_reserva"));
+
+  const avisosPdf = (resSeguroSR && Array.isArray(resSeguroSR.avisos) && resSeguroSR.avisos.length > 0)
+    ? resSeguroSR.avisos.slice(0, 2).join(" • ")
+    : "Sem formação de reserva (resgate R$ 0,00).";
+  setPdfTxt("pdf_seguro_sr_aviso", avisosPdf);
+
+  // Quadro Comparativo compacto no PDF
+  setPdfTxt("pdf_comp_est1_prazo", lerTela("comp_est1_prazo"));
+  setPdfTxt("pdf_comp_est2_custo", lerTela("comp_est2_custo"));
+  setPdfTxt("pdf_comp_est2_destaque", lerTela("comp_est2_destaque"));
+  setPdfTxt("pdf_comp_est3_custo", lerTela("comp_est3_custo"));
+  setPdfTxt("pdf_comp_est3_destaque", lerTela("comp_est3_destaque"));
+  setPdfTxt("pdf_comp_est4_custo", lerTela("comp_est4_custo"));
+  setPdfTxt("pdf_comp_est4_destaque", lerTela("comp_est4_destaque"));
+  setPdfTxt("pdf_comp_est5_nome", ehVit ? "5. Seguro s/ Res. (Vit.)" : "5. Seguro s/ Res. (Temp.)");
+  setPdfTxt(
+    "pdf_comp_est5_custo",
+    resSeguroSR && resSeguroSR.capitalSegurado > 0 && typeof fmt === "function"
+      ? `${fmt(resSeguroSR.premioMensal)}/mês`
+      : "—"
+  );
+  setPdfTxt("pdf_comp_est5_prazo", lerTela("comp_est5_prazo"));
+  setPdfTxt("pdf_comp_est5_resgate", "R$ 0,00");
+  setPdfTxt("pdf_comp_est5_destaque", lerTela("comp_est5_destaque"));
 
   // Atualiza elementos dinâmicos da PÁGINA 6 (Estratégia de Liquidez e Seguro Resgatável)
   const p6CapitalRec = document.getElementById("p6_capital_recomendado");
