@@ -2799,6 +2799,143 @@
       );
     }
 
+    // =========================================================================
+    // TESTE 50: 5ª Estratégia — Seguro sem Formação de Reserva (Motor Puro)
+    // =========================================================================
+    console.log("\n-> Teste 50: 5ª Estratégia — Seguro sem Formação de Reserva (Temporário e Vitalício)");
+
+    // 50.A — Modalidade Temporário com prêmio explícito e comparativo vs Estratégia 4
+    const ssrTemp = engine.calcularSeguroSemReserva({
+      capitalSegurado: 1000000,
+      modalidade: "temporario",
+      idadeSegurado: 40,
+      premioMensal: 500,
+      prazoAnos: 20,
+      reajusteEtarioAnualPct: 0,
+      premioComReservaMensal: 4246.67
+    });
+    assert(
+      ssrTemp.modalidade === "temporario" &&
+      ssrTemp.capitalSegurado === 1000000 &&
+      ssrTemp.premioMensal === 500 &&
+      ssrTemp.premioAnualInicial === 6000 &&
+      ssrTemp.prazoAnos === 20 &&
+      ssrTemp.desembolsoTotal === 120000 &&
+      ssrTemp.alavancagem === 8.33 &&
+      ssrTemp.economiaLiquida === 880000 &&
+      ssrTemp.eficienciaPct === 88 &&
+      ssrTemp.valorResgate === 0 &&
+      ssrTemp.premioEstimadoAutomaticamente === false &&
+      ssrTemp.diferencaMensalVsReserva === -3746.67 &&
+      Array.isArray(ssrTemp.avisos) &&
+      ssrTemp.avisos.some(a => a.toLowerCase().includes("resgate")) &&
+      ssrTemp.avisos.some(a => a.toLowerCase().includes("prazo determinado")) &&
+      semNaN(ssrTemp),
+      "SeguroSemReserva[Temporário]: calcula desembolso R$ 120k, alavancagem 8,33x, eficiência 88%, resgate 0 e avisos obrigatórios"
+    );
+
+    // 50.B — Modalidade Vitalício sem Resgate com expectativa de vida editável e estimativa automática pela idade
+    const ssrVit = engine.calcularSeguroSemReserva({
+      custoInventario: 1000000,
+      modalidade: "vitalicio",
+      idadeSegurado: 45,
+      expectativaVida: 85,
+      reajusteEtarioAnualPct: 0
+    });
+    const ssrVitFallbackPrazo = engine.calcularSeguroSemReserva({
+      capitalSegurado: 500000,
+      modalidade: "vitalicio",
+      idadeSegurado: 90,
+      expectativaVida: 85
+    });
+    assert(
+      ssrVit.modalidade === "vitalicio" &&
+      ssrVit.capitalSegurado === 1000000 &&
+      ssrVit.prazoAnos === 40 &&
+      ssrVit.premioEstimadoAutomaticamente === true &&
+      ssrVit.premioMensal > 0 &&
+      ssrVit.desembolsoTotal === Math.round(ssrVit.premioAnualInicial * 40 * 100) / 100 &&
+      ssrVit.alavancagem > 0 &&
+      ssrVit.valorResgate === 0 &&
+      ssrVit.diferencaMensalVsReserva === 0 &&
+      ssrVit.avisos.some(a => a.toLowerCase().includes("resgate")) &&
+      !ssrVit.avisos.some(a => a.toLowerCase().includes("prazo determinado")) &&
+      ssrVitFallbackPrazo.prazoAnos === 5 &&
+      semNaN(ssrVit) && semNaN(ssrVitFallbackPrazo),
+      "SeguroSemReserva[Vitalício]: deriva prazo da expectativa de vida (40 anos), estima prêmio pela idade, aplica fallback seguro (5 anos) e mantém resgate 0"
+    );
+
+    // 50.C — Reajuste etário anual composto e impacto em desembolso/eficiência/alavancagem
+    const ssrReaj = engine.calcularSeguroSemReserva({
+      capitalSegurado: 1000000,
+      modalidade: "temporario",
+      premioMensal: 1000,
+      prazoAnos: 10,
+      reajusteEtarioAnualPct: 5
+    });
+    const desembolsoEsperadoReaj = Math.round(12000 * ((Math.pow(1.05, 10) - 1) / 0.05) * 100) / 100;
+    const ssrCustoMaiorCapital = engine.calcularSeguroSemReserva({
+      capitalSegurado: 100000,
+      modalidade: "temporario",
+      premioMensal: 1000,
+      prazoAnos: 15,
+      reajusteEtarioAnualPct: 8
+    });
+    assert(
+      Math.abs(ssrReaj.desembolsoTotal - desembolsoEsperadoReaj) < 0.05 &&
+      ssrReaj.desembolsoTotal > 120000 &&
+      ssrReaj.alavancagem < (1000000 / 120000) &&
+      ssrReaj.eficienciaPct < 88 &&
+      ssrReaj.valorResgate === 0 &&
+      ssrReaj.avisos.some(a => a.toLowerCase().includes("reajuste etário")) &&
+      ssrCustoMaiorCapital.economiaLiquida < 0 &&
+      ssrCustoMaiorCapital.eficienciaPct < 0 &&
+      ssrCustoMaiorCapital.avisos.some(a => a.toLowerCase().includes("supera o capital")) &&
+      semNaN(ssrReaj) && semNaN(ssrCustoMaiorCapital),
+      "SeguroSemReserva[Reajuste Etário]: aplica progressão anual composta exata, reduz alavancagem/eficiência e emite alertas de custo"
+    );
+
+    // 50.D — Taxa anual parametrizável e casos de borda anti-NaN (null, undefined, zeros, negativos, strings e Infinity)
+    const ssrTaxaCustom = engine.calcularSeguroSemReserva({
+      capitalSegurado: 600000,
+      modalidade: "temporario",
+      taxaAnualPct: 1,
+      prazoAnos: 10
+    });
+    const ssrBordas = [
+      engine.calcularSeguroSemReserva(null),
+      engine.calcularSeguroSemReserva(undefined),
+      engine.calcularSeguroSemReserva({}),
+      engine.calcularSeguroSemReserva({ capitalSegurado: 0, premioMensal: 0, prazoAnos: 0 }),
+      engine.calcularSeguroSemReserva({
+        capitalSegurado: -500000,
+        custoInventario: "abc",
+        modalidade: "<script>alert(1)</script>",
+        idadeSegurado: NaN,
+        premioMensal: "invalido",
+        prazoAnos: -10,
+        expectativaVida: Infinity,
+        reajusteEtarioAnualPct: Infinity,
+        premioComReservaMensal: NaN
+      })
+    ];
+    assert(
+      ssrTaxaCustom.premioAnualInicial === 6000 &&
+      ssrTaxaCustom.premioMensal === 500 &&
+      ssrTaxaCustom.valorResgate === 0 &&
+      ssrBordas.every(r =>
+        r.modalidade === "temporario" &&
+        r.capitalSegurado === 0 &&
+        r.desembolsoTotal === 0 &&
+        r.alavancagem === 0 &&
+        r.eficienciaPct === 0 &&
+        r.valorResgate === 0 &&
+        r.diferencaMensalVsReserva === 0 &&
+        semNaN(r)
+      ),
+      "SeguroSemReserva[Anti-NaN]: trata taxa customizada e sanitiza null/undefined/zeros/negativos/strings/Infinity sem NaN"
+    );
+
     console.log("\n=================================================");
     console.log(`RESUMO DA SUÍTE DE TESTES:`);
     console.log(`   Total: ${totalTestes} | Passados: ${testesPassados} | Falhas: ${testesFalhados}`);
