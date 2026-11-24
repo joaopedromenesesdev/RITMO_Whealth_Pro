@@ -118,6 +118,36 @@ function copyCloudflareHeaders(copiedFiles) {
   return false;
 }
 
+function writeNotFoundPage(copiedFiles) {
+  const notFoundHtml = `<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 — Ritmo Wealth Pro</title>
+  <meta name="robots" content="noindex, nofollow">
+  <style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0f1115; color: #f4f4f5; font-family: system-ui, -apple-system, sans-serif; }
+    main { max-width: 420px; padding: 32px; border-radius: 16px; background: #181b22; border: 1px solid #272b36; text-align: center; }
+    h1 { margin: 0 0 8px; font-size: 40px; letter-spacing: -0.02em; }
+    p { margin: 0 0 24px; color: #a1a1aa; font-size: 15px; line-height: 1.5; }
+    a { display: inline-block; padding: 12px 20px; border-radius: 10px; background: #ffffff; color: #111318; font-weight: 600; text-decoration: none; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>404</h1>
+    <p>Página não encontrada na plataforma Ritmo Wealth Pro.</p>
+    <a href="/">Voltar para o início</a>
+  </main>
+</body>
+</html>
+`;
+  const destPath = path.join(DIST_DIR, '404.html');
+  fs.writeFileSync(destPath, notFoundHtml, 'utf8');
+  copiedFiles.push('404.html');
+}
+
 function listFilesRecursive(dir, baseDir = dir) {
   const results = [];
   const entries = fs.readdirSync(dir, { withFileTypes: true })
@@ -142,7 +172,7 @@ function validateDistOutput() {
     assertSafeOutputPath(relPath);
   }
 
-  for (const requiredHtml of ['index.html', 'login.html']) {
+  for (const requiredHtml of ['index.html', 'login.html', '404.html']) {
     if (!outputFiles.includes(requiredHtml)) {
       throw new Error(`Tela obrigatória ausente em dist/: ${requiredHtml}`);
     }
@@ -158,6 +188,7 @@ function buildPages() {
   copyPublicHtmlFiles(copiedFiles);
   copyPublicAssetDirs(copiedFiles);
   const headersIncluded = copyCloudflareHeaders(copiedFiles);
+  writeNotFoundPage(copiedFiles);
 
   const outputFiles = validateDistOutput();
 

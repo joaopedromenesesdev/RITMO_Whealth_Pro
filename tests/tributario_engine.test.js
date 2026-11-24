@@ -2790,10 +2790,12 @@
       );
 
       const buildScriptPath49 = path48.join(__dirname, "../scripts/build-pages.js");
+      const buildScriptSrc49 = fs48.readFileSync(buildScriptPath49, "utf8");
       assert(
         fs48.existsSync(buildScriptPath49) &&
-        fs48.existsSync(path48.join(__dirname, "../_headers")),
-        "Cloudflare[Build]: scripts/build-pages.js e _headers presentes na raiz"
+        fs48.existsSync(path48.join(__dirname, "../_headers")) &&
+        buildScriptSrc49.includes("404.html"),
+        "Cloudflare[Build]: scripts/build-pages.js (com 404.html anti-SPA-fallback) e _headers presentes na raiz"
       );
     }
 
