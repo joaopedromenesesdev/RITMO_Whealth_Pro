@@ -71,7 +71,7 @@
 
     // TESTE 3: Partilha de Regime de Casamento
     console.log("\nTeste 3: Partilha por Regime de Casamento");
-    
+
     // Comunhão Universal (50% meação, 50% herança) com totalPatrimonio puro
     const partilhaUniversal = engine.calcularPartilhaRegime({}, { estadoCivil: "casado", regime: "comunhao_universal" }, 10000000);
     assert(partilhaUniversal.totalPatrimonio === 10000000, "Injeção pura de totalPatrimonio (R$ 10.000.000)");
@@ -140,7 +140,7 @@
       try {
         const nodeCrypto = require("crypto");
         if (nodeCrypto && nodeCrypto.webcrypto) globalThis.crypto = nodeCrypto.webcrypto;
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // TESTE 5: Sanitização de Dados (db.js / Data Integrity)
@@ -151,7 +151,7 @@
       assert(fnSanitizarNumero("R$ 1.500.000,50") === 1500000.50, "Sanitização de moeda R$ 1.500.000,50 -> 1500000.50");
       assert(fnSanitizarNumero("inválido", 100) === 100, "Sanitização de texto inválido -> valor padrão 100");
       assert(fnSanitizarNumero(NaN, 0) === 0, "Sanitização de NaN -> 0");
-      
+
       const resValida = fnSanitizarSimulacao({
         nomeCliente: "  João Silva  ",
         totalPatrimonio: "R$ 5.000.000,00",
@@ -170,7 +170,7 @@
     if (appStateRef && typeof appStateRef.exportSnapshot === 'function') {
       const snapOriginal = appStateRef.exportSnapshot();
       assert(typeof snapOriginal === 'object' && snapOriginal.meta && snapOriginal.patrimonio, "Snapshot exportado com sucesso contendo metadados e patrimônio");
-      
+
       const resImport = appStateRef.importSnapshot({
         meta: { nomeCliente: "Cliente Teste" },
         patrimonio: { total: 2000000 }
@@ -190,7 +190,7 @@
     assert(tExatoLimite.valorValido === 96050 && !tExatoLimite.excedeuLimite, "Valor exato de R$ 96.050 deve ser aceito sem exceder o limite");
     const tAcimaLimite = engine.validarLimiteDoacaoIsenta(100000);
     assert(tAcimaLimite.valorValido === 96050 && tAcimaLimite.excedeuLimite, "Valor R$ 100.000 deve ser travado no teto de R$ 96.050 e sinalizar excedeuLimite = true");
-    
+
     // TESTE 8: Validação de Segurança e Integridade das Regras
     console.log("\nTeste 8: Validações de Segurança e Não Regressão");
     assert(typeof engine.obterAliquotaITCMD === "function", "obterAliquotaITCMD disponível");
@@ -214,10 +214,10 @@
       assert(encResult.v === 2, "Criptografia gerada na versão v2 (com pepper institucional)");
       assert(typeof encResult.ciphertext === "string" && encResult.ciphertext.length > 0, "Ciphertext gerado em base64 válido");
       assert(typeof encResult.iv === "string" && encResult.iv.length > 0, "Vetor de inicialização (IV) gerado em base64 válido");
-      
+
       const decResult = await sec._descriptografarPayload(encResult, "user-teste-uuid");
       assert(decResult.cliente === "João Silva" && decResult.saldo === 500000, "Descriptografia v2 retornou dados 100% íntegros");
-      
+
       const keyV1 = await sec._gerarChaveCriptografia("user-teste-uuid", 1);
       assert(typeof keyV1 === 'object', "Chave legado v1 gerada com sucesso para retrocompatibilidade");
     } else {
@@ -514,7 +514,7 @@
 
     // 17.3 Obtenção de Regras e Tipos de Conta Exterior (BTG Pactual - Pág 5)
     assert(engine.TIPOS_CONTA_EXTERIOR && typeof engine.TIPOS_CONTA_EXTERIOR === "object", "Dicionário TIPOS_CONTA_EXTERIOR exportado pelo engine");
-    
+
     const regraIndividual = engine.obterRegrasContaExterior("individual");
     assert(regraIndividual.nome === "Conta Individual", "Tipo de conta individual identificado");
     assert(regraIndividual.sujeitoInventario === true, "Conta individual está sujeita a inventário");
@@ -1563,14 +1563,14 @@
     console.log("\n-> Teste 41: Validação de Cálculo dos Novos KPIs Executivos");
     const usuariosMockKPI = [{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}]; // 20 usuarios
     const relatoriosMockKPI = [
-        { totalPatrimonio: 1000000, prejuizoTributario: 100000 },
-        { totalPatrimonio: 2000000, prejuizoTributario: 200000 }
+      { totalPatrimonio: 1000000, prejuizoTributario: 100000 },
+      { totalPatrimonio: 2000000, prejuizoTributario: 200000 }
     ];
     const totalUsuarios = usuariosMockKPI.length;
     const totalRelatorios = relatoriosMockKPI.length;
     const prejuizoTotal = relatoriosMockKPI.reduce((acc, r) => acc + r.prejuizoTributario, 0);
     const prejuizoMedio = totalRelatorios > 0 ? Math.round(prejuizoTotal / totalRelatorios) : 0;
-    
+
     assert(totalUsuarios === 20, "Total de usuários calculado incorretamente");
     assert(totalRelatorios === 2, "Total de relatórios calculado incorretamente");
     assert(prejuizoTotal === 300000, "Prejuízo total calculado incorretamente");
@@ -1601,7 +1601,7 @@
           style: {},
           children: [],
           _innerHTML: "",
-          classList: { add() {}, remove() {}, contains() { return false; } },
+          classList: { add() { }, remove() { }, contains() { return false; } },
           setAttribute(k, v) { attrs[k] = String(v); },
           getAttribute(k) { return attrs[k] !== undefined ? attrs[k] : null; },
           appendChild(child) { this.children.push(child); return child; },
@@ -1640,7 +1640,7 @@
       const storeNotas = { relatorio_notas_assessor: JSON.stringify([notaMaliciosa]) };
       const tribSandbox = {
         window: { escapeHTML: s => String(s || "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;" }[m])) },
-        Chart: { register() {} },
+        Chart: { register() { } },
         ChartDataLabels: {},
         sessionStorage: {
           getItem: k => storeNotas[k] || null,
@@ -1649,10 +1649,10 @@
         document: {
           createElement: tag => criarElStub(tag),
           getElementById: () => null,
-          addEventListener() {},
+          addEventListener() { },
           querySelectorAll: sel => (sel === ".container-notas-pagina" ? [containerNotasStub] : [])
         },
-        setTimeout() {},
+        setTimeout() { },
         console
       };
       vm.createContext(tribSandbox);
@@ -2434,7 +2434,7 @@
             return [];
           },
           querySelector() { return null; },
-          addEventListener() {}
+          addEventListener() { }
         };
         Object.defineProperty(no, "innerHTML", {
           get() { return ""; },
@@ -2469,26 +2469,26 @@
 
       const sb47 = {
         window: {},
-        Chart: { register() {} },
+        Chart: { register() { } },
         ChartDataLabels: {},
         URLSearchParams,
-        console: { log() {}, warn() {}, error() {} },
+        console: { log() { }, warn() { }, error() { } },
         setTimeout: () => 0,
-        sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} },
-        localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
+        sessionStorage: { getItem: () => null, setItem() { }, removeItem() { } },
+        localStorage: { getItem: () => null, setItem() { }, removeItem() { } },
         document: {
           body: body47,
           getElementById: id => mapaIds47[id] || null,
           querySelector: () => null,
           querySelectorAll: () => [],
-          addEventListener() {}
+          addEventListener() { }
         },
-        atualizarBlocoOffshoreEstateTaxUI() {},
-        criarGraficos() {},
-        renderizarGraficoEvolucao() {},
-        recalculaGraficosEspeciaisPDF() {},
-        renderizarNotasRelatorio() {},
-        preencherDadosAssessorRelatorio() {}
+        atualizarBlocoOffshoreEstateTaxUI() { },
+        criarGraficos() { },
+        renderizarGraficoEvolucao() { },
+        recalculaGraficosEspeciaisPDF() { },
+        renderizarNotasRelatorio() { },
+        preencherDadosAssessorRelatorio() { }
       };
       sb47.window = sb47;
       vm47.createContext(sb47);
@@ -2720,23 +2720,23 @@
       // 48.F — Máscara monetária em tempo real no campo Valor da Venda (#venda_input_valor)
       const maskCtx = {
         window: {
-          location: { pathname: "/index.html", replace() {}, href: "" },
-          addEventListener() {},
+          location: { pathname: "/index.html", replace() { }, href: "" },
+          addEventListener() { },
           PaceUI: {}
         },
-        sessionStorage: { getItem: () => null, setItem() {}, clear() {} },
-        localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
+        sessionStorage: { getItem: () => null, setItem() { }, clear() { } },
+        localStorage: { getItem: () => null, setItem() { }, removeItem() { } },
         document: {
-          addEventListener() {},
+          addEventListener() { },
           querySelectorAll: () => [],
           querySelector: () => null,
           getElementById: () => null
         },
-        IntersectionObserver: function () { return { observe() {} }; },
-        MutationObserver: function () { return { observe() {} }; },
-        CustomEvent: function () {},
+        IntersectionObserver: function () { return { observe() { } }; },
+        MutationObserver: function () { return { observe() { } }; },
+        CustomEvent: function () { },
         setTimeout: () => 0,
-        clearTimeout() {},
+        clearTimeout() { },
         console
       };
       maskCtx.globalThis = maskCtx;
@@ -2982,14 +2982,14 @@
       );
     }
 
-    // 50.F — Auditoria estrutural de UI, CSP (zero handlers inline no card 5), Comparativo e PDF (ON/OFF preservado)
+    // 50.F — Auditoria estrutural de UI, CSP (zero handlers inline no card 5) e PDF (ON/OFF preservado)
     if (typeof require === "function") {
       const fs50 = require("fs");
       const path50 = require("path");
       const html50 = fs50.readFileSync(path50.join(__dirname, "../tributario.html"), "utf8");
       const css50 = fs50.readFileSync(path50.join(__dirname, "../style/tributario.css"), "utf8");
       const card5Start = html50.indexOf('id="card_estrategia_sem_reserva"');
-      const card5End = html50.indexOf('id="resumo_comparativo_estrategias"');
+      const card5End = html50.indexOf('<!-- NAVEGAÇÃO E VISUALIZAÇÃO -->');
       const card5Snippet = card5Start >= 0 && card5End > card5Start ? html50.slice(card5Start, card5End) : "";
 
       assert(
@@ -2998,13 +2998,12 @@
         card5Snippet.includes('id="badge_seguro_sr_premio_origem"') &&
         card5Snippet.includes('id="seguro_sr_avisos_box"') &&
         !/\bon(?:click|input|change)\s*=/i.test(card5Snippet) &&
-        html50.includes('id="resumo_comparativo_estrategias"') &&
+        !html50.includes('id="resumo_comparativo_estrategias"') &&
+        !html50.includes('id="pdf_resumo_comparativo_estrategias"') &&
         html50.includes('id="pdf_seguro_sr_modalidade_badge"') &&
-        html50.includes('id="pdf_resumo_comparativo_estrategias"') &&
         html50.includes('id="pdf_disclaimer_institucional"') &&
-        css50.includes(".reducao-card-sem-reserva") &&
-        css50.includes(".pdf-comparativo-table"),
-        "SeguroSemReserva[UI/CSP/PDF]: 5º card sem handlers inline, badge de estimativa editável, resumo comparativo e PDF completos"
+        css50.includes(".reducao-card-sem-reserva"),
+        "SeguroSemReserva[UI/CSP/PDF]: 5º card sem handlers inline, badge de estimativa editável, sem resumo comparativo e PDF completos"
       );
     }
 

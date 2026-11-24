@@ -2031,12 +2031,11 @@ function calcularPrejuizo() {
     parcelaMensalComReserva,
     fmt
   );
-  atualizarResumoComparativoEstrategiasUI(resultadoSeguroSemReserva, fmt);
 
   gerarNarrativaIA(totalAtual, prejuizoAtual, regime);
   calcularPartilha(totalAtual, regime);
   calcularHolding(prejuizoAtual);
-  atualizarPreservacaoPDF(resultadoSeguroSemReserva, fmt);
+  atualizarPreservacaoPDF(resultadoSeguroSemReserva);
   persistirInputsTributarioNoSession();
 
   // Auto-save: persiste progressivamente no Supabase com debounce
@@ -2205,58 +2204,7 @@ function atualizarEstrategiaSeguroSemReservaUI(prejuizoAtual, inputSeguroIdade4,
   return resultado;
 }
 
-function atualizarResumoComparativoEstrategiasUI(resSeguroSR, fmt) {
-  const txt = (id) => {
-    const el = document.getElementById(id);
-    return el ? (el.textContent || el.innerText || "—").trim() : "—";
-  };
-  const setTxt = (id, val) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = val;
-  };
-
-  const tempoDoacao = txt("tempo_atual_doacao");
-  const avistaItcmd = txt("avista_custo_itcmd");
-  const avistaTotal = txt("avista_custo_total");
-  const prevIof = txt("previdencia_imposto");
-  const prevTotal = txt("previdencia_custo_total");
-  const seg4Parcela = txt("seguro_resultado_parcela");
-  const seg4Quitar = txt("seguro_resultado_quitar");
-  const seg4Eco = txt("seguro_resultado_economia");
-
-  const ehVitalicio = resSeguroSR && resSeguroSR.modalidade === "vitalicio";
-  const rotuloMod = ehVitalicio ? "Vitalício sem Resgate" : "Temporário";
-
-  setTxt("comp_estrategias_modalidade_badge", `5ª: ${rotuloMod}`);
-  setTxt("comp_est1_prazo", tempoDoacao);
-  setTxt("comp_est2_custo", avistaTotal);
-  setTxt("comp_est2_destaque", avistaItcmd === "—" ? "—" : `ITCMD: ${avistaItcmd}`);
-  setTxt("comp_est3_custo", prevTotal);
-  setTxt("comp_est3_destaque", prevIof === "—" ? "—" : `IOF: ${prevIof}`);
-  setTxt("comp_est4_custo", seg4Quitar === "—" || seg4Quitar === "Informe a idade" ? seg4Parcela : `${seg4Parcela} (${seg4Quitar})`);
-  setTxt("comp_est4_destaque", seg4Eco);
-
-  setTxt("comp_est5_nome", `5. Seguro sem Reserva (${rotuloMod})`);
-  if (resSeguroSR && resSeguroSR.capitalSegurado > 0) {
-    setTxt("comp_est5_custo", `${fmt(resSeguroSR.premioMensal)}/mês (${fmt(resSeguroSR.desembolsoTotal)})`);
-    setTxt(
-      "comp_est5_prazo",
-      ehVitalicio
-        ? `Vitalício (est. ${resSeguroSR.prazoAnos} anos)`
-        : `Temporário (${resSeguroSR.prazoAnos} ${resSeguroSR.prazoAnos === 1 ? "ano" : "anos"})`
-    );
-    setTxt("comp_est5_resgate", "R$ 0,00 (Sem reserva)");
-    const alavTxt = resSeguroSR.alavancagem > 0 ? `${resSeguroSR.alavancagem.toFixed(2).replace(".", ",")}x` : "—";
-    setTxt("comp_est5_destaque", `Alav. ${alavTxt} | Efic. ${resSeguroSR.eficienciaPct.toFixed(1).replace(".", ",")}%`);
-  } else {
-    setTxt("comp_est5_custo", "—");
-    setTxt("comp_est5_prazo", "—");
-    setTxt("comp_est5_resgate", "R$ 0,00 (Sem reserva)");
-    setTxt("comp_est5_destaque", "—");
-  }
-}
-
-function atualizarPreservacaoPDF(resSeguroSR, fmt) {
+function atualizarPreservacaoPDF(resSeguroSR) {
   const elTempoAtual = document.getElementById("tempo_atual_doacao");
   const elAvistaITCMD = document.getElementById("avista_custo_itcmd");
   const elAvistaTotal = document.getElementById("avista_custo_total");
@@ -2299,7 +2247,7 @@ function atualizarPreservacaoPDF(resSeguroSR, fmt) {
     pdfSeguroEconomia.style.color = elSeguroEconomia.style.color || "#1D6F42";
   }
 
-  // Sincroniza 5ª Estratégia e Quadro Comparativo na Página 6 do PDF (somente textContent)
+  // Sincroniza 5ª Estratégia na Página 6 do PDF (somente textContent)
   const setPdfTxt = (id, valor) => {
     const el = document.getElementById(id);
     if (el) el.textContent = valor;
@@ -2336,25 +2284,6 @@ function atualizarPreservacaoPDF(resSeguroSR, fmt) {
     ? resSeguroSR.avisos.slice(0, 2).join(" • ")
     : "Sem formação de reserva (resgate R$ 0,00).";
   setPdfTxt("pdf_seguro_sr_aviso", avisosPdf);
-
-  // Quadro Comparativo compacto no PDF
-  setPdfTxt("pdf_comp_est1_prazo", lerTela("comp_est1_prazo"));
-  setPdfTxt("pdf_comp_est2_custo", lerTela("comp_est2_custo"));
-  setPdfTxt("pdf_comp_est2_destaque", lerTela("comp_est2_destaque"));
-  setPdfTxt("pdf_comp_est3_custo", lerTela("comp_est3_custo"));
-  setPdfTxt("pdf_comp_est3_destaque", lerTela("comp_est3_destaque"));
-  setPdfTxt("pdf_comp_est4_custo", lerTela("comp_est4_custo"));
-  setPdfTxt("pdf_comp_est4_destaque", lerTela("comp_est4_destaque"));
-  setPdfTxt("pdf_comp_est5_nome", ehVit ? "5. Seguro s/ Res. (Vit.)" : "5. Seguro s/ Res. (Temp.)");
-  setPdfTxt(
-    "pdf_comp_est5_custo",
-    resSeguroSR && resSeguroSR.capitalSegurado > 0 && typeof fmt === "function"
-      ? `${fmt(resSeguroSR.premioMensal)}/mês`
-      : "—"
-  );
-  setPdfTxt("pdf_comp_est5_prazo", lerTela("comp_est5_prazo"));
-  setPdfTxt("pdf_comp_est5_resgate", "R$ 0,00");
-  setPdfTxt("pdf_comp_est5_destaque", lerTela("comp_est5_destaque"));
 
   // Atualiza elementos dinâmicos da PÁGINA 6 (Estratégia de Liquidez e Seguro Resgatável)
   const p6CapitalRec = document.getElementById("p6_capital_recomendado");
