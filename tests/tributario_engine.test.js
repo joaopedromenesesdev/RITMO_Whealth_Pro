@@ -71,7 +71,7 @@
 
     // TESTE 3: Partilha de Regime de Casamento
     console.log("\nTeste 3: Partilha por Regime de Casamento");
-    
+
     // Comunhão Universal (50% meação, 50% herança) com totalPatrimonio puro
     const partilhaUniversal = engine.calcularPartilhaRegime({}, { estadoCivil: "casado", regime: "comunhao_universal" }, 10000000);
     assert(partilhaUniversal.totalPatrimonio === 10000000, "Injeção pura de totalPatrimonio (R$ 10.000.000)");
@@ -140,7 +140,7 @@
       try {
         const nodeCrypto = require("crypto");
         if (nodeCrypto && nodeCrypto.webcrypto) globalThis.crypto = nodeCrypto.webcrypto;
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // TESTE 5: Sanitização de Dados (db.js / Data Integrity)
@@ -151,7 +151,7 @@
       assert(fnSanitizarNumero("R$ 1.500.000,50") === 1500000.50, "Sanitização de moeda R$ 1.500.000,50 -> 1500000.50");
       assert(fnSanitizarNumero("inválido", 100) === 100, "Sanitização de texto inválido -> valor padrão 100");
       assert(fnSanitizarNumero(NaN, 0) === 0, "Sanitização de NaN -> 0");
-      
+
       const resValida = fnSanitizarSimulacao({
         nomeCliente: "  João Silva  ",
         totalPatrimonio: "R$ 5.000.000,00",
@@ -170,7 +170,7 @@
     if (appStateRef && typeof appStateRef.exportSnapshot === 'function') {
       const snapOriginal = appStateRef.exportSnapshot();
       assert(typeof snapOriginal === 'object' && snapOriginal.meta && snapOriginal.patrimonio, "Snapshot exportado com sucesso contendo metadados e patrimônio");
-      
+
       const resImport = appStateRef.importSnapshot({
         meta: { nomeCliente: "Cliente Teste" },
         patrimonio: { total: 2000000 }
@@ -190,7 +190,7 @@
     assert(tExatoLimite.valorValido === 96050 && !tExatoLimite.excedeuLimite, "Valor exato de R$ 96.050 deve ser aceito sem exceder o limite");
     const tAcimaLimite = engine.validarLimiteDoacaoIsenta(100000);
     assert(tAcimaLimite.valorValido === 96050 && tAcimaLimite.excedeuLimite, "Valor R$ 100.000 deve ser travado no teto de R$ 96.050 e sinalizar excedeuLimite = true");
-    
+
     // TESTE 8: Validação de Segurança e Integridade das Regras
     console.log("\nTeste 8: Validações de Segurança e Não Regressão");
     assert(typeof engine.obterAliquotaITCMD === "function", "obterAliquotaITCMD disponível");
@@ -214,10 +214,10 @@
       assert(encResult.v === 2, "Criptografia gerada na versão v2 (com pepper institucional)");
       assert(typeof encResult.ciphertext === "string" && encResult.ciphertext.length > 0, "Ciphertext gerado em base64 válido");
       assert(typeof encResult.iv === "string" && encResult.iv.length > 0, "Vetor de inicialização (IV) gerado em base64 válido");
-      
+
       const decResult = await sec._descriptografarPayload(encResult, "user-teste-uuid");
       assert(decResult.cliente === "João Silva" && decResult.saldo === 500000, "Descriptografia v2 retornou dados 100% íntegros");
-      
+
       const keyV1 = await sec._gerarChaveCriptografia("user-teste-uuid", 1);
       assert(typeof keyV1 === 'object', "Chave legado v1 gerada com sucesso para retrocompatibilidade");
     } else {
@@ -514,7 +514,7 @@
 
     // 17.3 Obtenção de Regras e Tipos de Conta Exterior (BTG Pactual - Pág 5)
     assert(engine.TIPOS_CONTA_EXTERIOR && typeof engine.TIPOS_CONTA_EXTERIOR === "object", "Dicionário TIPOS_CONTA_EXTERIOR exportado pelo engine");
-    
+
     const regraIndividual = engine.obterRegrasContaExterior("individual");
     assert(regraIndividual.nome === "Conta Individual", "Tipo de conta individual identificado");
     assert(regraIndividual.sujeitoInventario === true, "Conta individual está sujeita a inventário");
@@ -1563,14 +1563,14 @@
     console.log("\n-> Teste 41: Validação de Cálculo dos Novos KPIs Executivos");
     const usuariosMockKPI = [{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}]; // 20 usuarios
     const relatoriosMockKPI = [
-        { totalPatrimonio: 1000000, prejuizoTributario: 100000 },
-        { totalPatrimonio: 2000000, prejuizoTributario: 200000 }
+      { totalPatrimonio: 1000000, prejuizoTributario: 100000 },
+      { totalPatrimonio: 2000000, prejuizoTributario: 200000 }
     ];
     const totalUsuarios = usuariosMockKPI.length;
     const totalRelatorios = relatoriosMockKPI.length;
     const prejuizoTotal = relatoriosMockKPI.reduce((acc, r) => acc + r.prejuizoTributario, 0);
     const prejuizoMedio = totalRelatorios > 0 ? Math.round(prejuizoTotal / totalRelatorios) : 0;
-    
+
     assert(totalUsuarios === 20, "Total de usuários calculado incorretamente");
     assert(totalRelatorios === 2, "Total de relatórios calculado incorretamente");
     assert(prejuizoTotal === 300000, "Prejuízo total calculado incorretamente");
@@ -1601,7 +1601,7 @@
           style: {},
           children: [],
           _innerHTML: "",
-          classList: { add() {}, remove() {}, contains() { return false; } },
+          classList: { add() { }, remove() { }, contains() { return false; } },
           setAttribute(k, v) { attrs[k] = String(v); },
           getAttribute(k) { return attrs[k] !== undefined ? attrs[k] : null; },
           appendChild(child) { this.children.push(child); return child; },
@@ -1640,7 +1640,7 @@
       const storeNotas = { relatorio_notas_assessor: JSON.stringify([notaMaliciosa]) };
       const tribSandbox = {
         window: { escapeHTML: s => String(s || "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;" }[m])) },
-        Chart: { register() {} },
+        Chart: { register() { } },
         ChartDataLabels: {},
         sessionStorage: {
           getItem: k => storeNotas[k] || null,
@@ -1649,10 +1649,10 @@
         document: {
           createElement: tag => criarElStub(tag),
           getElementById: () => null,
-          addEventListener() {},
+          addEventListener() { },
           querySelectorAll: sel => (sel === ".container-notas-pagina" ? [containerNotasStub] : [])
         },
-        setTimeout() {},
+        setTimeout() { },
         console
       };
       vm.createContext(tribSandbox);
@@ -2434,7 +2434,7 @@
             return [];
           },
           querySelector() { return null; },
-          addEventListener() {}
+          addEventListener() { }
         };
         Object.defineProperty(no, "innerHTML", {
           get() { return ""; },
@@ -2469,26 +2469,26 @@
 
       const sb47 = {
         window: {},
-        Chart: { register() {} },
+        Chart: { register() { } },
         ChartDataLabels: {},
         URLSearchParams,
-        console: { log() {}, warn() {}, error() {} },
+        console: { log() { }, warn() { }, error() { } },
         setTimeout: () => 0,
-        sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} },
-        localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
+        sessionStorage: { getItem: () => null, setItem() { }, removeItem() { } },
+        localStorage: { getItem: () => null, setItem() { }, removeItem() { } },
         document: {
           body: body47,
           getElementById: id => mapaIds47[id] || null,
           querySelector: () => null,
           querySelectorAll: () => [],
-          addEventListener() {}
+          addEventListener() { }
         },
-        atualizarBlocoOffshoreEstateTaxUI() {},
-        criarGraficos() {},
-        renderizarGraficoEvolucao() {},
-        recalculaGraficosEspeciaisPDF() {},
-        renderizarNotasRelatorio() {},
-        preencherDadosAssessorRelatorio() {}
+        atualizarBlocoOffshoreEstateTaxUI() { },
+        criarGraficos() { },
+        renderizarGraficoEvolucao() { },
+        recalculaGraficosEspeciaisPDF() { },
+        renderizarNotasRelatorio() { },
+        preencherDadosAssessorRelatorio() { }
       };
       sb47.window = sb47;
       vm47.createContext(sb47);
@@ -2720,23 +2720,23 @@
       // 48.F — Máscara monetária em tempo real no campo Valor da Venda (#venda_input_valor)
       const maskCtx = {
         window: {
-          location: { pathname: "/index.html", replace() {}, href: "" },
-          addEventListener() {},
+          location: { pathname: "/index.html", replace() { }, href: "" },
+          addEventListener() { },
           PaceUI: {}
         },
-        sessionStorage: { getItem: () => null, setItem() {}, clear() {} },
-        localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
+        sessionStorage: { getItem: () => null, setItem() { }, clear() { } },
+        localStorage: { getItem: () => null, setItem() { }, removeItem() { } },
         document: {
-          addEventListener() {},
+          addEventListener() { },
           querySelectorAll: () => [],
           querySelector: () => null,
           getElementById: () => null
         },
-        IntersectionObserver: function () { return { observe() {} }; },
-        MutationObserver: function () { return { observe() {} }; },
-        CustomEvent: function () {},
+        IntersectionObserver: function () { return { observe() { } }; },
+        MutationObserver: function () { return { observe() { } }; },
+        CustomEvent: function () { },
         setTimeout: () => 0,
-        clearTimeout() {},
+        clearTimeout() { },
         console
       };
       maskCtx.globalThis = maskCtx;
@@ -2813,6 +2813,214 @@
         kpiValueBlock50.includes("font-variant-numeric: tabular-nums") &&
         !kpiSalesValueBlock50.includes("font-size:"),
         "MasterKPI[Layout/Tipografia]: cards alinhados pelo topo sem vão artificial, rótulos com altura equalizada e valores com escala uniforme"
+      );
+    }
+
+    // =========================================================================
+    // TESTE 50: 5ª Estratégia — Seguro sem Formação de Reserva (Motor Puro)
+    // =========================================================================
+    console.log("\n-> Teste 50: 5ª Estratégia — Seguro sem Formação de Reserva (Temporário e Vitalício)");
+
+    // 50.A — Modalidade Temporário com prêmio explícito e comparativo vs Estratégia 4
+    const ssrTemp = engine.calcularSeguroSemReserva({
+      capitalSegurado: 1000000,
+      modalidade: "temporario",
+      idadeSegurado: 40,
+      premioMensal: 500,
+      prazoAnos: 20,
+      reajusteEtarioAnualPct: 0,
+      premioComReservaMensal: 4246.67
+    });
+    assert(
+      ssrTemp.modalidade === "temporario" &&
+      ssrTemp.capitalSegurado === 1000000 &&
+      ssrTemp.premioMensal === 500 &&
+      ssrTemp.premioAnualInicial === 6000 &&
+      ssrTemp.prazoAnos === 20 &&
+      ssrTemp.desembolsoTotal === 120000 &&
+      ssrTemp.alavancagem === 8.33 &&
+      ssrTemp.economiaLiquida === 880000 &&
+      ssrTemp.eficienciaPct === 88 &&
+      ssrTemp.valorResgate === 0 &&
+      ssrTemp.premioEstimadoAutomaticamente === false &&
+      ssrTemp.diferencaMensalVsReserva === -3746.67 &&
+      Array.isArray(ssrTemp.avisos) &&
+      ssrTemp.avisos.some(a => a.toLowerCase().includes("resgate")) &&
+      ssrTemp.avisos.some(a => a.toLowerCase().includes("prazo determinado")) &&
+      semNaN(ssrTemp),
+      "SeguroSemReserva[Temporário]: calcula desembolso R$ 120k, alavancagem 8,33x, eficiência 88%, resgate 0 e avisos obrigatórios"
+    );
+
+    // 50.B — Modalidade Vitalício sem Resgate com expectativa de vida editável e estimativa automática pela idade
+    const ssrVit = engine.calcularSeguroSemReserva({
+      custoInventario: 1000000,
+      modalidade: "vitalicio",
+      idadeSegurado: 45,
+      expectativaVida: 85,
+      reajusteEtarioAnualPct: 0
+    });
+    const ssrVitFallbackPrazo = engine.calcularSeguroSemReserva({
+      capitalSegurado: 500000,
+      modalidade: "vitalicio",
+      idadeSegurado: 90,
+      expectativaVida: 85
+    });
+    assert(
+      ssrVit.modalidade === "vitalicio" &&
+      ssrVit.capitalSegurado === 1000000 &&
+      ssrVit.prazoAnos === 40 &&
+      ssrVit.premioEstimadoAutomaticamente === true &&
+      ssrVit.premioMensal > 0 &&
+      ssrVit.desembolsoTotal === Math.round(ssrVit.premioAnualInicial * 40 * 100) / 100 &&
+      ssrVit.alavancagem > 0 &&
+      ssrVit.valorResgate === 0 &&
+      ssrVit.diferencaMensalVsReserva === 0 &&
+      ssrVit.avisos.some(a => a.toLowerCase().includes("resgate")) &&
+      !ssrVit.avisos.some(a => a.toLowerCase().includes("prazo determinado")) &&
+      ssrVitFallbackPrazo.prazoAnos === 5 &&
+      semNaN(ssrVit) && semNaN(ssrVitFallbackPrazo),
+      "SeguroSemReserva[Vitalício]: deriva prazo da expectativa de vida (40 anos), estima prêmio pela idade, aplica fallback seguro (5 anos) e mantém resgate 0"
+    );
+
+    // 50.C — Reajuste etário anual composto e impacto em desembolso/eficiência/alavancagem
+    const ssrReaj = engine.calcularSeguroSemReserva({
+      capitalSegurado: 1000000,
+      modalidade: "temporario",
+      premioMensal: 1000,
+      prazoAnos: 10,
+      reajusteEtarioAnualPct: 5
+    });
+    const desembolsoEsperadoReaj = Math.round(12000 * ((Math.pow(1.05, 10) - 1) / 0.05) * 100) / 100;
+    const ssrCustoMaiorCapital = engine.calcularSeguroSemReserva({
+      capitalSegurado: 100000,
+      modalidade: "temporario",
+      premioMensal: 1000,
+      prazoAnos: 15,
+      reajusteEtarioAnualPct: 8
+    });
+    assert(
+      Math.abs(ssrReaj.desembolsoTotal - desembolsoEsperadoReaj) < 0.05 &&
+      ssrReaj.desembolsoTotal > 120000 &&
+      ssrReaj.alavancagem < (1000000 / 120000) &&
+      ssrReaj.eficienciaPct < 88 &&
+      ssrReaj.valorResgate === 0 &&
+      ssrReaj.avisos.some(a => a.toLowerCase().includes("reajuste etário")) &&
+      ssrCustoMaiorCapital.economiaLiquida < 0 &&
+      ssrCustoMaiorCapital.eficienciaPct < 0 &&
+      ssrCustoMaiorCapital.avisos.some(a => a.toLowerCase().includes("supera o capital")) &&
+      semNaN(ssrReaj) && semNaN(ssrCustoMaiorCapital),
+      "SeguroSemReserva[Reajuste Etário]: aplica progressão anual composta exata, reduz alavancagem/eficiência e emite alertas de custo"
+    );
+
+    // 50.D — Taxa anual parametrizável e casos de borda anti-NaN (null, undefined, zeros, negativos, strings e Infinity)
+    const ssrTaxaCustom = engine.calcularSeguroSemReserva({
+      capitalSegurado: 600000,
+      modalidade: "temporario",
+      taxaAnualPct: 1,
+      prazoAnos: 10
+    });
+    const ssrBordas = [
+      engine.calcularSeguroSemReserva(null),
+      engine.calcularSeguroSemReserva(undefined),
+      engine.calcularSeguroSemReserva({}),
+      engine.calcularSeguroSemReserva({ capitalSegurado: 0, premioMensal: 0, prazoAnos: 0 }),
+      engine.calcularSeguroSemReserva({
+        capitalSegurado: -500000,
+        custoInventario: "abc",
+        modalidade: "<script>alert(1)</script>",
+        idadeSegurado: NaN,
+        premioMensal: "invalido",
+        prazoAnos: -10,
+        expectativaVida: Infinity,
+        reajusteEtarioAnualPct: Infinity,
+        premioComReservaMensal: NaN
+      })
+    ];
+    assert(
+      ssrTaxaCustom.premioAnualInicial === 6000 &&
+      ssrTaxaCustom.premioMensal === 500 &&
+      ssrTaxaCustom.valorResgate === 0 &&
+      ssrBordas.every(r =>
+        r.modalidade === "temporario" &&
+        r.capitalSegurado === 0 &&
+        r.desembolsoTotal === 0 &&
+        r.alavancagem === 0 &&
+        r.eficienciaPct === 0 &&
+        r.valorResgate === 0 &&
+        r.diferencaMensalVsReserva === 0 &&
+        semNaN(r)
+      ),
+      "SeguroSemReserva[Anti-NaN]: trata taxa customizada e sanitiza null/undefined/zeros/negativos/strings/Infinity sem NaN"
+    );
+
+    // 50.E — Retrocompatibilidade do AppState (relatórios antigos sem 5ª estratégia + persistência no snapshot)
+    if (appStateRef && typeof appStateRef.importSnapshot === "function") {
+      const okLegado = appStateRef.importSnapshot({
+        tributario: {
+          inputs: {
+            uf: "RJ",
+            itcmd: 8,
+            honorarios: 6,
+            custas: 1,
+            seguro_idade: 52,
+            seguro_capital: 800000
+          }
+        }
+      });
+      const inpLegado = appStateRef.getTributarioInputs();
+      assert(
+        okLegado === true &&
+        inpLegado.uf === "RJ" &&
+        inpLegado.seguro_sem_reserva_modalidade === "temporario" &&
+        inpLegado.seguro_sem_reserva_idade === 52 &&
+        inpLegado.seguro_sem_reserva_prazo_anos === 20 &&
+        inpLegado.seguro_sem_reserva_expectativa_vida === 85 &&
+        inpLegado.seguro_sem_reserva_reajuste_pct === 0 &&
+        semNaN(inpLegado),
+        "SeguroSemReserva[State Retrocompat]: relatório antigo sem 5ª estratégia aplica defaults seguros e herda idade sem NaN"
+      );
+
+      appStateRef.setTributarioInputs({
+        uf: "SP",
+        seguro_sem_reserva_modalidade: "vitalicio",
+        seguro_sem_reserva_idade: 48,
+        seguro_sem_reserva_idade_manual: true,
+        seguro_sem_reserva_expectativa_vida: 90,
+        seguro_sem_reserva_reajuste_pct: 3.5
+      });
+      const snapCom5 = appStateRef.exportSnapshot();
+      assert(
+        snapCom5.tributario &&
+        snapCom5.tributario.inputs &&
+        snapCom5.tributario.inputs.seguro_sem_reserva_modalidade === "vitalicio" &&
+        snapCom5.tributario.inputs.seguro_sem_reserva_expectativa_vida === 90 &&
+        snapCom5.tributario.inputs.seguro_sem_reserva_reajuste_pct === 3.5,
+        "SeguroSemReserva[State Snapshot]: exportSnapshot persiste configuração completa da 5ª estratégia"
+      );
+    }
+
+    // 50.F — Auditoria estrutural de UI, CSP (zero handlers inline no card 5) e PDF (ON/OFF preservado)
+    if (typeof require === "function") {
+      const fs50 = require("fs");
+      const path50 = require("path");
+      const html50 = fs50.readFileSync(path50.join(__dirname, "../tributario.html"), "utf8");
+      const css50 = fs50.readFileSync(path50.join(__dirname, "../style/tributario.css"), "utf8");
+      const card5Start = html50.indexOf('id="card_estrategia_sem_reserva"');
+      const card5End = html50.indexOf('<!-- NAVEGAÇÃO E VISUALIZAÇÃO -->');
+      const card5Snippet = card5Start >= 0 && card5End > card5Start ? html50.slice(card5Start, card5End) : "";
+
+      assert(
+        card5Snippet.includes('id="btn_modalidade_sr_temporario"') &&
+        card5Snippet.includes('id="btn_modalidade_sr_vitalicio"') &&
+        card5Snippet.includes('id="badge_seguro_sr_premio_origem"') &&
+        card5Snippet.includes('id="seguro_sr_avisos_box"') &&
+        !/\bon(?:click|input|change)\s*=/i.test(card5Snippet) &&
+        !html50.includes('id="resumo_comparativo_estrategias"') &&
+        !html50.includes('id="pdf_resumo_comparativo_estrategias"') &&
+        html50.includes('id="pdf_seguro_sr_modalidade_badge"') &&
+        html50.includes('id="pdf_disclaimer_institucional"') &&
+        css50.includes(".reducao-card-sem-reserva"),
+        "SeguroSemReserva[UI/CSP/PDF]: 5º card sem handlers inline, badge de estimativa editável, sem resumo comparativo e PDF completos"
       );
     }
 

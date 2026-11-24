@@ -272,6 +272,45 @@
  */
 
 /**
+ * @typedef {'temporario' | 'vitalicio'} ModalidadeSeguroSemReserva
+ */
+
+/**
+ * @typedef {Object} ParamsSeguroSemReserva
+ * @property {number | string | null} [capitalSegurado]
+ * @property {number | string | null} [custoInventario]
+ * @property {ModalidadeSeguroSemReserva | string | null} [modalidade]
+ * @property {number | string | null} [idadeSegurado]
+ * @property {number | string | null} [premioMensal]
+ * @property {number | string | null} [taxaAnualPct]
+ * @property {number | string | null} [prazoAnos]
+ * @property {number | string | null} [expectativaVida]
+ * @property {number | string | null} [reajusteEtarioAnualPct]
+ * @property {number | string | null} [premioComReservaMensal]
+ */
+
+/**
+ * @typedef {Object} ResultadoSeguroSemReserva
+ * @property {ModalidadeSeguroSemReserva} modalidade
+ * @property {number} capitalSegurado
+ * @property {number} idadeSegurado
+ * @property {number} expectativaVida
+ * @property {number} taxaAnualEstimadaPct
+ * @property {boolean} premioEstimadoAutomaticamente
+ * @property {number} premioMensal
+ * @property {number} premioAnualInicial
+ * @property {number} prazoAnos
+ * @property {number} reajusteEtarioAnualPct
+ * @property {number} desembolsoTotal
+ * @property {number} alavancagem
+ * @property {number} economiaLiquida
+ * @property {number} eficienciaPct
+ * @property {0} valorResgate
+ * @property {number} diferencaMensalVsReserva
+ * @property {string[]} avisos
+ */
+
+/**
  * @typedef {Object} PerfilUsuarioMaster
  * @property {string | null} [id]
  * @property {string | null} [email]
@@ -1295,6 +1334,7 @@
       const dados = (dadosPatrimonio && typeof dadosPatrimonio === "object") ? dadosPatrimonio : {};
       const opts = (opcoes && typeof opcoes === "object") ? opcoes : {};
 
+      /** @param {unknown} v */
       const sanitizarNaoNegativo = (v) => {
         const num = Number(v);
         return (Number.isFinite(num) && num > 0) ? num : 0;
@@ -1359,6 +1399,7 @@
      */
     calcularMetricasCanibalizacao(params = {}) {
       const p = (params && typeof params === "object") ? params : {};
+      /** @param {unknown} v */
       const sanitizarNaoNegativo = (v) => {
         const num = Number(v);
         return (Number.isFinite(num) && num > 0) ? num : 0;
@@ -1512,6 +1553,7 @@
      */
     calcularMaterializacaoPrejuizo(params = {}) {
       const p = (params && typeof params === "object") ? params : {};
+      /** @param {unknown} v */
       const sanitizarNaoNegativo = (v) => {
         const num = Number(v);
         return (Number.isFinite(num) && num > 0) ? num : 0;
@@ -1575,6 +1617,160 @@
         deltaPerda,
         custoDiarioInercia,
         anosProjecao
+      };
+    },
+
+    /**
+     * 16. Calcula a 5ª Estratégia: Seguro de Vida sem Formação de Reserva (Temporário ou Vitalício sem Resgate).
+     * Função pura e blindada contra NaN/Infinity; não altera nenhuma fórmula das 4 estratégias legadas.
+     * @param {ParamsSeguroSemReserva | null | undefined} [params={}]
+     * @returns {ResultadoSeguroSemReserva}
+     */
+    calcularSeguroSemReserva(params = {}) {
+      const p = (params && typeof params === "object") ? params : {};
+
+      /**
+       * @param {unknown} valor
+       * @returns {number | null}
+       */
+      const lerNumeroFinito = (valor) => {
+        if (valor === null || valor === undefined || valor === "") return null;
+        const num = Number(valor);
+        return Number.isFinite(num) ? num : null;
+      };
+
+      /**
+       * @param {unknown} valor
+       * @returns {number}
+       */
+      const lerNaoNegativo = (valor) => {
+        const num = lerNumeroFinito(valor);
+        return (num !== null && num > 0) ? num : 0;
+      };
+
+      const modalidadeRaw = String(p.modalidade ?? "temporario").toLowerCase().trim();
+      /** @type {ModalidadeSeguroSemReserva} */
+      const modalidade = modalidadeRaw === "vitalicio" ? "vitalicio" : "temporario";
+
+      const capitalInformado = lerNumeroFinito(p.capitalSegurado);
+      const capitalSegurado = capitalInformado !== null
+        ? Math.max(0, capitalInformado)
+        : lerNaoNegativo(p.custoInventario);
+
+      const idadeInformada = lerNumeroFinito(p.idadeSegurado);
+      const idadeSegurado = (idadeInformada !== null && idadeInformada > 0)
+        ? Math.min(99, Math.max(18, Math.round(idadeInformada)))
+        : 40;
+
+      const expectativaInformada = lerNumeroFinito(p.expectativaVida);
+      const expectativaVida = (expectativaInformada !== null && expectativaInformada > 0)
+        ? Math.min(120, Math.max(50, Math.round(expectativaInformada)))
+        : 85;
+
+      let prazoAnos = 20;
+      if (modalidade === "vitalicio") {
+        const horizonte = Math.round(expectativaVida - idadeSegurado);
+        prazoAnos = horizonte > 0 ? Math.min(80, horizonte) : 5;
+      } else {
+        const prazoInformado = lerNumeroFinito(p.prazoAnos);
+        prazoAnos = (prazoInformado !== null && prazoInformado > 0)
+          ? Math.min(60, Math.max(1, Math.round(prazoInformado)))
+          : 20;
+      }
+
+      const reajusteInformado = lerNumeroFinito(p.reajusteEtarioAnualPct);
+      const reajusteEtarioAnualPct = (reajusteInformado !== null && reajusteInformado > 0)
+        ? Math.min(50, reajusteInformado)
+        : 0;
+
+      const taxaBasePadrao = modalidade === "vitalicio"
+        ? (0.0065 + Math.max(0, idadeSegurado - 30) * 0.00045)
+        : (0.003 + Math.max(0, idadeSegurado - 30) * 0.00025);
+      const taxaInformadaPct = lerNumeroFinito(p.taxaAnualPct);
+      const taxaAnualDecimal = (taxaInformadaPct !== null && taxaInformadaPct > 0)
+        ? (Math.min(50, taxaInformadaPct) / 100)
+        : taxaBasePadrao;
+      const taxaAnualEstimadaPct = Math.round(taxaAnualDecimal * 10000) / 100;
+
+      const premioInformado = lerNumeroFinito(p.premioMensal);
+      const premioEstimadoAutomaticamente = !(premioInformado !== null && premioInformado > 0);
+      const premioMensalBruto = !premioEstimadoAutomaticamente
+        ? /** @type {number} */ (premioInformado)
+        : (capitalSegurado > 0 ? (capitalSegurado * taxaAnualDecimal) / 12 : 0);
+
+      const premioMensal = Math.round(Math.max(0, premioMensalBruto) * 100) / 100;
+      const premioAnualInicial = Math.round(premioMensal * 12 * 100) / 100;
+
+      let desembolsoBruto = 0;
+      if (premioAnualInicial > 0 && prazoAnos > 0) {
+        if (reajusteEtarioAnualPct <= 0) {
+          desembolsoBruto = premioAnualInicial * prazoAnos;
+        } else {
+          const fatorAnual = 1 + (reajusteEtarioAnualPct / 100);
+          for (let ano = 0; ano < prazoAnos; ano++) {
+            desembolsoBruto += premioAnualInicial * Math.pow(fatorAnual, ano);
+          }
+        }
+      }
+      const desembolsoTotal = Number.isFinite(desembolsoBruto)
+        ? Math.round(Math.max(0, desembolsoBruto) * 100) / 100
+        : 0;
+
+      const alavancagem = (capitalSegurado > 0 && desembolsoTotal > 0)
+        ? Math.round((capitalSegurado / desembolsoTotal) * 100) / 100
+        : 0;
+
+      const economiaLiquida = Math.round((capitalSegurado - desembolsoTotal) * 100) / 100;
+      const eficienciaPct = capitalSegurado > 0
+        ? Math.round(((capitalSegurado - desembolsoTotal) / capitalSegurado) * 10000) / 100
+        : 0;
+
+      const premioComReserva = lerNaoNegativo(p.premioComReservaMensal);
+      const diferencaMensalVsReserva = premioComReserva > 0
+        ? Math.round((premioMensal - premioComReserva) * 100) / 100
+        : 0;
+
+      /** @type {string[]} */
+      const avisos = [
+        "Sem formação de reserva: valor de resgate igual a R$ 0,00. Em caso de cancelamento ou desistência, não há devolução dos prêmios pagos."
+      ];
+
+      if (modalidade === "temporario") {
+        avisos.push(
+          `Cobertura por prazo determinado (${prazoAnos} ${prazoAnos === 1 ? "ano" : "anos"}): ao término do contrato, a proteção é encerrada sem indenização nem resgate.`
+        );
+      }
+
+      if (reajusteEtarioAnualPct > 0) {
+        avisos.push(
+          `Reajuste etário projetado de ${reajusteEtarioAnualPct.toFixed(1).replace(".", ",")}% a.a. eleva progressivamente o desembolso acumulado no longo prazo.`
+        );
+      }
+
+      if (capitalSegurado > 0 && desembolsoTotal > capitalSegurado) {
+        avisos.push(
+          "Atenção: o desembolso acumulado estimado supera o capital segurado neste horizonte."
+        );
+      }
+
+      return {
+        modalidade,
+        capitalSegurado,
+        idadeSegurado,
+        expectativaVida,
+        taxaAnualEstimadaPct,
+        premioEstimadoAutomaticamente,
+        premioMensal,
+        premioAnualInicial,
+        prazoAnos,
+        reajusteEtarioAnualPct,
+        desembolsoTotal,
+        alavancagem,
+        economiaLiquida,
+        eficienciaPct,
+        valorResgate: 0,
+        diferencaMensalVsReserva,
+        avisos
       };
     }
   };

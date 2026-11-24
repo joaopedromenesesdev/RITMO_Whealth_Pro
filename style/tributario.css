@@ -1776,17 +1776,152 @@ body.pdf-exporting .capa {
   margin-bottom: 16px;
 }
 
-/* Card 5 (Estrutura base sem inputs/lógica) */
-.reducao-card-5 {
-  min-height: 110px;
+/* Card 5 — Seguro sem Formação de Reserva */
+.reducao-card-5,
+.reducao-card-sem-reserva {
+  flex-direction: column;
+  gap: 16px;
+  border-color: rgba(2, 132, 199, 0.25);
+  background: rgba(248, 252, 255, 0.96);
 }
 
-.reducao-card-5 .reducao-col {
-  justify-content: flex-start;
+.seguro-sr-layout {
+  display: flex;
+  gap: 30px;
+  width: 100%;
 }
 
-.reducao-card-5 .input-title {
+.seguro-sr-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.seguro-sr-header .input-title {
   margin-bottom: 0;
+}
+
+.modalidade-toggle-group {
+  display: inline-flex;
+  align-items: center;
+  background: #e2e8f0;
+  padding: 3px;
+  border-radius: 10px;
+  gap: 3px;
+  border: 1px solid #cbd5e1;
+}
+
+.btn-modalidade-sr {
+  background: transparent;
+  color: #475569;
+  border: none;
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-modalidade-sr:hover {
+  background: #cbd5e1;
+  color: #0f172a;
+}
+
+.btn-modalidade-sr.ativo {
+  background: #0284c7;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+}
+
+.seguro-sr-inputs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 14px;
+}
+
+.seguro-sr-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.seguro-sr-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.seguro-sr-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.badge-estimativa-sr {
+  font-size: 10px;
+  font-weight: 700;
+  color: #0369a1;
+  background: #e0f2fe;
+  border: 1px solid #bae6fd;
+  border-radius: 999px;
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+
+.badge-estimativa-sr.badge-manual-sr {
+  color: #166534;
+  background: #dcfce7;
+  border-color: #bbf7d0;
+}
+
+.badge-estimativa-sr.badge-horizonte-sr {
+  color: #334155;
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.input-wrapper input.input-no-prefix {
+  padding-left: 14px;
+}
+
+.seguro-sr-hint {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+.seguro-sr-avisos-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 15px;
+  background: rgba(245, 158, 11, 0.08);
+  border-left: 4px solid #d97706;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #92400e;
+  line-height: 1.45;
+}
+
+.seguro-sr-aviso-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.seguro-sr-aviso-bullet {
+  font-weight: 800;
+  color: #b45309;
+  flex-shrink: 0;
 }
 
 /* Responsividade Completa (Tablet e Celular) */
@@ -1852,6 +1987,15 @@ body.pdf-exporting .capa {
     flex-direction: column !important;
     align-items: stretch !important;
     gap: 10px !important;
+  }
+
+  .seguro-sr-layout {
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .seguro-sr-inputs-grid {
+    grid-template-columns: 1fr;
   }
 
   .results-col {

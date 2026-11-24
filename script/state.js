@@ -217,18 +217,47 @@
     },
 
     // ── TRIBUTÁRIO & INVENTÁRIO ──────────────────────────────────────────────
+    _normalizarTributarioInputs(rawInputs) {
+      const defaults = this.getDefaultTributarioInputs();
+      if (!rawInputs || typeof rawInputs !== "object") return defaults;
+
+      const merged = { ...defaults, ...rawInputs };
+      const modalidadeRaw = String(merged.seguro_sem_reserva_modalidade || "temporario").toLowerCase().trim();
+      merged.seguro_sem_reserva_modalidade = modalidadeRaw === "vitalicio" ? "vitalicio" : "temporario";
+
+      const lerNum = (val, fallback, minVal = 0) => {
+        if (val === null || val === undefined || val === "") return fallback;
+        const n = Number(val);
+        return Number.isFinite(n) && n >= minVal ? n : fallback;
+      };
+
+      const idadeBase = lerNum(merged.seguro_idade, defaults.seguro_idade, 0);
+      merged.seguro_sem_reserva_idade = lerNum(rawInputs.seguro_sem_reserva_idade, idadeBase > 0 ? idadeBase : defaults.seguro_sem_reserva_idade, 0);
+      merged.seguro_sem_reserva_idade_manual = rawInputs.seguro_sem_reserva_idade_manual === true;
+      merged.seguro_sem_reserva_capital = lerNum(rawInputs.seguro_sem_reserva_capital, defaults.seguro_sem_reserva_capital, 0);
+      merged.seguro_sem_reserva_capital_manual = rawInputs.seguro_sem_reserva_capital_manual === true;
+      merged.seguro_sem_reserva_premio_mensal = lerNum(rawInputs.seguro_sem_reserva_premio_mensal, defaults.seguro_sem_reserva_premio_mensal, 0);
+      merged.seguro_sem_reserva_premio_manual = rawInputs.seguro_sem_reserva_premio_manual === true;
+      merged.seguro_sem_reserva_prazo_anos = lerNum(rawInputs.seguro_sem_reserva_prazo_anos, defaults.seguro_sem_reserva_prazo_anos, 1);
+      merged.seguro_sem_reserva_expectativa_vida = lerNum(rawInputs.seguro_sem_reserva_expectativa_vida, defaults.seguro_sem_reserva_expectativa_vida, 50);
+      merged.seguro_sem_reserva_reajuste_pct = lerNum(rawInputs.seguro_sem_reserva_reajuste_pct, defaults.seguro_sem_reserva_reajuste_pct, 0);
+
+      return merged;
+    },
+
     getTributarioInputs() {
       try {
         const raw = sessionStorage.getItem("tributario_inputs");
         if (!raw) return this.getDefaultTributarioInputs();
-        return { ...this.getDefaultTributarioInputs(), ...JSON.parse(raw) };
+        return this._normalizarTributarioInputs(JSON.parse(raw));
       } catch (e) {
         return this.getDefaultTributarioInputs();
       }
     },
 
     setTributarioInputs(inputs) {
-      sessionStorage.setItem("tributario_inputs", JSON.stringify(inputs));
+      const normalizado = this._normalizarTributarioInputs(inputs);
+      sessionStorage.setItem("tributario_inputs", JSON.stringify(normalizado));
     },
 
     getDefaultTributarioInputs() {
@@ -241,7 +270,17 @@
         doacao_avista: 0,
         previdencia: 0,
         seguro_idade: 40,
-        seguro_capital: 0
+        seguro_capital: 0,
+        seguro_sem_reserva_modalidade: "temporario",
+        seguro_sem_reserva_idade: 40,
+        seguro_sem_reserva_idade_manual: false,
+        seguro_sem_reserva_capital: 0,
+        seguro_sem_reserva_capital_manual: false,
+        seguro_sem_reserva_premio_mensal: 0,
+        seguro_sem_reserva_premio_manual: false,
+        seguro_sem_reserva_prazo_anos: 20,
+        seguro_sem_reserva_expectativa_vida: 85,
+        seguro_sem_reserva_reajuste_pct: 0
       };
     },
 
