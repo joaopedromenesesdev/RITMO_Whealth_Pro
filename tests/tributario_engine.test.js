@@ -2797,6 +2797,23 @@
         buildScriptSrc49.includes("404.html"),
         "Cloudflare[Build]: scripts/build-pages.js (com 404.html anti-SPA-fallback) e _headers presentes na raiz"
       );
+
+      // ── TESTE 50: Alinhamento e Hierarquia Tipográfica dos KPIs do Painel Master ──
+      console.log("\n-> Teste 50: Alinhamento e Hierarquia Tipográfica dos KPIs do Painel Master");
+      const styleCss50 = fs48.readFileSync(path48.join(__dirname, "../style/style.css"), "utf8");
+      const kpiCardBlock50 = (styleCss50.match(/\.master-kpi-card\s*\{[\s\S]*?\}/) || [""])[0];
+      const kpiLabelBlock50 = (styleCss50.match(/\.master-kpi-label\s*\{[\s\S]*?\}/) || [""])[0];
+      const kpiValueBlock50 = (styleCss50.match(/\.master-kpi-value\s*\{[\s\S]*?\}/) || [""])[0];
+      const kpiSalesValueBlock50 = (styleCss50.match(/\.master-kpi-value\.is-sales-value\s*\{[\s\S]*?\}/) || [""])[0];
+      assert(
+        kpiCardBlock50.includes("justify-content: flex-start") &&
+        !kpiCardBlock50.includes("justify-content: space-between") &&
+        kpiLabelBlock50.includes("min-height: 20px") &&
+        kpiValueBlock50.includes("clamp(22px, 2vw, 26px)") &&
+        kpiValueBlock50.includes("font-variant-numeric: tabular-nums") &&
+        !kpiSalesValueBlock50.includes("font-size:"),
+        "MasterKPI[Layout/Tipografia]: cards alinhados pelo topo sem vão artificial, rótulos com altura equalizada e valores com escala uniforme"
+      );
     }
 
     console.log("\n=================================================");
