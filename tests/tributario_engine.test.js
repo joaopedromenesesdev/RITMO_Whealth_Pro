@@ -2817,51 +2817,49 @@
     }
 
     // =========================================================================
-    // TESTE 51: 5ª Estratégia — Seguro sem Formação de Reserva (Motor Puro)
+    // TESTE 51: 5ª Estratégia — Seguro sem Formação de Reserva (Vitalício sem Resgate)
     // =========================================================================
-    console.log("\n-> Teste 51: 5ª Estratégia — Seguro sem Formação de Reserva (Temporário e Vitalício)");
+    console.log("\n-> Teste 51: 5ª Estratégia — Seguro sem Formação de Reserva (Vitalício sem Resgate)");
 
-    // 51.A — Modalidade Temporário com prêmio explícito e comparativo vs Estratégia 4
-    const ssrTemp = engine.calcularSeguroSemReserva({
+    // 51.A — Vitalício sem Resgate com prêmio explícito, horizonte por expectativa de vida e comparativo vs Estratégia 4
+    const ssrVitManual = engine.calcularSeguroSemReserva({
       capitalSegurado: 1000000,
-      modalidade: "temporario",
-      idadeSegurado: 40,
+      idadeSegurado: 45,
+      expectativaVida: 85,
       premioMensal: 500,
-      prazoAnos: 20,
-      reajusteEtarioAnualPct: 0,
       premioComReservaMensal: 4246.67
     });
     assert(
-      ssrTemp.modalidade === "temporario" &&
-      ssrTemp.capitalSegurado === 1000000 &&
-      ssrTemp.premioMensal === 500 &&
-      ssrTemp.premioAnualInicial === 6000 &&
-      ssrTemp.prazoAnos === 20 &&
-      ssrTemp.desembolsoTotal === 120000 &&
-      ssrTemp.alavancagem === 8.33 &&
-      ssrTemp.economiaLiquida === 880000 &&
-      ssrTemp.eficienciaPct === 88 &&
-      ssrTemp.valorResgate === 0 &&
-      ssrTemp.premioEstimadoAutomaticamente === false &&
-      ssrTemp.diferencaMensalVsReserva === -3746.67 &&
-      Array.isArray(ssrTemp.avisos) &&
-      ssrTemp.avisos.some(a => a.toLowerCase().includes("resgate")) &&
-      ssrTemp.avisos.some(a => a.toLowerCase().includes("prazo determinado")) &&
-      semNaN(ssrTemp),
-      "SeguroSemReserva[Temporário]: calcula desembolso R$ 120k, alavancagem 8,33x, eficiência 88%, resgate 0 e avisos obrigatórios"
+      ssrVitManual.modalidade === "vitalicio" &&
+      ssrVitManual.capitalSegurado === 1000000 &&
+      ssrVitManual.premioMensal === 500 &&
+      ssrVitManual.premioAnualInicial === 6000 &&
+      ssrVitManual.prazoAnos === 40 &&
+      ssrVitManual.reajusteEtarioAnualPct === 0 &&
+      ssrVitManual.desembolsoTotal === 240000 &&
+      ssrVitManual.alavancagem === 4.17 &&
+      ssrVitManual.economiaLiquida === 760000 &&
+      ssrVitManual.eficienciaPct === 76 &&
+      ssrVitManual.valorResgate === 0 &&
+      ssrVitManual.premioEstimadoAutomaticamente === false &&
+      ssrVitManual.diferencaMensalVsReserva === -3746.67 &&
+      Array.isArray(ssrVitManual.avisos) &&
+      ssrVitManual.avisos.some(a => a.toLowerCase().includes("resgate")) &&
+      !ssrVitManual.avisos.some(a => a.toLowerCase().includes("prazo determinado")) &&
+      semNaN(ssrVitManual),
+      "SeguroSemReserva[Vitalício Manual]: calcula desembolso R$ 240k (40 anos), alavancagem 4,17x, eficiência 76%, reajuste 0 e resgate 0"
     );
 
-    // 51.B — Modalidade Vitalício sem Resgate com expectativa de vida editável e estimativa automática pela idade
+    // 51.B — Estimativa automática pela idade, fallback seguro de prazo e consolidação exclusiva em Vitalício
     const ssrVit = engine.calcularSeguroSemReserva({
       custoInventario: 1000000,
-      modalidade: "vitalicio",
+      modalidade: "temporario",
       idadeSegurado: 45,
       expectativaVida: 85,
-      reajusteEtarioAnualPct: 0
+      reajusteEtarioAnualPct: 5
     });
     const ssrVitFallbackPrazo = engine.calcularSeguroSemReserva({
       capitalSegurado: 500000,
-      modalidade: "vitalicio",
       idadeSegurado: 90,
       expectativaVida: 85
     });
@@ -2869,6 +2867,7 @@
       ssrVit.modalidade === "vitalicio" &&
       ssrVit.capitalSegurado === 1000000 &&
       ssrVit.prazoAnos === 40 &&
+      ssrVit.reajusteEtarioAnualPct === 0 &&
       ssrVit.premioEstimadoAutomaticamente === true &&
       ssrVit.premioMensal > 0 &&
       ssrVit.desembolsoTotal === Math.round(ssrVit.premioAnualInicial * 40 * 100) / 100 &&
@@ -2876,48 +2875,35 @@
       ssrVit.valorResgate === 0 &&
       ssrVit.diferencaMensalVsReserva === 0 &&
       ssrVit.avisos.some(a => a.toLowerCase().includes("resgate")) &&
-      !ssrVit.avisos.some(a => a.toLowerCase().includes("prazo determinado")) &&
+      !ssrVit.avisos.some(a => a.toLowerCase().includes("reajuste etário")) &&
       ssrVitFallbackPrazo.prazoAnos === 5 &&
       semNaN(ssrVit) && semNaN(ssrVitFallbackPrazo),
-      "SeguroSemReserva[Vitalício]: deriva prazo da expectativa de vida (40 anos), estima prêmio pela idade, aplica fallback seguro (5 anos) e mantém resgate 0"
+      "SeguroSemReserva[Vitalício Auto]: força modalidade vitalício com reajuste 0, estima prêmio pela idade e aplica fallback seguro (5 anos)"
     );
 
-    // 51.C — Reajuste etário anual composto e impacto em desembolso/eficiência/alavancagem
-    const ssrReaj = engine.calcularSeguroSemReserva({
-      capitalSegurado: 1000000,
-      modalidade: "temporario",
-      premioMensal: 1000,
-      prazoAnos: 10,
-      reajusteEtarioAnualPct: 5
-    });
-    const desembolsoEsperadoReaj = Math.round(12000 * ((Math.pow(1.05, 10) - 1) / 0.05) * 100) / 100;
+    // 51.C — Alerta quando desembolso acumulado supera o capital segurado no horizonte vitalício
     const ssrCustoMaiorCapital = engine.calcularSeguroSemReserva({
       capitalSegurado: 100000,
-      modalidade: "temporario",
-      premioMensal: 1000,
-      prazoAnos: 15,
-      reajusteEtarioAnualPct: 8
+      idadeSegurado: 40,
+      expectativaVida: 85,
+      premioMensal: 500
     });
     assert(
-      Math.abs(ssrReaj.desembolsoTotal - desembolsoEsperadoReaj) < 0.05 &&
-      ssrReaj.desembolsoTotal > 120000 &&
-      ssrReaj.alavancagem < (1000000 / 120000) &&
-      ssrReaj.eficienciaPct < 88 &&
-      ssrReaj.valorResgate === 0 &&
-      ssrReaj.avisos.some(a => a.toLowerCase().includes("reajuste etário")) &&
-      ssrCustoMaiorCapital.economiaLiquida < 0 &&
-      ssrCustoMaiorCapital.eficienciaPct < 0 &&
+      ssrCustoMaiorCapital.prazoAnos === 45 &&
+      ssrCustoMaiorCapital.desembolsoTotal === 270000 &&
+      ssrCustoMaiorCapital.economiaLiquida === -170000 &&
+      ssrCustoMaiorCapital.eficienciaPct === -170 &&
       ssrCustoMaiorCapital.avisos.some(a => a.toLowerCase().includes("supera o capital")) &&
-      semNaN(ssrReaj) && semNaN(ssrCustoMaiorCapital),
-      "SeguroSemReserva[Reajuste Etário]: aplica progressão anual composta exata, reduz alavancagem/eficiência e emite alertas de custo"
+      semNaN(ssrCustoMaiorCapital),
+      "SeguroSemReserva[Alerta Custo]: emite alerta quando desembolso acumulado vitalício supera capital segurado"
     );
 
     // 51.D — Taxa anual parametrizável e casos de borda anti-NaN (null, undefined, zeros, negativos, strings e Infinity)
     const ssrTaxaCustom = engine.calcularSeguroSemReserva({
       capitalSegurado: 600000,
-      modalidade: "temporario",
       taxaAnualPct: 1,
-      prazoAnos: 10
+      idadeSegurado: 45,
+      expectativaVida: 55
     });
     const ssrBordas = [
       engine.calcularSeguroSemReserva(null),
@@ -2941,7 +2927,8 @@
       ssrTaxaCustom.premioMensal === 500 &&
       ssrTaxaCustom.valorResgate === 0 &&
       ssrBordas.every(r =>
-        r.modalidade === "temporario" &&
+        r.modalidade === "vitalicio" &&
+        r.reajusteEtarioAnualPct === 0 &&
         r.capitalSegurado === 0 &&
         r.desembolsoTotal === 0 &&
         r.alavancagem === 0 &&
@@ -2953,7 +2940,7 @@
       "SeguroSemReserva[Anti-NaN]: trata taxa customizada e sanitiza null/undefined/zeros/negativos/strings/Infinity sem NaN"
     );
 
-    // 51.E — Retrocompatibilidade do AppState (relatórios antigos sem 5ª estratégia + persistência no snapshot)
+    // 51.E — Retrocompatibilidade do AppState (relatórios antigos ou com modalidade temporário/reajuste são migrados para vitalício sem reajuste)
     if (appStateRef && typeof appStateRef.importSnapshot === "function") {
       const okLegado = appStateRef.importSnapshot({
         tributario: {
@@ -2963,7 +2950,9 @@
             honorarios: 6,
             custas: 1,
             seguro_idade: 52,
-            seguro_capital: 800000
+            seguro_capital: 800000,
+            seguro_sem_reserva_modalidade: "temporario",
+            seguro_sem_reserva_reajuste_pct: 5
           }
         }
       });
@@ -2971,13 +2960,12 @@
       assert(
         okLegado === true &&
         inpLegado.uf === "RJ" &&
-        inpLegado.seguro_sem_reserva_modalidade === "temporario" &&
+        inpLegado.seguro_sem_reserva_modalidade === "vitalicio" &&
         inpLegado.seguro_sem_reserva_idade === 52 &&
-        inpLegado.seguro_sem_reserva_prazo_anos === 20 &&
         inpLegado.seguro_sem_reserva_expectativa_vida === 85 &&
         inpLegado.seguro_sem_reserva_reajuste_pct === 0 &&
         semNaN(inpLegado),
-        "SeguroSemReserva[State Retrocompat]: relatório antigo sem 5ª estratégia aplica defaults seguros e herda idade sem NaN"
+        "SeguroSemReserva[State Retrocompat]: relatório antigo ou temporário é normalizado para vitalício sem reajuste e herda idade sem NaN"
       );
 
       appStateRef.setTributarioInputs({
@@ -2994,8 +2982,8 @@
         snapCom5.tributario.inputs &&
         snapCom5.tributario.inputs.seguro_sem_reserva_modalidade === "vitalicio" &&
         snapCom5.tributario.inputs.seguro_sem_reserva_expectativa_vida === 90 &&
-        snapCom5.tributario.inputs.seguro_sem_reserva_reajuste_pct === 3.5,
-        "SeguroSemReserva[State Snapshot]: exportSnapshot persiste configuração completa da 5ª estratégia"
+        snapCom5.tributario.inputs.seguro_sem_reserva_reajuste_pct === 0,
+        "SeguroSemReserva[State Snapshot]: exportSnapshot persiste configuração vitalícia sem reajuste etário"
       );
     }
 
@@ -3010,17 +2998,23 @@
       const card5Snippet = card5Start >= 0 && card5End > card5Start ? html50.slice(card5Start, card5End) : "";
 
       assert(
-        card5Snippet.includes('id="btn_modalidade_sr_temporario"') &&
-        card5Snippet.includes('id="btn_modalidade_sr_vitalicio"') &&
+        !card5Snippet.includes('id="btn_modalidade_sr_temporario"') &&
+        !card5Snippet.includes('id="btn_modalidade_sr_vitalicio"') &&
+        !card5Snippet.includes('id="input_seguro_sr_prazo"') &&
+        !card5Snippet.includes('id="input_seguro_sr_reajuste"') &&
+        card5Snippet.includes('Vitalício sem Resgate') &&
+        card5Snippet.includes('id="input_seguro_sr_expectativa"') &&
         card5Snippet.includes('id="badge_seguro_sr_premio_origem"') &&
         card5Snippet.includes('id="seguro_sr_avisos_box"') &&
         !/\bon(?:click|input|change)\s*=/i.test(card5Snippet) &&
         !html50.includes('id="resumo_comparativo_estrategias"') &&
         !html50.includes('id="pdf_resumo_comparativo_estrategias"') &&
         html50.includes('id="pdf_seguro_sr_modalidade_badge"') &&
+        html50.includes('VITALÍCIO SEM RESGATE') &&
         html50.includes('id="pdf_disclaimer_institucional"') &&
-        css50.includes(".reducao-card-sem-reserva"),
-        "SeguroSemReserva[UI/CSP/PDF]: 5º card sem handlers inline, badge de estimativa editável, sem resumo comparativo e PDF completos"
+        css50.includes(".reducao-card-sem-reserva") &&
+        css50.includes(".badge-modalidade-sr-fixa"),
+        "SeguroSemReserva[UI/CSP/PDF]: 5º card apenas Vitalício sem Resgate, sem temporário nem reajuste etário, sem handlers inline e PDF completos"
       );
     }
 

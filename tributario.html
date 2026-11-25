@@ -553,18 +553,11 @@
               <div class="reducao-col">
                 <div class="seguro-sr-header">
                   <span class="input-title">5 - Seguro sem Formação de Reserva</span>
-                  <div class="modalidade-toggle-group" role="group"
-                    aria-label="Modalidade do Seguro sem Formação de Reserva">
-                    <button type="button" class="btn-modalidade-sr ativo" id="btn_modalidade_sr_temporario"
-                      data-modalidade="temporario" aria-pressed="true">Temporário</button>
-                    <button type="button" class="btn-modalidade-sr" id="btn_modalidade_sr_vitalicio"
-                      data-modalidade="vitalicio" aria-pressed="false">Vitalício sem Resgate</button>
-                  </div>
+                  <span class="badge-modalidade-sr-fixa">Vitalício sem Resgate</span>
                 </div>
                 <p class="seguro-descricao" id="seguro_sr_descricao">
-                  Proteção de puro risco voltada à liquidez imediata no inventário com menor parcela mensal e
-                  <strong>sem formação de reserva resgatável</strong>. Alterne entre cobertura por prazo determinado
-                  (Temporário) ou por toda a vida (Vitalício sem Resgate).
+                  Proteção vitalícia de puro risco (<strong>Vitalício sem Resgate</strong>) voltada à liquidez imediata
+                  no inventário com menor parcela mensal e <strong>sem formação de reserva resgatável</strong>.
                 </p>
 
                 <div class="seguro-sr-inputs-grid">
@@ -599,15 +592,7 @@
                       pelo assessor)</span>
                   </div>
 
-                  <div class="seguro-sr-field" id="campo_seguro_sr_prazo">
-                    <label for="input_seguro_sr_prazo">Prazo da Cobertura (anos)</label>
-                    <div class="input-wrapper" style="margin-bottom: 0;">
-                      <input type="number" id="input_seguro_sr_prazo" value="20" min="1" max="60" autocomplete="off"
-                        class="input-no-prefix">
-                    </div>
-                  </div>
-
-                  <div class="seguro-sr-field" id="campo_seguro_sr_expectativa" style="display: none;">
+                  <div class="seguro-sr-field" id="campo_seguro_sr_expectativa">
                     <div class="seguro-sr-label-row">
                       <label for="input_seguro_sr_expectativa">Expectativa de Vida (anos)</label>
                       <span class="badge-estimativa-sr badge-horizonte-sr" id="seguro_sr_horizonte_badge">Horizonte: 45
@@ -618,31 +603,22 @@
                         autocomplete="off" class="input-no-prefix">
                     </div>
                   </div>
-
-                  <div class="seguro-sr-field">
-                    <label for="input_seguro_sr_reajuste">Reajuste Etário (% a.a.)</label>
-                    <div class="input-wrapper" style="margin-bottom: 0;">
-                      <input type="number" id="input_seguro_sr_reajuste" value="0" min="0" max="50" step="0.5"
-                        autocomplete="off" class="input-no-prefix">
-                    </div>
-                    <span class="seguro-sr-hint">0% = prêmio nivelado</span>
-                  </div>
                 </div>
               </div>
 
               <div class="reducao-col results-col">
-                <div class="results-title" id="seguro_sr_results_title">Simulação — Temporário (Sem Reserva):</div>
+                <div class="results-title" id="seguro_sr_results_title">Simulação — Vitalício sem Resgate:</div>
                 <div class="results-values">
                   <div class="result-item">
                     <span class="result-label">Capital Segurado:</span>
                     <span class="result-badge" id="seguro_sr_resultado_capital">—</span>
                   </div>
                   <div class="result-item">
-                    <span class="result-label">Parcela Mensal Inicial:</span>
+                    <span class="result-label">Parcela Mensal:</span>
                     <span class="result-badge" id="seguro_sr_resultado_parcela">—</span>
                   </div>
                   <div class="result-item">
-                    <span class="result-label" id="seguro_sr_label_desembolso">Desembolso Total (20 anos):</span>
+                    <span class="result-label" id="seguro_sr_label_desembolso">Desembolso Estimado (45 anos):</span>
                     <span class="result-badge" id="seguro_sr_resultado_desembolso">—</span>
                   </div>
                   <div class="result-item">
@@ -1070,17 +1046,16 @@
             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; gap: 8px;">
             <h4 style="margin: 0; color: #0c4a6e; font-size: 13.5px;">5 - Seguro sem Formação de Reserva</h4>
             <span id="pdf_seguro_sr_modalidade_badge"
-              style="font-size: 9px; font-weight: 800; color: #0369a1; background: #e0f2fe; padding: 2px 7px; border-radius: 10px; border: 1px solid #bae6fd;">TEMPORÁRIO</span>
+              style="font-size: 9px; font-weight: 800; color: #0369a1; background: #e0f2fe; padding: 2px 7px; border-radius: 10px; border: 1px solid #bae6fd;">VITALÍCIO SEM RESGATE</span>
           </div>
           <p id="pdf_seguro_sr_descricao"
             style="margin: 0 0 6px 0; font-size: 10px; color: #475569; line-height: 1.35;">
-            Seguro de puro risco focado em liquidez sucessória imediata com menor desembolso mensal e valor de resgate
-            igual a R$ 0,00.
+            Proteção vitalícia de puro risco sem formação de reserva resgatável (resgate R$ 0,00), com foco em liquidez sucessória permanente.
           </p>
           <div
             style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px 8px; font-size: 10.5px; background: #fff; padding: 6px 10px; border-radius: 7px; border: 1px solid #e2e8f0; margin-bottom: 6px;">
             <div><strong>Capital:</strong> <span id="pdf_seguro_sr_capital">—</span></div>
-            <div><strong>Parcela Inicial:</strong> <span id="pdf_seguro_sr_parcela">—</span></div>
+            <div><strong>Parcela Mensal:</strong> <span id="pdf_seguro_sr_parcela">—</span></div>
             <div><strong>Prazo:</strong> <span id="pdf_seguro_sr_prazo">—</span></div>
             <div><strong>Desembolso:</strong> <span id="pdf_seguro_sr_desembolso">—</span></div>
             <div><strong>Alavancagem:</strong> <span id="pdf_seguro_sr_alavancagem">—</span></div>
