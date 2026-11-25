@@ -844,16 +844,72 @@ window.__masterUsabilidadeCache = {
     filtroRelatorioVendas: ''
 };
 
-const PACE_PRODUTOS_VENDA_SUGESTOES = [
-    "Seguro de Vida",
-    "Previdência Privada (PGBL/VGBL)",
-    "Holding Patrimonial",
-    "Estrutura Offshore",
-    "Planejamento Sucessório / Consultoria",
-    "Gestão de Carteira / Investimentos",
-    "Consórcio / Crédito Estruturado",
-    "Outro"
-];
+const PACE_PRODUTO_VENDA_PADRAO_UI = "Seguro de Vida";
+const PACE_COMISSIONAMENTOS_UI = Object.freeze({
+    MAG: 57,
+    POB: 70
+});
+
+function _parseValorMonetarioVendaUI(valorBruto) {
+    if (typeof window.sanitizarNumero === "function") {
+        return Math.max(0, window.sanitizarNumero(valorBruto, 0));
+    }
+    if (typeof valorBruto === "number") {
+        return isFinite(valorBruto) ? Math.max(0, valorBruto) : 0;
+    }
+    const limpo = String(valorBruto ?? "").replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
+    const num = parseFloat(limpo);
+    return isFinite(num) ? Math.max(0, num) : 0;
+}
+
+function _calcularComissaoVendaUI(valorBruto, comissionamentoRaw) {
+    const valorNum = _parseValorMonetarioVendaUI(valorBruto);
+    if (typeof window.calcularComissaoVenda === "function") {
+        return window.calcularComissaoVenda(valorNum, comissionamentoRaw);
+    }
+    const codigo = String(comissionamentoRaw ?? "").trim().toUpperCase();
+    if (!codigo) {
+        return { comissionamento: null, percentualComissao: null, valorComissao: 0, invalido: false };
+    }
+    const percentual = PACE_COMISSIONAMENTOS_UI[codigo];
+    if (!percentual) {
+        return { comissionamento: null, percentualComissao: null, valorComissao: 0, invalido: true };
+    }
+    return {
+        comissionamento: codigo,
+        percentualComissao: percentual,
+        valorComissao: Math.round(((valorNum * percentual) / 100) * 100) / 100,
+        invalido: false
+    };
+}
+
+function _obterValorComissaoVendaUI(venda) {
+    if (!venda || typeof venda !== "object") return 0;
+    if (venda.valorComissao !== undefined && venda.valorComissao !== null) {
+        return Math.max(0, Number(venda.valorComissao) || 0);
+    }
+    if (venda.valor_comissao !== undefined && venda.valor_comissao !== null) {
+        return Math.max(0, Number(venda.valor_comissao) || 0);
+    }
+    return _calcularComissaoVendaUI(venda.valorVenda ?? venda.valor_venda, venda.comissionamento).valorComissao;
+}
+
+function _renderizarCelulaComissaoVendaHTML(venda) {
+    const esc = window.escapeHTML;
+    const codigo = String(venda?.comissionamento || "").trim().toUpperCase();
+    if (codigo !== "MAG" && codigo !== "POB") {
+        return `<span class="master-commission-pill is-empty">—</span>`;
+    }
+    const percentual = Number(venda?.percentualComissao) || PACE_COMISSIONAMENTOS_UI[codigo];
+    const valorComissao = _obterValorComissaoVendaUI(venda);
+    const pillClass = codigo === "POB" ? "is-pob" : "is-mag";
+    return `
+      <div class="master-commission-cell">
+        <span class="master-commission-pill ${pillClass}">${esc(codigo)} • ${esc(percentual)}%</span>
+        <span class="master-commission-val">${esc(_formatarMoedaBRLVenda(valorComissao, 2))}</span>
+      </div>
+    `;
+}
 
 function _formatarMoedaBRLVenda(valor, casas = 0) {
     const num = Number(valor) || 0;
@@ -1070,6 +1126,12 @@ function _criarModalUsabilidadeMasterDOM() {
                 <option value="relatorio">Com Relatório</option>
                 <option value="avulsa">Avulsas</option>
               </select>
+              <select id="master_select_comissionamento_venda" class="master-filter-select compact">
+                <option value="todos">Todos Comiss.</option>
+                <option value="MAG">MAG (57%)</option>
+                <option value="POB">POB (70%)</option>
+                <option value="sem_comissao">Sem Comiss.</option>
+              </select>
               <select id="master_select_periodo_venda" class="master-filter-select compact">
                 <option value="todos">Todo o Período</option>
                 <option value="mes_atual">Este Mês</option>
@@ -1099,11 +1161,12 @@ function _criarModalUsabilidadeMasterDOM() {
                   <th>Assessor</th>
                   <th>Data da Venda</th>
                   <th>Valor</th>
+                  <th>Comissão</th>
                   <th style="text-align: right;">Ações</th>
                 </tr>
               </thead>
               <tbody id="master_tbody_vendas">
-                <tr><td colspan="6" class="master-empty-cell">Carregando vendas realizadas...</td></tr>
+                <tr><td colspan="7" class="master-empty-cell">Carregando vendas realizadas...</td></tr>
               </tbody>
             </table>
           </div>
@@ -1146,6 +1209,7 @@ function _criarModalUsabilidadeMasterDOM() {
     overlay.querySelector("#master_input_busca_venda")?.addEventListener("input", () => window.renderizarTabelaVendasMaster());
     overlay.querySelector("#master_select_assessor_venda")?.addEventListener("change", () => window.renderizarTabelaVendasMaster());
     overlay.querySelector("#master_select_origem_venda")?.addEventListener("change", () => window.renderizarTabelaVendasMaster());
+    overlay.querySelector("#master_select_comissionamento_venda")?.addEventListener("change", () => window.renderizarTabelaVendasMaster());
     overlay.querySelector("#master_select_periodo_venda")?.addEventListener("change", () => window.renderizarTabelaVendasMaster());
 
     overlay.querySelector("#btn_master_limpar_filtro_relatorio")?.addEventListener("click", () => {
@@ -1514,6 +1578,7 @@ window.renderizarTabelaVendasMaster = function() {
     const busca = document.getElementById("master_input_busca_venda")?.value || "";
     const filtroAssessor = document.getElementById("master_select_assessor_venda")?.value || "todos";
     const origem = document.getElementById("master_select_origem_venda")?.value || "todas";
+    const comissionamento = document.getElementById("master_select_comissionamento_venda")?.value || "todos";
     const periodo = document.getElementById("master_select_periodo_venda")?.value || "todos";
     const relatorioIdFiltro = window.__masterUsabilidadeCache.filtroRelatorioVendas || "";
 
@@ -1527,20 +1592,23 @@ window.renderizarTabelaVendasMaster = function() {
             busca,
             filtroAssessor,
             origem,
+            comissionamento,
             periodo,
             relatorioId: relatorioIdFiltro
         })
         : vendas;
 
     const volumeFiltrado = filtradas.reduce((acc, v) => acc + (Number(v.valorVenda) || 0), 0);
+    const comissaoFiltrada = filtradas.reduce((acc, v) => acc + _obterValorComissaoVendaUI(v), 0);
     const resumoEl = document.getElementById("master_vendas_resumo_filtrado");
     if (resumoEl) {
         const sufixoRel = relatorioIdFiltro ? " (filtrado por relatório)" : "";
-        resumoEl.textContent = `${filtradas.length} ${filtradas.length === 1 ? 'venda' : 'vendas'} • ${_formatarMoedaBRLVenda(volumeFiltrado, 0)}${sufixoRel}`;
+        const textoComissao = comissaoFiltrada > 0 ? ` • Comissão: ${_formatarMoedaBRLVenda(comissaoFiltrada, 2)}` : "";
+        resumoEl.textContent = `${filtradas.length} ${filtradas.length === 1 ? 'venda' : 'vendas'} • ${_formatarMoedaBRLVenda(volumeFiltrado, 0)}${textoComissao}${sufixoRel}`;
     }
 
     if (filtradas.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="master-empty-cell">Nenhuma venda registrada para os critérios selecionados.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="master-empty-cell">Nenhuma venda registrada para os critérios selecionados.</td></tr>`;
         return;
     }
 
@@ -1577,6 +1645,7 @@ window.renderizarTabelaVendasMaster = function() {
             <td><span class="master-advisor-pill">${esc(nomeAssessor)}</span></td>
             <td class="master-nowrap" style="color: #64748b; font-size: 12.5px;">${esc(_formatarDataBRVenda(v.dataVenda))}</td>
             <td class="master-nowrap" style="font-weight: 700; color: #059669;">${esc(_formatarMoedaBRLVenda(v.valorVenda, 2))}</td>
+            <td class="master-nowrap">${_renderizarCelulaComissaoVendaHTML(v)}</td>
             <td style="text-align: right;">
               <div class="master-report-actions">
                 <button type="button" class="master-btn-table-action" data-action="editar-venda" data-venda-id="${esc(safeId)}">
@@ -1727,7 +1796,12 @@ window.recarregarDadosUsabilidadeMaster = async function() {
         if (elTotalU) elTotalU.textContent = String(totalUsuarios);
         if (elTotalR) elTotalR.textContent = String(totalRelatorios);
         if (elTotalV) elTotalV.textContent = String(metricasVendas.totalVendas);
-        if (elVolV) elVolV.textContent = `${_formatarMoedaBRLVenda(metricasVendas.valorTotalVendas, 0)} em volume vendido`;
+        if (elVolV) {
+            const totCom = Number(metricasVendas.valorTotalComissao) || 0;
+            elVolV.textContent = totCom > 0
+                ? `${_formatarMoedaBRLVenda(metricasVendas.valorTotalVendas, 0)} • Com.: ${_formatarMoedaBRLVenda(totCom, 0)}`
+                : `${_formatarMoedaBRLVenda(metricasVendas.valorTotalVendas, 0)} em volume vendido`;
+        }
         if (elConvV) elConvV.textContent = `${String(metricasVendas.taxaConversao).replace(".", ",")}% conv.`;
         if (elTabCounterV) elTabCounterV.textContent = String(metricasVendas.totalVendas);
 
@@ -1840,6 +1914,23 @@ window.__paceVendaModalState = {
     usuariosMap: new Map()
 };
 
+function _atualizarPreviewComissaoModalVenda() {
+    const previewEl = document.getElementById("venda_comissao_preview");
+    if (!previewEl) return;
+
+    const valorRaw = document.getElementById("venda_input_valor")?.value || "";
+    const comissCode = document.getElementById("venda_input_comissionamento")?.value || "";
+    const calc = _calcularComissaoVendaUI(valorRaw, comissCode);
+
+    if (calc.comissionamento) {
+        previewEl.className = "pace-venda-commission-preview is-active";
+        previewEl.textContent = `${calc.comissionamento} (${calc.percentualComissao}%) — Comissão calculada: ${_formatarMoedaBRLVenda(calc.valorComissao, 2)}`;
+    } else {
+        previewEl.className = "pace-venda-commission-preview";
+        previewEl.textContent = "Comissionamento opcional — selecione MAG (57%) ou POB (70%) para calcular a comissão.";
+    }
+}
+
 function _criarModalVendaDOM() {
     let overlay = document.getElementById("modal_venda_pace_overlay");
     if (overlay) return overlay;
@@ -1848,10 +1939,6 @@ function _criarModalVendaDOM() {
     overlay.id = "modal_venda_pace_overlay";
     overlay.className = "pace-venda-overlay hidden";
     overlay.style.display = "none";
-
-    const datalistOptions = PACE_PRODUTOS_VENDA_SUGESTOES
-        .map(item => `<option value="${window.escapeHTML(item)}"></option>`)
-        .join("");
 
     overlay.innerHTML = `
       <div class="pace-venda-modal" role="dialog" aria-modal="true" aria-labelledby="pace_venda_modal_title">
@@ -1883,8 +1970,7 @@ function _criarModalVendaDOM() {
             </div>
             <div class="pace-venda-field">
               <label for="venda_input_produto">Produto / Serviço *</label>
-              <input type="text" id="venda_input_produto" class="pace-venda-control" list="pace_produtos_venda_datalist" maxlength="120" placeholder="Ex.: Seguro de Vida, Holding..." required autocomplete="off">
-              <datalist id="pace_produtos_venda_datalist">${datalistOptions}</datalist>
+              <input type="text" id="venda_input_produto" class="pace-venda-control pace-venda-locked" value="Seguro de Vida" readonly aria-readonly="true" title="Produto pré-definido e travado: Seguro de Vida">
             </div>
           </div>
 
@@ -1897,6 +1983,16 @@ function _criarModalVendaDOM() {
               <label for="venda_input_data">Data da Venda *</label>
               <input type="date" id="venda_input_data" class="pace-venda-control" required>
             </div>
+          </div>
+
+          <div class="pace-venda-field">
+            <label for="venda_input_comissionamento">Comissionamento (Opcional)</label>
+            <select id="venda_input_comissionamento" class="pace-venda-control">
+              <option value="">Não informado (Opcional)</option>
+              <option value="MAG">MAG — 57% de comissão</option>
+              <option value="POB">POB — 70% de comissão</option>
+            </select>
+            <div class="pace-venda-commission-preview" id="venda_comissao_preview" aria-live="polite"></div>
           </div>
 
           <div class="pace-venda-field" id="venda_group_assessor" style="display: none;">
@@ -1945,19 +2041,23 @@ function _criarModalVendaDOM() {
     });
 
     const inputValor = overlay.querySelector("#venda_input_valor");
+    const selectComiss = overlay.querySelector("#venda_input_comissionamento");
     inputValor?.addEventListener("input", () => {
         inputValor.value = _formatarMascaraMoedaDigitacao(inputValor.value);
+        _atualizarPreviewComissaoModalVenda();
     });
     inputValor?.addEventListener("blur", () => {
         if (!String(inputValor.value || "").trim()) {
             inputValor.value = "";
+            _atualizarPreviewComissaoModalVenda();
             return;
         }
-        const num = typeof window.sanitizarNumero === "function"
-            ? window.sanitizarNumero(inputValor.value, 0)
-            : (parseFloat(String(inputValor.value || "").replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".")) || 0);
-        const seguro = Math.max(0, num);
-        inputValor.value = _formatarMoedaBRLVenda(seguro, 2);
+        const num = _parseValorMonetarioVendaUI(inputValor.value);
+        inputValor.value = _formatarMoedaBRLVenda(num, 2);
+        _atualizarPreviewComissaoModalVenda();
+    });
+    selectComiss?.addEventListener("change", () => {
+        _atualizarPreviewComissaoModalVenda();
     });
 
     overlay.querySelector("#form_pace_venda")?.addEventListener("submit", async (e) => {
@@ -1993,8 +2093,9 @@ async function _submeterFormularioVenda() {
     const state = window.__paceVendaModalState;
     const relatorioId = document.getElementById("venda_input_relatorio")?.value || "";
     const nomeCliente = (document.getElementById("venda_input_cliente")?.value || "").trim();
-    const produto = (document.getElementById("venda_input_produto")?.value || "").trim();
+    const produto = PACE_PRODUTO_VENDA_PADRAO_UI;
     const valorRaw = document.getElementById("venda_input_valor")?.value || "0";
+    const comissionamentoRaw = (document.getElementById("venda_input_comissionamento")?.value || "").trim().toUpperCase();
     const dataVenda = document.getElementById("venda_input_data")?.value || _obterDataHojeISO();
     const observacao = (document.getElementById("venda_input_observacao")?.value || "").trim();
     const selectAssessor = document.getElementById("venda_input_assessor");
@@ -2003,8 +2104,8 @@ async function _submeterFormularioVenda() {
         mostrarErro("Informe o nome do cliente.");
         return;
     }
-    if (!produto) {
-        mostrarErro("Informe o produto ou serviço vendido.");
+    if (comissionamentoRaw && comissionamentoRaw !== "MAG" && comissionamentoRaw !== "POB") {
+        mostrarErro("Comissionamento inválido. Selecione MAG (57%), POB (70%) ou deixe opcional.");
         return;
     }
 
@@ -2044,6 +2145,7 @@ async function _submeterFormularioVenda() {
             nomeAssessor,
             produto,
             valorVenda: valorRaw,
+            comissionamento: comissionamentoRaw || null,
             dataVenda,
             observacao
         });
@@ -2153,6 +2255,7 @@ window.abrirModalVenda = async function(opcoes = {}) {
     const inputCliente = document.getElementById("venda_input_cliente");
     const inputProduto = document.getElementById("venda_input_produto");
     const inputValor = document.getElementById("venda_input_valor");
+    const selectComiss = document.getElementById("venda_input_comissionamento");
     const inputData = document.getElementById("venda_input_data");
     const inputObs = document.getElementById("venda_input_observacao");
 
@@ -2160,16 +2263,24 @@ window.abrirModalVenda = async function(opcoes = {}) {
         inputCliente.value = venda?.nomeCliente || relatorioPre?.nomeCliente || "";
         inputCliente.dataset.autofilled = (!venda && relatorioPre) ? "true" : "false";
     }
-    if (inputProduto) inputProduto.value = venda?.produto || "";
+    if (inputProduto) {
+        inputProduto.value = PACE_PRODUTO_VENDA_PADRAO_UI;
+        inputProduto.readOnly = true;
+    }
     if (inputValor) {
         inputValor.value = venda ? _formatarMoedaBRLVenda(venda.valorVenda || 0, 2) : "";
     }
+    if (selectComiss) {
+        const comissAtual = String(venda?.comissionamento || "").trim().toUpperCase();
+        selectComiss.value = (comissAtual === "MAG" || comissAtual === "POB") ? comissAtual : "";
+    }
     if (inputData) inputData.value = venda?.dataVenda || _obterDataHojeISO();
     if (inputObs) inputObs.value = venda?.observacao || "";
+    _atualizarPreviewComissaoModalVenda();
 
     overlay.classList.remove("hidden");
     overlay.style.display = "flex";
-    setTimeout(() => (inputCliente?.value ? inputProduto : inputCliente)?.focus(), 50);
+    setTimeout(() => (inputCliente?.value ? inputValor : inputCliente)?.focus(), 50);
 };
 
 window.fecharModalVenda = function() {
@@ -2267,6 +2378,12 @@ function _criarModalListaVendasDOM() {
               <option value="relatorio">Com Relatório</option>
               <option value="avulsa">Avulsas</option>
             </select>
+            <select id="lista_vendas_comissionamento" class="master-filter-select compact">
+              <option value="todos">Todos Comiss.</option>
+              <option value="MAG">MAG (57%)</option>
+              <option value="POB">POB (70%)</option>
+              <option value="sem_comissao">Sem Comiss.</option>
+            </select>
           </div>
           <div class="master-table-container">
             <table class="master-table">
@@ -2276,11 +2393,12 @@ function _criarModalListaVendasDOM() {
                   <th>Produto / Serviço</th>
                   <th>Data</th>
                   <th>Valor</th>
+                  <th>Comissão</th>
                   <th style="text-align: right;">Ações</th>
                 </tr>
               </thead>
               <tbody id="lista_vendas_tbody">
-                <tr><td colspan="5" class="master-empty-cell">Nenhuma venda registrada.</td></tr>
+                <tr><td colspan="6" class="master-empty-cell">Nenhuma venda registrada.</td></tr>
               </tbody>
             </table>
           </div>
@@ -2294,6 +2412,7 @@ function _criarModalListaVendasDOM() {
     overlay.querySelector("#btn_fechar_lista_vendas")?.addEventListener("click", () => window.fecharModalListaVendas());
     overlay.querySelector("#lista_vendas_busca")?.addEventListener("input", () => _renderizarModalListaVendas());
     overlay.querySelector("#lista_vendas_origem")?.addEventListener("change", () => _renderizarModalListaVendas());
+    overlay.querySelector("#lista_vendas_comissionamento")?.addEventListener("change", () => _renderizarModalListaVendas());
     overlay.querySelector("#btn_lista_vendas_ver_todas")?.addEventListener("click", () => {
         window.__paceListaVendasState.relatorioFiltro = null;
         _renderizarModalListaVendas();
@@ -2378,6 +2497,7 @@ function _renderizarModalListaVendas() {
 
     const busca = document.getElementById("lista_vendas_busca")?.value || "";
     const origem = document.getElementById("lista_vendas_origem")?.value || "todas";
+    const comissionamento = document.getElementById("lista_vendas_comissionamento")?.value || "todos";
     const relFiltro = st.relatorioFiltro;
 
     const titleEl = document.getElementById("lista_vendas_modal_title");
@@ -2399,18 +2519,21 @@ function _renderizarModalListaVendas() {
         ? window.filtrarVendasPainel(st.vendas, st.usuarios, {
             busca,
             origem,
+            comissionamento,
             relatorioId: relFiltro?.id || ""
         })
         : st.vendas;
 
     const totalVol = filtradas.reduce((acc, v) => acc + (Number(v.valorVenda) || 0), 0);
+    const totalComissao = filtradas.reduce((acc, v) => acc + _obterValorComissaoVendaUI(v), 0);
     const resumoEl = document.getElementById("lista_vendas_resumo");
     if (resumoEl) {
-        resumoEl.textContent = `${filtradas.length} ${filtradas.length === 1 ? 'venda' : 'vendas'} • ${_formatarMoedaBRLVenda(totalVol, 0)}`;
+        const textoCom = totalComissao > 0 ? ` • Comissão: ${_formatarMoedaBRLVenda(totalComissao, 2)}` : "";
+        resumoEl.textContent = `${filtradas.length} ${filtradas.length === 1 ? 'venda' : 'vendas'} • ${_formatarMoedaBRLVenda(totalVol, 0)}${textoCom}`;
     }
 
     if (filtradas.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="master-empty-cell">Nenhuma venda registrada neste filtro.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="master-empty-cell">Nenhuma venda registrada neste filtro.</td></tr>`;
         return;
     }
 
@@ -2436,6 +2559,7 @@ function _renderizarModalListaVendas() {
             <td><span class="master-product-tag">${esc(v.produto || "—")}</span></td>
             <td class="master-nowrap" style="color: #64748b; font-size: 12.5px;">${esc(_formatarDataBRVenda(v.dataVenda))}</td>
             <td class="master-nowrap" style="font-weight: 700; color: #059669;">${esc(_formatarMoedaBRLVenda(v.valorVenda, 2))}</td>
+            <td class="master-nowrap">${_renderizarCelulaComissaoVendaHTML(v)}</td>
             <td style="text-align: right;">
               <div class="master-report-actions">
                 <button type="button" class="master-btn-table-action" data-action="editar-venda" data-venda-id="${esc(safeId)}">Editar</button>
@@ -2460,8 +2584,10 @@ window.abrirModalListaVendas = function(opcoes = {}) {
 
     const buscaEl = document.getElementById("lista_vendas_busca");
     const origemEl = document.getElementById("lista_vendas_origem");
+    const comissEl = document.getElementById("lista_vendas_comissionamento");
     if (buscaEl) buscaEl.value = "";
     if (origemEl) origemEl.value = "todas";
+    if (comissEl) comissEl.value = "todos";
 
     _renderizarModalListaVendas();
     overlay.classList.remove("hidden");
