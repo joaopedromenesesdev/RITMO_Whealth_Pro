@@ -1804,40 +1804,18 @@ body.pdf-exporting .capa {
   margin-bottom: 0;
 }
 
-.modalidade-toggle-group {
+.badge-modalidade-sr-fixa {
   display: inline-flex;
   align-items: center;
-  background: #e2e8f0;
-  padding: 3px;
-  border-radius: 10px;
-  gap: 3px;
-  border: 1px solid #cbd5e1;
-}
-
-.btn-modalidade-sr {
-  background: transparent;
-  color: #475569;
-  border: none;
-  font-family: 'Outfit', sans-serif;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 6px 12px;
-  border-radius: 7px;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
-  white-space: nowrap;
-}
-
-.btn-modalidade-sr:hover {
-  background: #cbd5e1;
-  color: #0f172a;
-}
-
-.btn-modalidade-sr.ativo {
   background: #0284c7;
   color: #ffffff;
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
   font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 8px;
   box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+  white-space: nowrap;
 }
 
 .seguro-sr-inputs-grid {

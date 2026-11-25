@@ -222,8 +222,7 @@
       if (!rawInputs || typeof rawInputs !== "object") return defaults;
 
       const merged = { ...defaults, ...rawInputs };
-      const modalidadeRaw = String(merged.seguro_sem_reserva_modalidade || "temporario").toLowerCase().trim();
-      merged.seguro_sem_reserva_modalidade = modalidadeRaw === "vitalicio" ? "vitalicio" : "temporario";
+      merged.seguro_sem_reserva_modalidade = "vitalicio";
 
       const lerNum = (val, fallback, minVal = 0) => {
         if (val === null || val === undefined || val === "") return fallback;
@@ -240,7 +239,7 @@
       merged.seguro_sem_reserva_premio_manual = rawInputs.seguro_sem_reserva_premio_manual === true;
       merged.seguro_sem_reserva_prazo_anos = lerNum(rawInputs.seguro_sem_reserva_prazo_anos, defaults.seguro_sem_reserva_prazo_anos, 1);
       merged.seguro_sem_reserva_expectativa_vida = lerNum(rawInputs.seguro_sem_reserva_expectativa_vida, defaults.seguro_sem_reserva_expectativa_vida, 50);
-      merged.seguro_sem_reserva_reajuste_pct = lerNum(rawInputs.seguro_sem_reserva_reajuste_pct, defaults.seguro_sem_reserva_reajuste_pct, 0);
+      merged.seguro_sem_reserva_reajuste_pct = 0;
 
       return merged;
     },
@@ -271,7 +270,7 @@
         previdencia: 0,
         seguro_idade: 40,
         seguro_capital: 0,
-        seguro_sem_reserva_modalidade: "temporario",
+        seguro_sem_reserva_modalidade: "vitalicio",
         seguro_sem_reserva_idade: 40,
         seguro_sem_reserva_idade_manual: false,
         seguro_sem_reserva_capital: 0,

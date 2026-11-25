@@ -272,7 +272,7 @@
  */
 
 /**
- * @typedef {'temporario' | 'vitalicio'} ModalidadeSeguroSemReserva
+ * @typedef {'vitalicio'} ModalidadeSeguroSemReserva
  */
 
 /**
@@ -863,8 +863,8 @@
 
       const ehComunhaoUniversal = regimeNorm.includes("comunhao universal");
       const ehComunhaoParcial = regimeNorm.includes("comunhao parcial") ||
-                                regimeNorm.includes("participacao final") ||
-                                regimeNorm.includes("aquestos");
+        regimeNorm.includes("participacao final") ||
+        regimeNorm.includes("aquestos");
       const ehComunhaoGenerica = !ehComunhaoUniversal && !ehComunhaoParcial && regimeNorm.includes("comunhao");
 
       const temMeacao = casadoOuOmitido && (ehComunhaoUniversal || ehComunhaoParcial || ehComunhaoGenerica);
@@ -963,7 +963,7 @@
             // Bens adquiridos na constância do casamento (meação 50%) + bens particulares (herança)
             const bensParticulares = Number(dp.bens_particulares) || 0;
             const bensComuns = Math.max(0, total - bensParticulares);
-            
+
             meacaoConjuge = bensComuns * 0.5;
             herancaTransmitida = (bensComuns * 0.5) + bensParticulares;
             break;
@@ -1221,7 +1221,7 @@
       // 4. Seguro Sucessão (Alavancagem de Liquidez em 120 parcelas)
       const capitalSeguro = Math.max(0, Number(inp.seguro_capital) || prejuizo);
       const idadeSegurado = Number(inp.seguro_idade) || 40;
-      
+
       // Estimativa aproximada de taxa de seguro de vida resgatável/sucessório (~0.8% a 1.8% a.a. dependendo da idade)
       const taxaAnualSeguro = 0.008 + Math.max(0, (idadeSegurado - 30) * 0.0003);
       const premioAnual = capitalSeguro * taxaAnualSeguro;
@@ -1621,7 +1621,7 @@
     },
 
     /**
-     * 16. Calcula a 5ª Estratégia: Seguro de Vida sem Formação de Reserva (Temporário ou Vitalício sem Resgate).
+     * 16. Calcula a 5ª Estratégia: Seguro de Vida sem Formação de Reserva (Vitalício sem Resgate).
      * Função pura e blindada contra NaN/Infinity; não altera nenhuma fórmula das 4 estratégias legadas.
      * @param {ParamsSeguroSemReserva | null | undefined} [params={}]
      * @returns {ResultadoSeguroSemReserva}
@@ -1648,9 +1648,8 @@
         return (num !== null && num > 0) ? num : 0;
       };
 
-      const modalidadeRaw = String(p.modalidade ?? "temporario").toLowerCase().trim();
       /** @type {ModalidadeSeguroSemReserva} */
-      const modalidade = modalidadeRaw === "vitalicio" ? "vitalicio" : "temporario";
+      const modalidade = "vitalicio";
 
       const capitalInformado = lerNumeroFinito(p.capitalSegurado);
       const capitalSegurado = capitalInformado !== null
@@ -1667,25 +1666,11 @@
         ? Math.min(120, Math.max(50, Math.round(expectativaInformada)))
         : 85;
 
-      let prazoAnos = 20;
-      if (modalidade === "vitalicio") {
-        const horizonte = Math.round(expectativaVida - idadeSegurado);
-        prazoAnos = horizonte > 0 ? Math.min(80, horizonte) : 5;
-      } else {
-        const prazoInformado = lerNumeroFinito(p.prazoAnos);
-        prazoAnos = (prazoInformado !== null && prazoInformado > 0)
-          ? Math.min(60, Math.max(1, Math.round(prazoInformado)))
-          : 20;
-      }
+      const horizonte = Math.round(expectativaVida - idadeSegurado);
+      const prazoAnos = horizonte > 0 ? Math.min(80, horizonte) : 5;
+      const reajusteEtarioAnualPct = 0;
 
-      const reajusteInformado = lerNumeroFinito(p.reajusteEtarioAnualPct);
-      const reajusteEtarioAnualPct = (reajusteInformado !== null && reajusteInformado > 0)
-        ? Math.min(50, reajusteInformado)
-        : 0;
-
-      const taxaBasePadrao = modalidade === "vitalicio"
-        ? (0.0065 + Math.max(0, idadeSegurado - 30) * 0.00045)
-        : (0.003 + Math.max(0, idadeSegurado - 30) * 0.00025);
+      const taxaBasePadrao = 0.0065 + Math.max(0, idadeSegurado - 30) * 0.00045;
       const taxaInformadaPct = lerNumeroFinito(p.taxaAnualPct);
       const taxaAnualDecimal = (taxaInformadaPct !== null && taxaInformadaPct > 0)
         ? (Math.min(50, taxaInformadaPct) / 100)
@@ -1701,17 +1686,9 @@
       const premioMensal = Math.round(Math.max(0, premioMensalBruto) * 100) / 100;
       const premioAnualInicial = Math.round(premioMensal * 12 * 100) / 100;
 
-      let desembolsoBruto = 0;
-      if (premioAnualInicial > 0 && prazoAnos > 0) {
-        if (reajusteEtarioAnualPct <= 0) {
-          desembolsoBruto = premioAnualInicial * prazoAnos;
-        } else {
-          const fatorAnual = 1 + (reajusteEtarioAnualPct / 100);
-          for (let ano = 0; ano < prazoAnos; ano++) {
-            desembolsoBruto += premioAnualInicial * Math.pow(fatorAnual, ano);
-          }
-        }
-      }
+      const desembolsoBruto = (premioAnualInicial > 0 && prazoAnos > 0)
+        ? (premioAnualInicial * prazoAnos)
+        : 0;
       const desembolsoTotal = Number.isFinite(desembolsoBruto)
         ? Math.round(Math.max(0, desembolsoBruto) * 100) / 100
         : 0;
@@ -1734,18 +1711,6 @@
       const avisos = [
         "Sem formação de reserva: valor de resgate igual a R$ 0,00. Em caso de cancelamento ou desistência, não há devolução dos prêmios pagos."
       ];
-
-      if (modalidade === "temporario") {
-        avisos.push(
-          `Cobertura por prazo determinado (${prazoAnos} ${prazoAnos === 1 ? "ano" : "anos"}): ao término do contrato, a proteção é encerrada sem indenização nem resgate.`
-        );
-      }
-
-      if (reajusteEtarioAnualPct > 0) {
-        avisos.push(
-          `Reajuste etário projetado de ${reajusteEtarioAnualPct.toFixed(1).replace(".", ",")}% a.a. eleva progressivamente o desembolso acumulado no longo prazo.`
-        );
-      }
 
       if (capitalSegurado > 0 && desembolsoTotal > capitalSegurado) {
         avisos.push(
@@ -1780,4 +1745,4 @@
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = TributarioEngine;
   }
-})(/** @type {TributarioGlobalScope} */ (typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this)));
+})(/** @type {TributarioGlobalScope} */(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this)));
