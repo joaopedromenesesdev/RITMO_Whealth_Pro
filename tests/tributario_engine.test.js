@@ -2701,9 +2701,11 @@
         indexSrc48.includes('id="btn_registrar_venda_dashboard"') &&
         globalUiSrc48.includes('id="master_kpi_card_vendas"') &&
         globalUiSrc48.includes('id="tab_btn_master_vendas"') &&
-        globalUiSrc48.includes('id="pace_produtos_venda_datalist"') &&
+        globalUiSrc48.includes('id="venda_input_produto"') &&
+        globalUiSrc48.includes('value="Seguro de Vida"') &&
+        globalUiSrc48.includes('id="venda_input_comissionamento"') &&
         cssMain48.includes("grid-template-columns: repeat(3, 1fr);"),
-        "Vendas[UI]: 6º card KPI 3x2 + 3ª aba no Painel Master + datalist de produtos + 4º card e botão no Dashboard presentes"
+        "Vendas[UI]: 6º card KPI 3x2 + 3ª aba no Painel Master + produto travado Seguro de Vida + comissionamento + 4º card e botão no Dashboard presentes"
       );
 
       let sintaxeOk48 = true;
@@ -3021,6 +3023,113 @@
         html50.includes('id="pdf_disclaimer_institucional"') &&
         css50.includes(".reducao-card-sem-reserva"),
         "SeguroSemReserva[UI/CSP/PDF]: 5º card sem handlers inline, badge de estimativa editável, sem resumo comparativo e PDF completos"
+      );
+    }
+
+    // =========================================================================
+    // TESTE 52: Comissionamento de Vendas (MAG 57% / POB 70%) e Trava Seguro de Vida
+    // =========================================================================
+    console.log("\n-> Teste 52: Comissionamento de Vendas (MAG 57% / POB 70%) e Trava em Seguro de Vida");
+    if (_dbModNode && typeof _dbModNode.calcularComissaoVenda === "function") {
+      const cMag = _dbModNode.calcularComissaoVenda(10000, "MAG");
+      const cPob = _dbModNode.calcularComissaoVenda(10000, "pob");
+      const cVazio = _dbModNode.calcularComissaoVenda(10000, "");
+      const cCentavos = _dbModNode.calcularComissaoVenda(1234.56, "MAG");
+      const cInvalido = _dbModNode.calcularComissaoVenda(10000, "XYZ");
+      const cNegativo = _dbModNode.calcularComissaoVenda(-5000, "POB");
+
+      assert(
+        cMag.comissionamento === "MAG" && cMag.percentualComissao === 57 && cMag.valorComissao === 5700 && !cMag.invalido &&
+        cPob.comissionamento === "POB" && cPob.percentualComissao === 70 && cPob.valorComissao === 7000 && !cPob.invalido &&
+        cVazio.comissionamento === null && cVazio.percentualComissao === null && cVazio.valorComissao === 0 && !cVazio.invalido &&
+        cCentavos.valorComissao === 703.7 &&
+        cInvalido.invalido === true &&
+        cNegativo.valorComissao === 0,
+        "Comissao[Cálculo]: MAG=57% (R$ 5.700), POB=70% (R$ 7.000), opcional vazio=0, centavos precisos e bloqueio de código inválido/negativo"
+      );
+
+      const vMag = _dbModNode.sanitizarEValidarVenda({
+        nomeCliente: "Cliente Seguro MAG",
+        produto: "Seguro de Vida",
+        valorVenda: "R$ 20.000,00",
+        comissionamento: "MAG"
+      });
+      const vSemComiss = _dbModNode.sanitizarEValidarVenda({
+        nomeCliente: "Cliente Opcional",
+        produto: "Seguro de Vida",
+        valorVenda: 15000,
+        comissionamento: ""
+      });
+      const vComissInv = _dbModNode.sanitizarEValidarVenda({
+        nomeCliente: "Cliente Inválido",
+        produto: "Seguro de Vida",
+        valorVenda: 15000,
+        comissionamento: "ABC"
+      });
+
+      assert(
+        vMag.valido === true &&
+        vMag.vendaSanitizada.comissionamento === "MAG" &&
+        vMag.vendaSanitizada.percentualComissao === 57 &&
+        vMag.vendaSanitizada.valorComissao === 11400 &&
+        vSemComiss.valido === true &&
+        vSemComiss.vendaSanitizada.comissionamento === null &&
+        vSemComiss.vendaSanitizada.valorComissao === 0 &&
+        vComissInv.valido === false,
+        "Comissao[Validação]: aceita MAG/POB e opcional vazio, rejeita código inválido fora de MAG/POB"
+      );
+
+      const listaComiss = [
+        { id: "c1", userId: "u1", nomeCliente: "A", produto: "Seguro de Vida", valorVenda: 10000, comissionamento: "MAG", percentualComissao: 57, valorComissao: 5700 },
+        { id: "c2", userId: "u1", nomeCliente: "B", produto: "Seguro de Vida", valorVenda: 10000, comissionamento: "POB", percentualComissao: 70, valorComissao: 7000 },
+        { id: "c3", userId: "u1", nomeCliente: "C", produto: "Seguro de Vida", valorVenda: 5000, comissionamento: null, percentualComissao: null, valorComissao: 0 }
+      ];
+      const metComiss = _dbModNode.calcularMetricasVendas(listaComiss, []);
+      const fMag = _dbModNode.filtrarVendasPainel(listaComiss, [], { comissionamento: "MAG" });
+      const fPob = _dbModNode.filtrarVendasPainel(listaComiss, [], { comissionamento: "POB" });
+      const fSem = _dbModNode.filtrarVendasPainel(listaComiss, [], { comissionamento: "sem_comissao" });
+
+      assert(
+        metComiss.valorTotalVendas === 25000 &&
+        metComiss.valorTotalComissao === 12700 &&
+        fMag.length === 1 && fMag[0].id === "c1" &&
+        fPob.length === 1 && fPob[0].id === "c2" &&
+        fSem.length === 1 && fSem[0].id === "c3",
+        "Comissao[Métricas/Filtros]: totaliza R$ 12.700 de comissão e filtra corretamente por MAG, POB e sem comissionamento"
+      );
+    }
+
+    if (typeof require === "function") {
+      const fs52 = require("fs");
+      const path52 = require("path");
+      const sqlComiss = fs52.readFileSync(path52.join(__dirname, "../supabase/migrations/20261125_comissionamento_vendas_seguro_vida.sql"), "utf8");
+      const sqlComissLower = sqlComiss.toLowerCase();
+      assert(
+        sqlComissLower.includes("add column if not exists comissionamento text") &&
+        sqlComissLower.includes("chk_vendas_comissionamento_valido") &&
+        sqlComissLower.includes("in ('mag', 'pob')") &&
+        sqlComissLower.includes("in (57.00, 70.00)") &&
+        sqlComissLower.includes("fn_vendas_blindagem") &&
+        sqlComissLower.includes("revoke execute on function public.fn_vendas_blindagem() from public, anon, authenticated") &&
+        sqlComissLower.includes("revoke execute on function public.fn_vendas_audit_trigger() from public, anon, authenticated") &&
+        !/using\s*\(\s*true\s*\)/i.test(sqlComiss) &&
+        !/with\s+check\s*\(\s*true\s*\)/i.test(sqlComiss),
+        "Comissao[SQL Security Gate]: constraints MAG/POB, derivação server-side, triggers revogados e zero USING(true)"
+      );
+
+      const globalUi52 = fs52.readFileSync(path52.join(__dirname, "../script/global_ui.js"), "utf8");
+      const css52 = fs52.readFileSync(path52.join(__dirname, "../style/style.css"), "utf8");
+      assert(
+        globalUi52.includes('id="venda_input_produto"') &&
+        globalUi52.includes('value="Seguro de Vida" readonly') &&
+        !globalUi52.includes('pace_produtos_venda_datalist') &&
+        globalUi52.includes('id="venda_input_comissionamento"') &&
+        globalUi52.includes('value="MAG"') &&
+        globalUi52.includes('value="POB"') &&
+        globalUi52.includes('id="venda_comissao_preview"') &&
+        css52.includes(".pace-venda-locked") &&
+        css52.includes(".pace-venda-commission-preview"),
+        "Comissao[UI]: produto travado em Seguro de Vida (sem datalist), select MAG/POB opcional e prévia em tempo real presentes"
       );
     }
 

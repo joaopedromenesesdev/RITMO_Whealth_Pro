@@ -762,6 +762,32 @@ if (typeof window !== "undefined") {
 
 // ─── Sistema de Contabilização e Gestão de Vendas (Modelo Híbrido 1:N) ────────
 
+const PACE_PRODUTO_VENDA_PADRAO = "Seguro de Vida";
+const PACE_COMISSIONAMENTOS_VENDA = Object.freeze({
+  MAG: 57,
+  POB: 70
+});
+
+// Calcula percentual e valor da comissão para MAG (57%) ou POB (70%) de forma determinística
+function calcularComissaoVenda(valorVenda, comissionamentoRaw) {
+  const valorSeguro = Math.max(0, sanitizarNumero(valorVenda, 0));
+  const codigo = String(comissionamentoRaw ?? "").trim().toUpperCase();
+  if (!codigo) {
+    return { comissionamento: null, percentualComissao: null, valorComissao: 0, invalido: false };
+  }
+  const percentual = PACE_COMISSIONAMENTOS_VENDA[codigo];
+  if (!percentual) {
+    return { comissionamento: null, percentualComissao: null, valorComissao: 0, invalido: true };
+  }
+  const valorComissao = Math.round(((valorSeguro * percentual) / 100) * 100) / 100;
+  return {
+    comissionamento: codigo,
+    percentualComissao: percentual,
+    valorComissao,
+    invalido: false
+  };
+}
+
 function _normalizarDataISOVenda(dataRaw) {
   if (typeof dataRaw === "string") {
     const limpa = dataRaw.trim();
@@ -792,6 +818,7 @@ function sanitizarEValidarVenda(vendaEntrada) {
   const observacao = String(src.observacao ?? "").trim().slice(0, 1000);
   let valorVenda = sanitizarNumero(src.valorVenda ?? src.valor_venda, 0);
   const dataVenda = _normalizarDataISOVenda(src.dataVenda ?? src.data_venda);
+  const comissaoCalc = calcularComissaoVenda(Math.max(0, valorVenda), src.comissionamento);
 
   const rawRelId = String(src.relatorioId ?? src.relatorio_id ?? "").trim();
   const relatorioId = isUUID(rawRelId) ? rawRelId : null;
@@ -812,6 +839,9 @@ function sanitizarEValidarVenda(vendaEntrada) {
     valorVenda = 0;
     erros.push("O valor da venda não pode ser negativo.");
   }
+  if (comissaoCalc.invalido) {
+    erros.push("Comissionamento inválido. Escolha MAG (57%), POB (70%) ou deixe opcional.");
+  }
 
   return {
     vendaSanitizada: {
@@ -822,6 +852,9 @@ function sanitizarEValidarVenda(vendaEntrada) {
       nomeAssessor: nomeAssessor || "Assessor",
       produto,
       valorVenda: Math.round(valorVenda * 100) / 100,
+      comissionamento: comissaoCalc.comissionamento,
+      percentualComissao: comissaoCalc.percentualComissao,
+      valorComissao: comissaoCalc.valorComissao,
       dataVenda,
       observacao
     },
@@ -833,6 +866,12 @@ function sanitizarEValidarVenda(vendaEntrada) {
 // Mapeia linha da tabela public.vendas para objeto padronizado
 function _mapearLinhaVendaSupabase(item, fallbackUserId = null) {
   if (!item || typeof item !== "object") return null;
+  const valorVenda = Number(item.valor_venda) || 0;
+  const comissaoCalc = calcularComissaoVenda(valorVenda, item.comissionamento);
+  const valorComissao = (item.valor_comissao !== undefined && item.valor_comissao !== null)
+    ? Math.max(0, Number(item.valor_comissao) || 0)
+    : comissaoCalc.valorComissao;
+
   return {
     id: item.id,
     userId: item.user_id || fallbackUserId || null,
@@ -840,7 +879,10 @@ function _mapearLinhaVendaSupabase(item, fallbackUserId = null) {
     nomeCliente: item.nome_cliente || "Cliente",
     nomeAssessor: item.nome_assessor || "Assessor",
     produto: item.produto || "",
-    valorVenda: Number(item.valor_venda) || 0,
+    valorVenda,
+    comissionamento: comissaoCalc.comissionamento,
+    percentualComissao: comissaoCalc.percentualComissao,
+    valorComissao: Math.round(valorComissao * 100) / 100,
     dataVenda: _normalizarDataISOVenda(item.data_venda || item.created_at),
     observacao: item.observacao || "",
     createdBy: item.created_by || null,
@@ -911,21 +953,27 @@ function calcularMetricasVendas(vendas = [], relatorios = []) {
   const relatoriosConvertidosSet = new Set();
 
   let valorTotalVendas = 0;
+  let valorTotalComissao = 0;
   let vendasVinculadas = 0;
   let vendasAvulsas = 0;
 
   listaVendas.forEach(v => {
     const valor = Math.max(0, Number(v.valorVenda ?? v.valor_venda) || 0);
+    const comissaoVal = (v.valorComissao !== undefined || v.valor_comissao !== undefined)
+      ? Math.max(0, Number(v.valorComissao ?? v.valor_comissao) || 0)
+      : calcularComissaoVenda(valor, v.comissionamento).valorComissao;
     valorTotalVendas += valor;
+    valorTotalComissao += comissaoVal;
 
     const relId = v.relatorioId ? String(v.relatorioId) : (v.relatorio_id ? String(v.relatorio_id) : "");
     if (relId) {
       vendasVinculadas += 1;
       if (!porRelatorio[relId]) {
-        porRelatorio[relId] = { quantidade: 0, valorTotal: 0, vendas: [] };
+        porRelatorio[relId] = { quantidade: 0, valorTotal: 0, valorComissaoTotal: 0, vendas: [] };
       }
       porRelatorio[relId].quantidade += 1;
       porRelatorio[relId].valorTotal += valor;
+      porRelatorio[relId].valorComissaoTotal += comissaoVal;
       porRelatorio[relId].vendas.push(v);
 
       if (relatorioIdsPresentes.size === 0 || relatorioIdsPresentes.has(relId)) {
@@ -938,10 +986,11 @@ function calcularMetricasVendas(vendas = [], relatorios = []) {
     const uid = v.userId ? String(v.userId) : (v.user_id ? String(v.user_id) : "");
     if (uid) {
       if (!porUsuario[uid]) {
-        porUsuario[uid] = { quantidade: 0, valorTotal: 0, ultimaVendaEm: null };
+        porUsuario[uid] = { quantidade: 0, valorTotal: 0, valorComissaoTotal: 0, ultimaVendaEm: null };
       }
       porUsuario[uid].quantidade += 1;
       porUsuario[uid].valorTotal += valor;
+      porUsuario[uid].valorComissaoTotal += comissaoVal;
       const dt = v.dataVenda || v.createdAt || null;
       if (dt && (!porUsuario[uid].ultimaVendaEm || String(dt) > String(porUsuario[uid].ultimaVendaEm))) {
         porUsuario[uid].ultimaVendaEm = dt;
@@ -958,6 +1007,7 @@ function calcularMetricasVendas(vendas = [], relatorios = []) {
   return {
     totalVendas: listaVendas.length,
     valorTotalVendas: Math.round(valorTotalVendas * 100) / 100,
+    valorTotalComissao: Math.round(valorTotalComissao * 100) / 100,
     vendasVinculadas,
     vendasAvulsas,
     relatoriosConvertidos,
@@ -967,7 +1017,7 @@ function calcularMetricasVendas(vendas = [], relatorios = []) {
   };
 }
 
-// Filtra vendas para o Painel Master e Modal de Vendas (busca sem acentos, assessor, origem, período e relatório)
+// Filtra vendas para o Painel Master e Modal de Vendas (busca sem acentos, assessor, origem, comissionamento, período e relatório)
 function filtrarVendasPainel(vendas = [], usuarios = [], opcoes = {}) {
   const lista = Array.isArray(vendas) ? vendas : [];
   const listaUsuarios = Array.isArray(usuarios) ? usuarios : [];
@@ -975,6 +1025,7 @@ function filtrarVendasPainel(vendas = [], usuarios = [], opcoes = {}) {
   const filtroAssessor = opcoes && opcoes.filtroAssessor ? String(opcoes.filtroAssessor).trim() : "todos";
   const origem = opcoes && opcoes.origem ? String(opcoes.origem).trim() : "todas";
   const periodo = opcoes && opcoes.periodo ? String(opcoes.periodo).trim() : "todos";
+  const comissionamentoFiltro = opcoes && opcoes.comissionamento ? String(opcoes.comissionamento).trim() : "todos";
   const relatorioIdFiltro = opcoes && opcoes.relatorioId ? String(opcoes.relatorioId).trim() : "";
 
   const norm = (s) => String(s || "")
@@ -1007,6 +1058,12 @@ function filtrarVendasPainel(vendas = [], usuarios = [], opcoes = {}) {
     if (origem === "relatorio" && !v.relatorioId) return false;
     if (origem === "avulsa" && v.relatorioId) return false;
 
+    const comissCodigo = String(v.comissionamento || "").trim().toUpperCase();
+    if (comissionamentoFiltro === "sem_comissao" && comissCodigo) return false;
+    if ((comissionamentoFiltro === "MAG" || comissionamentoFiltro === "POB") && comissCodigo !== comissionamentoFiltro) {
+      return false;
+    }
+
     if (periodo !== "todos") {
       const dataStr = _normalizarDataISOVenda(v.dataVenda || v.createdAt);
       if (periodo === "mes_atual") {
@@ -1022,6 +1079,7 @@ function filtrarVendasPainel(vendas = [], usuarios = [], opcoes = {}) {
     const produto = norm(v.produto);
     const assessor = norm(v.nomeAssessor);
     const obs = norm(v.observacao);
+    const comissNorm = norm(v.comissionamento);
     const donoUsuario = v.userId ? (usuariosById.get(String(v.userId)) || null) : null;
     const nomeDono = norm(donoUsuario?.full_name || "");
 
@@ -1030,6 +1088,7 @@ function filtrarVendasPainel(vendas = [], usuarios = [], opcoes = {}) {
       produto.includes(buscaNorm) ||
       assessor.includes(buscaNorm) ||
       nomeDono.includes(buscaNorm) ||
+      comissNorm.includes(buscaNorm) ||
       obs.includes(buscaNorm);
     if (!matchBusca) return false;
 
@@ -1133,6 +1192,9 @@ async function dbSalvarVenda(vendaEntrada) {
     nome_assessor: vendaSanitizada.nomeAssessor || null,
     produto: vendaSanitizada.produto,
     valor_venda: vendaSanitizada.valorVenda,
+    comissionamento: vendaSanitizada.comissionamento,
+    percentual_comissao: vendaSanitizada.percentualComissao,
+    valor_comissao: vendaSanitizada.valorComissao,
     data_venda: vendaSanitizada.dataVenda,
     observacao: vendaSanitizada.observacao || null
   };
@@ -1623,6 +1685,9 @@ function filtrarRelatoriosPainelMaster(relatorios = [], usuarios = [], opcoes = 
 
 if (typeof window !== "undefined") {
   window.DIRETORIO_USUARIOS_SISTEMA = DIRETORIO_USUARIOS_SISTEMA;
+  window.PACE_PRODUTO_VENDA_PADRAO = PACE_PRODUTO_VENDA_PADRAO;
+  window.PACE_COMISSIONAMENTOS_VENDA = PACE_COMISSIONAMENTOS_VENDA;
+  window.calcularComissaoVenda = calcularComissaoVenda;
   window.calcularMetricasUsabilidadeEquipe = calcularMetricasUsabilidadeEquipe;
   window.filtrarRelatoriosPainelMaster = filtrarRelatoriosPainelMaster;
   window.dbObterUsabilidadeUsuarios = dbObterUsabilidadeUsuarios;
@@ -1638,6 +1703,9 @@ if (typeof window !== "undefined") {
 
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
+    PACE_PRODUTO_VENDA_PADRAO,
+    PACE_COMISSIONAMENTOS_VENDA,
+    calcularComissaoVenda,
     calcularMetricasUsabilidadeEquipe,
     filtrarRelatoriosPainelMaster,
     sanitizarNumero,

@@ -365,6 +365,9 @@ create table if not exists public.vendas (
   nome_assessor text check (nome_assessor is null or char_length(nome_assessor) <= 200),
   produto text not null check (char_length(trim(produto)) between 1 and 120),
   valor_venda numeric(18,2) not null default 0 check (valor_venda >= 0),
+  comissionamento text check (comissionamento is null or comissionamento in ('MAG', 'POB')),
+  percentual_comissao numeric(5,2) check (percentual_comissao is null or percentual_comissao in (57.00, 70.00)),
+  valor_comissao numeric(18,2) not null default 0 check (valor_comissao >= 0),
   data_venda date not null default current_date,
   observacao text check (observacao is null or char_length(observacao) <= 1000),
   created_by uuid references auth.users(id) on delete set null,
@@ -456,6 +459,7 @@ begin
       'ultimo_relatorio_em', r_stats.ultimo_relatorio_em,
       'total_vendas', coalesce(v_stats.total_vendas, 0),
       'valor_total_vendas', coalesce(v_stats.valor_total_vendas, 0),
+      'valor_total_comissao', coalesce(v_stats.valor_total_comissao, 0),
       'ultima_venda_em', v_stats.ultima_venda_em
     )
     order by coalesce(p.ultimo_acesso, u.last_sign_in_at, p.created_at, u.created_at) desc nulls last
@@ -474,6 +478,7 @@ begin
     select
       count(v.id) as total_vendas,
       coalesce(sum(v.valor_venda), 0) as valor_total_vendas,
+      coalesce(sum(v.valor_comissao), 0) as valor_total_comissao,
       max(v.created_at) as ultima_venda_em
     from public.vendas v
     where v.user_id = coalesce(p.id, u.id)

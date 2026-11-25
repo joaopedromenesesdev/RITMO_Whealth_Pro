@@ -307,6 +307,14 @@ function calcularEExibirMetricas(relatorios, vendas = []) {
   const prejuizoMedio = totalRelatorios > 0 ? (prejuizoAcumulado / totalRelatorios) : 0;
   const totalVendas = vendas.length;
   const valorTotalVendas = vendas.reduce((acc, v) => acc + (Number(v.valorVenda) || 0), 0);
+  const valorTotalComissao = vendas.reduce((acc, v) => {
+    const comissao = (v.valorComissao !== undefined && v.valorComissao !== null)
+      ? Math.max(0, Number(v.valorComissao) || 0)
+      : (typeof window.calcularComissaoVenda === "function"
+        ? window.calcularComissaoVenda(v.valorVenda, v.comissionamento).valorComissao
+        : 0);
+    return acc + comissao;
+  }, 0);
 
   // Atualizar DOM
   const elQtd = document.getElementById("metric_qtd_relatorios");
@@ -321,7 +329,10 @@ function calcularEExibirMetricas(relatorios, vendas = []) {
   if (elVendasQtd) elVendasQtd.innerText = totalVendas;
   if (elVendasVal) {
     const formattedVendas = "R$ " + valorTotalVendas.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
-    elVendasVal.innerText = `${formattedVendas} • Ver detalhes`;
+    const formattedComissao = "R$ " + valorTotalComissao.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+    elVendasVal.innerText = valorTotalComissao > 0
+      ? `${formattedVendas} • Com.: ${formattedComissao}`
+      : `${formattedVendas} • Ver detalhes`;
   }
 }
 
