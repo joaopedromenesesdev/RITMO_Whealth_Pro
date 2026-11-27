@@ -2819,76 +2819,98 @@
     }
 
     // =========================================================================
-    // TESTE 51: 5ª Estratégia — Seguro sem Formação de Reserva (Vitalício sem Resgate)
+    // TESTE 51: Estratégias 4 & 5 — Motor MAG (3709 Integral 10a / 3715 Sucessão 10a, Sexo M/F e Interpolação)
     // =========================================================================
-    console.log("\n-> Teste 51: 5ª Estratégia — Seguro sem Formação de Reserva (Vitalício sem Resgate)");
+    console.log("\n-> Teste 51: Estratégias 4 & 5 — Motor MAG (3709 / 3715, Sexo M/F e Interpolação)");
 
-    // 51.A — Todas as faixas etárias de 25 a 74 anos (TABELA_SEGURO_SUCESSAO com 35% de desconto antes de /12)
-    const tabelaSS = engine.TABELA_SEGURO_SUCESSAO;
-    const todasIdadesTabela = Array.from({ length: 50 }, (_, idx) => 25 + idx);
+    // 51.A — Todas as 12 âncoras reais MAG (25, 30, 35, 40, 45, 47, 50, 55, 60, 65, 70, 74) para M e F em ambos produtos
+    const tabelasMAG = engine.TABELAS_MAG_SEGURO;
+    const ancorasMAG = engine.ANCORAS_IDADE_MAG || [25, 30, 35, 40, 45, 47, 50, 55, 60, 65, 70, 74];
     const capitalTeste51 = 1000000;
-    const todasFaixasOk = Boolean(tabelaSS) && todasIdadesTabela.every(idade => {
-      const taxa = tabelaSS[idade];
-      const esperadoParcela = ((capitalTeste51 / 100000) * (taxa * 0.65)) / 12;
-      const esperadoQuitar = esperadoParcela * 120;
-      const esperadaEconomia = capitalTeste51 - esperadoQuitar;
-      const esperadoPct = (esperadaEconomia / capitalTeste51) * 100;
-      const res = engine.calcularSeguroSemReserva({
-        capitalSegurado: capitalTeste51,
-        idadeSegurado: idade,
-        modalidade: "temporario"
-      });
-      return (
-        res.modalidade === "vitalicio" &&
-        res.idadePreenchida === true &&
-        res.idadeSegurado === idade &&
-        res.idadeTabela === idade &&
-        res.descontoAplicadoPct === 35 &&
-        res.reajusteEtarioAnualPct === 0 &&
-        res.valorResgate === 0 &&
-        Math.abs(res.parcelaMensal - esperadoParcela) < 1e-9 &&
-        Math.abs(res.premioMensal - esperadoParcela) < 1e-9 &&
-        Math.abs(res.valorQuitar - esperadoQuitar) < 1e-9 &&
-        Math.abs(res.economiaLiquida - esperadaEconomia) < 1e-9 &&
-        Math.abs(res.eficienciaPct - esperadoPct) < 1e-9 &&
-        Array.isArray(res.avisos) &&
-        res.avisos.some(a => a.toLowerCase().includes("resgate")) &&
-        semNaN(res)
+    const ancorasExatasOk = Boolean(tabelasMAG && tabelasMAG.integral_10 && tabelasMAG.sucessao_10) &&
+      ["masculino", "feminino"].every(sexo =>
+        ancorasMAG.every(idade => {
+          const taxa4 = tabelasMAG.integral_10[sexo][idade];
+          const taxa5 = tabelasMAG.sucessao_10[sexo][idade];
+          const res4 = engine.calcularSeguroComReserva({ capitalSegurado: capitalTeste51, idadeSegurado: idade, sexo });
+          const res5 = engine.calcularSeguroSemReserva({ capitalSegurado: capitalTeste51, idadeSegurado: idade, sexo, modalidade: "temporario" });
+
+          const espParc4 = (capitalTeste51 / 100000) * taxa4;
+          const espQuit4 = espParc4 * 120;
+          const espEco4 = capitalTeste51 - espQuit4;
+
+          const espParc5 = (capitalTeste51 / 100000) * taxa5;
+          const espQuit5 = espParc5 * 120;
+          const espEco5 = capitalTeste51 - espQuit5;
+
+          return (
+            res4.produto === "integral_10" && res4.sexo === sexo &&
+            res5.produto === "sucessao_10" && res5.sexo === sexo && res5.modalidade === "vitalicio" &&
+            res5.valorResgate === 0 && res5.reajusteEtarioAnualPct === 0 &&
+            Math.abs(res4.parcelaMensal - espParc4) < 1e-9 &&
+            Math.abs(res4.valorQuitar - espQuit4) < 1e-9 &&
+            Math.abs(res4.economiaLiquida - espEco4) < 1e-9 &&
+            Math.abs(res5.parcelaMensal - espParc5) < 1e-9 &&
+            Math.abs(res5.valorQuitar - espQuit5) < 1e-9 &&
+            Math.abs(res5.economiaLiquida - espEco5) < 1e-9 &&
+            res5.parcelaMensal < res4.parcelaMensal &&
+            (sexo === "masculino" || (
+              res4.parcelaMensal < engine.calcularSeguroComReserva({ capitalSegurado: capitalTeste51, idadeSegurado: idade, sexo: "masculino" }).parcelaMensal &&
+              res5.parcelaMensal < engine.calcularSeguroSemReserva({ capitalSegurado: capitalTeste51, idadeSegurado: idade, sexo: "masculino" }).parcelaMensal
+            )) &&
+            Array.isArray(res5.avisos) && res5.avisos.some(a => a.toLowerCase().includes("resgate")) &&
+            semNaN(res4) && semNaN(res5)
+          );
+        })
       );
+
+    // Verifica proporcionalidade e interpolação geométrica monotônica de 25 a 74 anos
+    let monotonicidadeOk = true;
+    ["masculino", "feminino"].forEach(sexo => {
+      for (let idade = 26; idade <= 74; idade++) {
+        const p4Prev = engine.calcularSeguroComReserva({ capitalSegurado: 370700, idadeSegurado: idade - 1, sexo }).parcelaMensal;
+        const p4Curr = engine.calcularSeguroComReserva({ capitalSegurado: 370700, idadeSegurado: idade, sexo }).parcelaMensal;
+        const p5Prev = engine.calcularSeguroSemReserva({ capitalSegurado: 370700, idadeSegurado: idade - 1, sexo }).parcelaMensal;
+        const p5Curr = engine.calcularSeguroSemReserva({ capitalSegurado: 370700, idadeSegurado: idade, sexo }).parcelaMensal;
+        if (!(p4Curr > p4Prev && p5Curr > p5Prev)) monotonicidadeOk = false;
+      }
     });
+
     const ssrFallbackCusto = engine.calcularSeguroSemReserva({
       custoInventario: 500000,
-      idadeSegurado: 45
+      idadeSegurado: 45,
+      sexo: "feminino"
     });
     assert(
-      todasFaixasOk &&
+      ancorasExatasOk &&
+      monotonicidadeOk &&
       ssrFallbackCusto.capitalSegurado === 500000 &&
-      Math.abs(ssrFallbackCusto.parcelaMensal - (((500000 / 100000) * (tabelaSS[45] * 0.65)) / 12)) < 1e-9 &&
+      Math.abs(ssrFallbackCusto.parcelaMensal - ((500000 / 100000) * tabelasMAG.sucessao_10.feminino[45])) < 1e-9 &&
       semNaN(ssrFallbackCusto),
-      "SeguroSemReserva[Faixas 25..74 + -35%]: todas as 50 faixas etárias aplicam 35% de desconto antes da divisão por 12, 120x e economia exata"
+      "SeguroMAG[Âncoras + Sexo M/F + Interp.]: 12 âncoras exatas (3709/3715), curvas M>F monotônicas 25..74 e proporcionalidade exata"
     );
 
-    // 51.B — Clamping de idade (<25 -> 25 e >74 -> 74)
-    const ssrMenor18 = engine.calcularSeguroSemReserva({ capitalSegurado: 1000000, idadeSegurado: 18 });
-    const ssrMenor24 = engine.calcularSeguroSemReserva({ capitalSegurado: 1000000, idadeSegurado: 24 });
-    const ssr25 = engine.calcularSeguroSemReserva({ capitalSegurado: 1000000, idadeSegurado: 25 });
-    const ssrMaior75 = engine.calcularSeguroSemReserva({ capitalSegurado: 1000000, idadeSegurado: 75 });
-    const ssrMaior90 = engine.calcularSeguroSemReserva({ capitalSegurado: 1000000, idadeSegurado: 90 });
-    const ssr74 = engine.calcularSeguroSemReserva({ capitalSegurado: 1000000, idadeSegurado: 74 });
+    // 51.B — Clamping de idade (<25 -> 25 e >74 -> 74) e sanitização de sexo
+    const ssrMenor18 = engine.calcularSeguroSemReserva({ capitalSegurado: 1000000, idadeSegurado: 18, sexo: "MASCULINO" });
+    const ssrMenor24 = engine.calcularSeguroSemReserva({ capitalSegurado: 1000000, idadeSegurado: 24, sexo: "invalido" });
+    const ssr25 = engine.calcularSeguroSemReserva({ capitalSegurado: 1000000, idadeSegurado: 25, sexo: "masculino" });
+    const ssrMaior75 = engine.calcularSeguroSemReserva({ capitalSegurado: 1000000, idadeSegurado: 75, sexo: "F" });
+    const ssrMaior90 = engine.calcularSeguroSemReserva({ capitalSegurado: 1000000, idadeSegurado: 90, sexo: "feminino" });
+    const ssr74 = engine.calcularSeguroSemReserva({ capitalSegurado: 1000000, idadeSegurado: 74, sexo: "feminino" });
     assert(
-      ssrMenor18.idadeTabela === 25 && ssrMenor18.parcelaMensal === ssr25.parcelaMensal &&
-      ssrMenor24.idadeTabela === 25 && ssrMenor24.parcelaMensal === ssr25.parcelaMensal &&
-      ssrMaior75.idadeTabela === 74 && ssrMaior75.parcelaMensal === ssr74.parcelaMensal &&
-      ssrMaior90.idadeTabela === 74 && ssrMaior90.parcelaMensal === ssr74.parcelaMensal &&
+      ssrMenor18.idadeTabela === 25 && ssrMenor18.sexo === "masculino" && ssrMenor18.parcelaMensal === ssr25.parcelaMensal &&
+      ssrMenor24.idadeTabela === 25 && ssrMenor24.sexo === "masculino" && ssrMenor24.parcelaMensal === ssr25.parcelaMensal &&
+      ssrMaior75.idadeTabela === 74 && ssrMaior75.sexo === "feminino" && ssrMaior75.parcelaMensal === ssr74.parcelaMensal &&
+      ssrMaior90.idadeTabela === 74 && ssrMaior90.sexo === "feminino" && ssrMaior90.parcelaMensal === ssr74.parcelaMensal &&
       ssrMenor18.valorQuitar === ssr25.valorQuitar &&
       ssrMaior90.valorQuitar === ssr74.valorQuitar &&
       semNaN(ssrMenor18) && semNaN(ssrMaior90),
-      "SeguroSemReserva[Clamping]: idades <25 usam faixa 25 e idades >74 usam faixa 74 com valores idênticos"
+      "SeguroMAG[Clamping & Sexo]: idades <25 usam 25, >74 usam 74 e sexo inválido faz fallback seguro para masculino"
     );
 
     // 51.C — Idade não preenchida com capital > 0 mantém coerência sem fallback artificial para 40
     const ssrSemIdade = [null, undefined, "", 0, -10, NaN].map(idadeVazia =>
-      engine.calcularSeguroSemReserva({ capitalSegurado: 1000000, idadeSegurado: idadeVazia })
+      engine.calcularSeguroSemReserva({ capitalSegurado: 1000000, idadeSegurado: idadeVazia, sexo: "feminino" })
     );
     assert(
       ssrSemIdade.every(r =>
@@ -2918,6 +2940,7 @@
         capitalSegurado: -500000,
         custoInventario: "abc",
         modalidade: "<script>alert(1)</script>",
+        sexo: "<img onerror=alert(1)>",
         idadeSegurado: NaN,
         premioMensal: "invalido",
         prazoAnos: -10,
@@ -2929,6 +2952,7 @@
     assert(
       ssrBordas.every(r =>
         r.modalidade === "vitalicio" &&
+        r.sexo === "masculino" &&
         r.reajusteEtarioAnualPct === 0 &&
         r.capitalSegurado === 0 &&
         r.parcelaMensal === 0 &&
@@ -2943,7 +2967,7 @@
       "SeguroSemReserva[Anti-NaN / Capital Zero]: sanitiza null/undefined/zeros/negativos/strings/Infinity sem NaN"
     );
 
-    // 51.E — Retrocompatibilidade do AppState (relatórios antigos ou com modalidade temporário/reajuste são migrados para vitalício sem reajuste)
+    // 51.E — Retrocompatibilidade do AppState (inclui sexo padrão masculino e override feminino)
     if (appStateRef && typeof appStateRef.importSnapshot === "function") {
       const okLegado = appStateRef.importSnapshot({
         tributario: {
@@ -2963,17 +2987,22 @@
       assert(
         okLegado === true &&
         inpLegado.uf === "RJ" &&
+        inpLegado.seguro_sexo === "masculino" &&
+        inpLegado.seguro_sem_reserva_sexo === "masculino" &&
         inpLegado.seguro_sem_reserva_modalidade === "vitalicio" &&
         inpLegado.seguro_sem_reserva_idade === 52 &&
         inpLegado.seguro_sem_reserva_expectativa_vida === 85 &&
         inpLegado.seguro_sem_reserva_reajuste_pct === 0 &&
         semNaN(inpLegado),
-        "SeguroSemReserva[State Retrocompat]: relatório antigo ou temporário é normalizado para vitalício sem reajuste e herda idade sem NaN"
+        "SeguroSemReserva[State Retrocompat]: relatório antigo sem sexo faz fallback para masculino e normaliza modalidade"
       );
 
       appStateRef.setTributarioInputs({
         uf: "SP",
+        seguro_sexo: "feminino",
         seguro_sem_reserva_modalidade: "vitalicio",
+        seguro_sem_reserva_sexo: "feminino",
+        seguro_sem_reserva_sexo_manual: true,
         seguro_sem_reserva_idade: 48,
         seguro_sem_reserva_idade_manual: true,
         seguro_sem_reserva_expectativa_vida: 90,
@@ -2983,14 +3012,17 @@
       assert(
         snapCom5.tributario &&
         snapCom5.tributario.inputs &&
+        snapCom5.tributario.inputs.seguro_sexo === "feminino" &&
+        snapCom5.tributario.inputs.seguro_sem_reserva_sexo === "feminino" &&
+        snapCom5.tributario.inputs.seguro_sem_reserva_sexo_manual === true &&
         snapCom5.tributario.inputs.seguro_sem_reserva_modalidade === "vitalicio" &&
         snapCom5.tributario.inputs.seguro_sem_reserva_expectativa_vida === 90 &&
         snapCom5.tributario.inputs.seguro_sem_reserva_reajuste_pct === 0,
-        "SeguroSemReserva[State Snapshot]: exportSnapshot persiste configuração vitalícia sem reajuste etário"
+        "SeguroSemReserva[State Snapshot]: exportSnapshot persiste sexo masculino/feminino e configuração vitalícia"
       );
     }
 
-    // 51.F — Auditoria estrutural de UI, CSP (zero handlers inline no card 5) e PDF (ON/OFF preservado)
+    // 51.F — Auditoria estrutural de UI, seletor de sexo, CSP (zero handlers inline) e PDF (ON/OFF preservado)
     if (typeof require === "function") {
       const fs50 = require("fs");
       const path50 = require("path");
@@ -2998,8 +3030,10 @@
       const html50 = fs50.readFileSync(path50.join(__dirname, "../tributario.html"), "utf8");
       const js50 = fs50.readFileSync(path50.join(__dirname, "../script/tributario.js"), "utf8");
       const css50 = fs50.readFileSync(path50.join(__dirname, "../style/tributario.css"), "utf8");
+      const card4Start = html50.indexOf('<!-- OPÇÃO 4: Seguro Sucessão -->');
       const card5Start = html50.indexOf('id="card_estrategia_sem_reserva"');
       const card5End = html50.indexOf('<!-- NAVEGAÇÃO E VISUALIZAÇÃO -->');
+      const card4Snippet = card4Start >= 0 && card5Start > card4Start ? html50.slice(card4Start, card5Start) : "";
       const card5Snippet = card5Start >= 0 && card5End > card5Start ? html50.slice(card5Start, card5End) : "";
 
       let sintaxeTribOk = true;
@@ -3012,6 +3046,8 @@
 
       assert(
         sintaxeTribOk &&
+        card4Snippet.includes('id="input_seguro_sexo"') &&
+        !/\bon(?:click|input|change)\s*=/i.test(card4Snippet) &&
         !card5Snippet.includes('id="btn_modalidade_sr_temporario"') &&
         !card5Snippet.includes('id="btn_modalidade_sr_vitalicio"') &&
         !card5Snippet.includes('id="input_seguro_sr_prazo"') &&
@@ -3026,6 +3062,7 @@
         !card5Snippet.includes('id="seguro_sr_resultado_alavancagem"') &&
         !card5Snippet.includes('id="seguro_sr_resultado_resgate"') &&
         !card5Snippet.includes('id="seguro_sr_resultado_diff_reserva"') &&
+        card5Snippet.includes('id="input_seguro_sr_sexo"') &&
         card5Snippet.includes('id="input_seguro_sr_idade"') &&
         card5Snippet.includes('id="input_seguro_sr_capital"') &&
         card5Snippet.includes('id="seguro_sr_resultado_capital"') &&
@@ -3054,8 +3091,9 @@
         html50.includes('id="pdf_disclaimer_institucional"') &&
         js50.includes('"Informe a idade"') &&
         css50.includes(".reducao-card-sem-reserva") &&
-        css50.includes(".badge-modalidade-sr-fixa"),
-        "SeguroSemReserva[UI/CSP/PDF]: 5º card com exatamente os 4 outputs do Seguro Sucessão, avisos preservados, zero handlers inline e PDF sincronizado"
+        css50.includes(".badge-modalidade-sr-fixa") &&
+        css50.includes(".input-wrapper select"),
+        "SeguroSemReserva[UI/CSP/PDF]: cards 4 e 5 com seletor de sexo, 4 outputs, avisos preservados, zero handlers inline e PDF sincronizado"
       );
     }
 

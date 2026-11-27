@@ -961,6 +961,14 @@ function initPrejuizo() {
     });
   }
 
+  const inputSeguroSexo = document.getElementById("input_seguro_sexo");
+  if (inputSeguroSexo) {
+    inputSeguroSexo.addEventListener("change", function () {
+      checkFilled(this);
+      salvarInputsTributario();
+    });
+  }
+
   const inputSeguroIdade = document.getElementById("input_seguro_idade");
   if (inputSeguroIdade) {
     inputSeguroIdade.addEventListener("input", function () {
@@ -986,6 +994,15 @@ function initPrejuizo() {
   }
 
   // Opção 5: Seguro sem Formação de Reserva — Vitalício sem Resgate (listeners sem handlers inline)
+  const inputSrSexo = document.getElementById("input_seguro_sr_sexo");
+  if (inputSrSexo) {
+    inputSrSexo.addEventListener("change", function () {
+      checkFilled(this);
+      marcarCampoManual(this, true);
+      salvarInputsTributario();
+    });
+  }
+
   const inputSrIdade = document.getElementById("input_seguro_sr_idade");
   if (inputSrIdade) {
     inputSrIdade.addEventListener("input", function () {
@@ -1069,8 +1086,12 @@ function initPrejuizo() {
         }
       }
     }
-    if (salvos.seguro_idade) {
-      if (inputSeguroIdade) {
+    if (inputSeguroSexo) {
+      inputSeguroSexo.value = normalizarSexoSeguradoUI(salvos.seguro_sexo);
+      checkFilled(inputSeguroSexo);
+    }
+    if (inputSeguroIdade) {
+      if (salvos.seguro_idade) {
         inputSeguroIdade.value = salvos.seguro_idade;
         checkFilled(inputSeguroIdade);
       }
@@ -1088,6 +1109,16 @@ function initPrejuizo() {
     }
 
     // Restauração retrocompatível da 5ª estratégia (relatórios antigos recebem defaults seguros)
+    if (inputSrSexo) {
+      if (salvos.seguro_sem_reserva_sexo_manual === true && salvos.seguro_sem_reserva_sexo) {
+        inputSrSexo.value = normalizarSexoSeguradoUI(salvos.seguro_sem_reserva_sexo);
+        marcarCampoManual(inputSrSexo, true);
+      } else {
+        inputSrSexo.value = normalizarSexoSeguradoUI(salvos.seguro_sexo);
+        marcarCampoManual(inputSrSexo, false);
+      }
+      checkFilled(inputSrSexo);
+    }
     if (inputSrIdade) {
       const srIdadeNum = Number(salvos.seguro_sem_reserva_idade);
       if (salvos.seguro_sem_reserva_idade_manual === true && Number.isFinite(srIdadeNum) && srIdadeNum > 0) {
@@ -1170,6 +1201,25 @@ function sincronizarInputComPrejuizo(inputEl, prejuizoAtual) {
   return obterValorInput(inputEl);
 }
 
+function normalizarSexoSeguradoUI(valor) {
+  if (window.TributarioEngine && typeof window.TributarioEngine.normalizarSexoSegurado === "function") {
+    return window.TributarioEngine.normalizarSexoSegurado(valor);
+  }
+  return String(valor || "").toLowerCase().trim() === "feminino" ? "feminino" : "masculino";
+}
+
+function sincronizarSexoSeguroSemReserva(inputSrSexo, inputSeguroSexo4) {
+  const sexo4 = normalizarSexoSeguradoUI(inputSeguroSexo4 ? inputSeguroSexo4.value : "masculino");
+  if (!inputSrSexo) return sexo4;
+  if (!isCampoManual(inputSrSexo) && inputSeguroSexo4) {
+    if (inputSrSexo.value !== sexo4) {
+      inputSrSexo.value = sexo4;
+    }
+    checkFilled(inputSrSexo);
+  }
+  return normalizarSexoSeguradoUI(inputSrSexo.value);
+}
+
 function sincronizarIdadeSeguroSemReserva(inputSrIdade, inputSeguroIdade4) {
   if (!inputSrIdade) return null;
   const estaEmFocoVazio = (typeof document !== "undefined" && document.activeElement === inputSrIdade) && String(inputSrIdade.value || "").trim() === "";
@@ -1233,14 +1283,18 @@ function persistirInputsTributarioNoSession() {
   const doacao_avista = obterValorInput(inputAvista);
   const doacao_avista_manual = isCampoManual(inputAvista);
   const previdencia = obterValorInput(document.getElementById("input_previdencia"));
+  const seguro_sexo = normalizarSexoSeguradoUI(document.getElementById("input_seguro_sexo")?.value);
   const seguro_idade = document.getElementById("input_seguro_idade")?.value || "";
   const seguro_capital = obterValorInput(inputSeguroCapital);
   const seguro_capital_manual = isCampoManual(inputSeguroCapital);
 
+  const inputSrSexo = document.getElementById("input_seguro_sr_sexo");
   const inputSrIdade = document.getElementById("input_seguro_sr_idade");
   const inputSrCapital = document.getElementById("input_seguro_sr_capital");
 
   const seguro_sem_reserva_modalidade = "vitalicio";
+  const seguro_sem_reserva_sexo = normalizarSexoSeguradoUI(inputSrSexo ? inputSrSexo.value : seguro_sexo);
+  const seguro_sem_reserva_sexo_manual = isCampoManual(inputSrSexo);
   const srIdadeParsed = parseInt(inputSrIdade?.value, 10);
   const seguro_sem_reserva_idade = (Number.isFinite(srIdadeParsed) && srIdadeParsed > 0)
     ? srIdadeParsed
@@ -1262,10 +1316,13 @@ function persistirInputsTributarioNoSession() {
     doacao_avista,
     doacao_avista_manual,
     previdencia,
+    seguro_sexo,
     seguro_idade,
     seguro_capital,
     seguro_capital_manual,
     seguro_sem_reserva_modalidade,
+    seguro_sem_reserva_sexo,
+    seguro_sem_reserva_sexo_manual,
     seguro_sem_reserva_idade,
     seguro_sem_reserva_idade_manual,
     seguro_sem_reserva_capital,
@@ -1834,22 +1891,11 @@ function calcularPrejuizo() {
     if (elPrevTotal) elPrevTotal.innerText = "—";
   }
 
-  // Opção 4: Seguro Sucessão (reutiliza fonte única do TributarioEngine com fallback seguro)
-  const TABELA_SEGURO_SUCESSAO = (window.TributarioEngine && window.TributarioEngine.TABELA_SEGURO_SUCESSAO) || {
-    25: 3483.96, 26: 3563.00, 27: 3646.00, 28: 3734.00, 29: 3826.00,
-    30: 3923.00, 31: 4024.00, 32: 4130.00, 33: 4237.00, 34: 4341.00,
-    35: 4443.12, 36: 4565.00, 37: 4691.00, 38: 4821.00, 39: 4956.00,
-    40: 5096.00, 41: 5241.00, 42: 5392.00, 43: 5548.00, 44: 5710.00,
-    45: 5878.00, 46: 6053.00, 47: 6234.00, 48: 6421.00, 49: 6615.00,
-    50: 6817.00, 51: 7026.00, 52: 7243.00, 53: 7469.00, 54: 7704.00,
-    55: 7949.00, 56: 8204.00, 57: 8469.00, 58: 8745.00, 59: 9032.00,
-    60: 9332.00, 61: 9445.00, 62: 9555.00, 63: 9638.00, 64: 9662.00,
-    65: 9672.48, 66: 9912.00, 67: 10165.00, 68: 10433.00, 69: 10715.00,
-    70: 11014.00, 71: 11329.00, 72: 11662.00, 73: 12013.00, 74: 12384.00
-  };
-
+  // Opção 4: Seguro Sucessão (3709 Whole Life Integral 10 Anos — tabela MAG por sexo e idade)
+  const inputSeguroSexo = document.getElementById("input_seguro_sexo");
   const inputSeguroIdade = document.getElementById("input_seguro_idade");
   const inputSeguroCapital = document.getElementById("input_seguro_capital");
+  const seguroSexoVal = normalizarSexoSeguradoUI(inputSeguroSexo ? inputSeguroSexo.value : "masculino");
   const seguroCapitalVal = sincronizarInputComPrejuizo(inputSeguroCapital, prejuizoAtual);
 
   const elSeguroCapital = document.getElementById("seguro_resultado_capital");
@@ -1858,65 +1904,37 @@ function calcularPrejuizo() {
   const elSeguroEconomia = document.getElementById("seguro_resultado_economia");
 
   const fmt = (v) => "R$ " + v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  let parcelaMensalComReserva = 0;
+  const rawIdade4 = inputSeguroIdade ? parseInt(inputSeguroIdade.value, 10) : NaN;
+  const idade4Efetiva = (Number.isFinite(rawIdade4) && rawIdade4 > 0) ? rawIdade4 : null;
 
-  if (seguroCapitalVal > 0) {
-    if (elSeguroCapital) elSeguroCapital.innerText = fmt(seguroCapitalVal);
+  const resSeguro4 = (window.TributarioEngine && typeof window.TributarioEngine.calcularSeguroComReserva === "function")
+    ? window.TributarioEngine.calcularSeguroComReserva({
+      capitalSegurado: seguroCapitalVal,
+      custoInventario: seguroCapitalVal,
+      sexo: seguroSexoVal,
+      idadeSegurado: idade4Efetiva
+    })
+    : {
+      capitalSegurado: seguroCapitalVal,
+      idadePreenchida: Boolean(idade4Efetiva),
+      parcelaMensal: 0,
+      valorQuitar: 0,
+      economiaLiquida: 0,
+      eficienciaPct: 0
+    };
 
-    const rawIdade = inputSeguroIdade ? parseInt(inputSeguroIdade.value, 10) : NaN;
+  renderizarOutputsSeguroCard(
+    resSeguro4,
+    { elCap: elSeguroCapital, elParc: elSeguroParcela, elQuitar: elSeguroQuitar, elEco: elSeguroEconomia },
+    fmt
+  );
+  const parcelaMensalComReserva = resSeguro4.parcelaMensal || 0;
 
-    if (!isNaN(rawIdade)) {
-      let idadeBusca = rawIdade;
-      if (idadeBusca < 25) idadeBusca = 25;
-      if (idadeBusca > 74) idadeBusca = 74;
-
-      const taxaAnualPor100k = TABELA_SEGURO_SUCESSAO[idadeBusca];
-      if (taxaAnualPor100k) {
-        const contribucaoAnualTotal = (seguroCapitalVal / 100000) * taxaAnualPor100k;
-        const parcelaMensal = contribucaoAnualTotal / 12;
-        parcelaMensalComReserva = parcelaMensal;
-        const valorQuitar = parcelaMensal * 120;
-        const economia = seguroCapitalVal - valorQuitar;
-        const pctEconomia = seguroCapitalVal > 0 ? (economia / seguroCapitalVal) * 100 : 0;
-
-        if (elSeguroParcela) elSeguroParcela.innerText = fmt(parcelaMensal) + " / mês";
-        if (elSeguroQuitar) elSeguroQuitar.innerText = fmt(valorQuitar);
-        if (elSeguroEconomia) {
-          if (economia > 0) {
-            elSeguroEconomia.innerText = fmt(economia) + ` (${pctEconomia.toFixed(1)}%)`;
-            elSeguroEconomia.style.backgroundColor = "rgba(29, 111, 66, 0.1)";
-            elSeguroEconomia.style.color = "#1D6F42";
-          } else {
-            elSeguroEconomia.innerText = fmt(0);
-            elSeguroEconomia.style.backgroundColor = "rgba(229, 57, 53, 0.1)";
-            elSeguroEconomia.style.color = "#E53935";
-          }
-        }
-      }
-    } else {
-      if (elSeguroParcela) elSeguroParcela.innerText = "Informe a idade";
-      if (elSeguroQuitar) elSeguroQuitar.innerText = "Informe a idade";
-      if (elSeguroEconomia) {
-        elSeguroEconomia.innerText = "Informe a idade";
-        elSeguroEconomia.style.backgroundColor = "";
-        elSeguroEconomia.style.color = "";
-      }
-    }
-  } else {
-    if (elSeguroCapital) elSeguroCapital.innerText = "—";
-    if (elSeguroParcela) elSeguroParcela.innerText = "—";
-    if (elSeguroQuitar) elSeguroQuitar.innerText = "—";
-    if (elSeguroEconomia) {
-      elSeguroEconomia.innerText = "—";
-      elSeguroEconomia.style.backgroundColor = "";
-      elSeguroEconomia.style.color = "";
-    }
-  }
-
-  // Opção 5: Seguro sem Formação de Reserva (Vitalício sem Resgate)
+  // Opção 5: Seguro sem Formação de Reserva (3715 Whole Life Sucessão 10 Anos — Vitalício sem Resgate)
   const resultadoSeguroSemReserva = atualizarEstrategiaSeguroSemReservaUI(
     prejuizoAtual,
     inputSeguroIdade,
+    inputSeguroSexo,
     parcelaMensalComReserva,
     fmt
   );
@@ -1931,42 +1949,8 @@ function calcularPrejuizo() {
   if (typeof dbAutoSalvar === "function") dbAutoSalvar();
 }
 
-function atualizarEstrategiaSeguroSemReservaUI(prejuizoAtual, inputSeguroIdade4, parcelaMensalComReserva, fmt) {
-  const inputSrIdade = document.getElementById("input_seguro_sr_idade");
-  const inputSrCapital = document.getElementById("input_seguro_sr_capital");
-
-  const modalidade = "vitalicio";
-  const idadeEfetiva = sincronizarIdadeSeguroSemReserva(inputSrIdade, inputSeguroIdade4);
-  const capitalVal = sincronizarInputComPrejuizo(inputSrCapital, prejuizoAtual);
-
-  const resultado = (window.TributarioEngine && typeof window.TributarioEngine.calcularSeguroSemReserva === "function")
-    ? window.TributarioEngine.calcularSeguroSemReserva({
-      capitalSegurado: capitalVal,
-      custoInventario: prejuizoAtual,
-      modalidade,
-      idadeSegurado: idadeEfetiva,
-      premioComReservaMensal: parcelaMensalComReserva > 0 ? parcelaMensalComReserva : 0
-    })
-    : {
-      modalidade,
-      capitalSegurado: capitalVal,
-      idadeSegurado: idadeEfetiva,
-      idadePreenchida: Boolean(idadeEfetiva && idadeEfetiva > 0),
-      parcelaMensal: 0,
-      premioMensal: 0,
-      premioAnualInicial: 0,
-      valorQuitar: 0,
-      economiaLiquida: 0,
-      eficienciaPct: 0,
-      valorResgate: 0,
-      avisos: ["Sem formação de reserva: valor de resgate igual a R$ 0,00. Em caso de cancelamento ou desistência, não há devolução dos prêmios pagos."]
-    };
-
-  const elCap = document.getElementById("seguro_sr_resultado_capital");
-  const elParc = document.getElementById("seguro_sr_resultado_parcela");
-  const elQuitar = document.getElementById("seguro_sr_resultado_quitar");
-  const elEco = document.getElementById("seguro_sr_resultado_economia");
-
+function renderizarOutputsSeguroCard(resultado, els, fmt) {
+  const { elCap, elParc, elQuitar, elEco } = els || {};
   const resetarBadgeNeutro = (el, texto) => {
     if (!el) return;
     el.textContent = texto;
@@ -1974,7 +1958,7 @@ function atualizarEstrategiaSeguroSemReservaUI(prejuizoAtual, inputSeguroIdade4,
     el.style.color = "";
   };
 
-  if (resultado.capitalSegurado > 0) {
+  if (resultado && resultado.capitalSegurado > 0) {
     if (elCap) elCap.textContent = fmt(resultado.capitalSegurado);
 
     if (resultado.idadePreenchida) {
@@ -2002,6 +1986,53 @@ function atualizarEstrategiaSeguroSemReservaUI(prejuizoAtual, inputSeguroIdade4,
     if (elQuitar) elQuitar.textContent = "—";
     resetarBadgeNeutro(elEco, "—");
   }
+}
+
+function atualizarEstrategiaSeguroSemReservaUI(prejuizoAtual, inputSeguroIdade4, inputSeguroSexo4, parcelaMensalComReserva, fmt) {
+  const inputSrSexo = document.getElementById("input_seguro_sr_sexo");
+  const inputSrIdade = document.getElementById("input_seguro_sr_idade");
+  const inputSrCapital = document.getElementById("input_seguro_sr_capital");
+
+  const modalidade = "vitalicio";
+  const sexoEfetivo = sincronizarSexoSeguroSemReserva(inputSrSexo, inputSeguroSexo4);
+  const idadeEfetiva = sincronizarIdadeSeguroSemReserva(inputSrIdade, inputSeguroIdade4);
+  const capitalVal = sincronizarInputComPrejuizo(inputSrCapital, prejuizoAtual);
+
+  const resultado = (window.TributarioEngine && typeof window.TributarioEngine.calcularSeguroSemReserva === "function")
+    ? window.TributarioEngine.calcularSeguroSemReserva({
+      capitalSegurado: capitalVal,
+      custoInventario: prejuizoAtual,
+      modalidade,
+      sexo: sexoEfetivo,
+      idadeSegurado: idadeEfetiva,
+      premioComReservaMensal: parcelaMensalComReserva > 0 ? parcelaMensalComReserva : 0
+    })
+    : {
+      modalidade,
+      sexo: sexoEfetivo,
+      capitalSegurado: capitalVal,
+      idadeSegurado: idadeEfetiva,
+      idadePreenchida: Boolean(idadeEfetiva && idadeEfetiva > 0),
+      parcelaMensal: 0,
+      premioMensal: 0,
+      premioAnualInicial: 0,
+      valorQuitar: 0,
+      economiaLiquida: 0,
+      eficienciaPct: 0,
+      valorResgate: 0,
+      avisos: ["Sem formação de reserva: valor de resgate igual a R$ 0,00. Em caso de cancelamento ou desistência, não há devolução dos prêmios pagos."]
+    };
+
+  renderizarOutputsSeguroCard(
+    resultado,
+    {
+      elCap: document.getElementById("seguro_sr_resultado_capital"),
+      elParc: document.getElementById("seguro_sr_resultado_parcela"),
+      elQuitar: document.getElementById("seguro_sr_resultado_quitar"),
+      elEco: document.getElementById("seguro_sr_resultado_economia")
+    },
+    fmt
+  );
 
   renderizarAvisosSeguroSemReservaDOM(resultado.avisos);
   return resultado;

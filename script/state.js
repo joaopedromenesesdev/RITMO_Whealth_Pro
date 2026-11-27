@@ -230,7 +230,17 @@
         return Number.isFinite(n) && n >= minVal ? n : fallback;
       };
 
+      const normalizarSexo = (val, fallback = "masculino") => {
+        const s = String(val || "").toLowerCase().trim();
+        if (s === "feminino" || s === "f") return "feminino";
+        if (s === "masculino" || s === "m") return "masculino";
+        return fallback;
+      };
+
       const idadeBase = lerNum(merged.seguro_idade, defaults.seguro_idade, 0);
+      merged.seguro_sexo = normalizarSexo(rawInputs.seguro_sexo, defaults.seguro_sexo);
+      merged.seguro_sem_reserva_sexo = normalizarSexo(rawInputs.seguro_sem_reserva_sexo, merged.seguro_sexo);
+      merged.seguro_sem_reserva_sexo_manual = rawInputs.seguro_sem_reserva_sexo_manual === true;
       merged.seguro_sem_reserva_idade = lerNum(rawInputs.seguro_sem_reserva_idade, idadeBase > 0 ? idadeBase : defaults.seguro_sem_reserva_idade, 0);
       merged.seguro_sem_reserva_idade_manual = rawInputs.seguro_sem_reserva_idade_manual === true;
       merged.seguro_sem_reserva_capital = lerNum(rawInputs.seguro_sem_reserva_capital, defaults.seguro_sem_reserva_capital, 0);
@@ -268,9 +278,12 @@
         doacao: 0,
         doacao_avista: 0,
         previdencia: 0,
+        seguro_sexo: "masculino",
         seguro_idade: 40,
         seguro_capital: 0,
         seguro_sem_reserva_modalidade: "vitalicio",
+        seguro_sem_reserva_sexo: "masculino",
+        seguro_sem_reserva_sexo_manual: false,
         seguro_sem_reserva_idade: 40,
         seguro_sem_reserva_idade_manual: false,
         seguro_sem_reserva_capital: 0,

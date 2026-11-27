@@ -1583,7 +1583,8 @@ body.pdf-exporting .capa {
   font-size: 15px;
 }
 
-.input-wrapper input {
+.input-wrapper input,
+.input-wrapper select {
   width: 100%;
   padding: 12px 12px 12px 45px;
   border: 1.5px solid #e1e8f0;
@@ -1597,7 +1598,13 @@ body.pdf-exporting .capa {
   transition: 0.2s ease-in-out;
 }
 
-.input-wrapper input:focus {
+.input-wrapper select {
+  padding: 12px 14px;
+  cursor: pointer;
+}
+
+.input-wrapper input:focus,
+.input-wrapper select:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 4px rgba(9, 9, 11, 0.1);
   background: #ffffff;
@@ -1832,8 +1839,8 @@ body.pdf-exporting .capa {
 
 .seguro-sr-inputs-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-  gap: 15px;
+  grid-template-columns: minmax(112px, 1.05fr) minmax(82px, 0.85fr) minmax(165px, 1.75fr);
+  gap: 12px;
   align-items: end;
 }
 

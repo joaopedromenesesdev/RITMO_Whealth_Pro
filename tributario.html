@@ -501,8 +501,18 @@
                 dilapidar o patrimônio.
               </p>
               <div class="seguro-inputs-row"
-                style="display: flex; gap: 15px; align-items: flex-end; margin-bottom: 8px;">
-                <div style="flex: 1; display: flex; flex-direction: column;">
+                style="display: flex; gap: 12px; align-items: flex-end; margin-bottom: 8px;">
+                <div style="flex: 1.1; min-width: 112px; display: flex; flex-direction: column;">
+                  <label for="input_seguro_sexo"
+                    style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: flex; align-items: flex-end; margin-bottom: 6px; min-height: 28px;">Sexo</label>
+                  <div class="input-wrapper" style="margin-bottom: 0;">
+                    <select id="input_seguro_sexo" autocomplete="off">
+                      <option value="masculino" selected>Masculino</option>
+                      <option value="feminino">Feminino</option>
+                    </select>
+                  </div>
+                </div>
+                <div style="flex: 0.85; min-width: 82px; display: flex; flex-direction: column;">
                   <label for="input_seguro_idade"
                     style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: flex; align-items: flex-end; margin-bottom: 6px; min-height: 28px;">Idade
                     do Segurado</label>
@@ -511,7 +521,7 @@
                       autocomplete="off" style="padding-left: 15px;">
                   </div>
                 </div>
-                <div style="flex: 2; display: flex; flex-direction: column;">
+                <div style="flex: 1.75; min-width: 165px; display: flex; flex-direction: column;">
                   <label for="input_seguro_capital"
                     style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: flex; align-items: flex-end; margin-bottom: 6px; min-height: 28px;">Capital
                     Segurado</label>
@@ -562,6 +572,16 @@
                 </p>
 
                 <div class="seguro-sr-inputs-grid">
+                  <div class="seguro-sr-field">
+                    <label for="input_seguro_sr_sexo">Sexo</label>
+                    <div class="input-wrapper" style="margin-bottom: 0;">
+                      <select id="input_seguro_sr_sexo" autocomplete="off">
+                        <option value="masculino" selected>Masculino</option>
+                        <option value="feminino">Feminino</option>
+                      </select>
+                    </div>
+                  </div>
+
                   <div class="seguro-sr-field">
                     <label for="input_seguro_sr_idade">Idade do Titular</label>
                     <div class="input-wrapper" style="margin-bottom: 0;">

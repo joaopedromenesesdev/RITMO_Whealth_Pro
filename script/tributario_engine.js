@@ -276,10 +276,20 @@
  */
 
 /**
+ * @typedef {'masculino' | 'feminino'} SexoSegurado
+ */
+
+/**
+ * @typedef {'integral_10' | 'sucessao_10'} ProdutoSeguroMAG
+ */
+
+/**
  * @typedef {Object} ParamsSeguroSemReserva
  * @property {number | string | null} [capitalSegurado]
  * @property {number | string | null} [custoInventario]
  * @property {ModalidadeSeguroSemReserva | string | null} [modalidade]
+ * @property {ProdutoSeguroMAG | string | null} [produto]
+ * @property {SexoSegurado | string | null} [sexo]
  * @property {number | string | null} [idadeSegurado]
  * @property {number | string | null} [premioMensal]
  * @property {number | string | null} [taxaAnualPct]
@@ -292,10 +302,13 @@
 /**
  * @typedef {Object} ResultadoSeguroSemReserva
  * @property {ModalidadeSeguroSemReserva} modalidade
+ * @property {ProdutoSeguroMAG} produto
+ * @property {SexoSegurado} sexo
  * @property {number} capitalSegurado
  * @property {number | null} idadeSegurado
  * @property {number | null} idadeTabela
  * @property {boolean} idadePreenchida
+ * @property {number} taxaMensal100k
  * @property {number} taxaAnualTabela
  * @property {number} taxaAnualComDesconto
  * @property {number} descontoAplicadoPct
@@ -378,28 +391,112 @@
   };
 
   /**
-   * Tabela oficial de taxas anuais por R$ 100.000 de Capital Segurado (25 a 74 anos)
-   * compartilhada entre o Seguro Sucessão (Estratégia 4) e o Vitalício sem Resgate (Estratégia 5, com 35% de desconto).
+   * Idades-âncora reais coletadas na plataforma MAG (Mensal, Benefício R$ 100.000,00, 10 Anos).
+   * @type {readonly number[]}
+   */
+  const ANCORAS_IDADE_MAG = Object.freeze([25, 30, 35, 40, 45, 47, 50, 55, 60, 65, 70, 74]);
+
+  /**
+   * Tabelas MAG de contribuição mensal por R$ 100.000,00 de capital segurado (prazo 10 Anos):
+   * - integral_10: 3709 Whole Life Integral 10 Anos (Estratégia 4)
+   * - sucessao_10: 3715 Whole Life Sucessão 10 Anos (Estratégia 5)
+   * @type {Readonly<Record<ProdutoSeguroMAG, Readonly<Record<SexoSegurado, Readonly<Record<number, number>>>>>>}
+   */
+  const TABELAS_MAG_SEGURO = Object.freeze({
+    integral_10: Object.freeze({
+      masculino: Object.freeze({
+        25: 284.69, 30: 318.03, 35: 356.08, 40: 399.25,
+        45: 448.37, 47: 470.02, 50: 504.95, 55: 569.63,
+        60: 646.29, 65: 729.73, 70: 791.77, 74: 884.21
+      }),
+      feminino: Object.freeze({
+        25: 253.40, 30: 285.13, 35: 320.85, 40: 361.10,
+        45: 406.38, 47: 426.12, 50: 457.60, 55: 516.58,
+        60: 586.99, 65: 662.56, 70: 713.83, 74: 792.31
+      })
+    }),
+    sucessao_10: Object.freeze({
+      masculino: Object.freeze({
+        25: 195.92, 30: 221.26, 35: 249.94, 40: 282.29,
+        45: 318.72, 47: 334.54, 50: 359.70, 55: 405.78,
+        60: 457.49, 65: 515.60, 70: 581.01, 74: 639.45
+      }),
+      feminino: Object.freeze({
+        25: 190.56, 30: 215.32, 35: 243.29, 40: 274.88,
+        45: 310.44, 47: 325.89, 50: 350.50, 55: 395.59,
+        60: 446.43, 65: 503.87, 70: 568.79, 74: 627.27
+      })
+    })
+  });
+
+  /**
+   * Normaliza o sexo biológico do segurado via allowlist estrita (padrão conservador: masculino).
+   * @param {unknown} sexo
+   * @returns {SexoSegurado}
+   */
+  function normalizarSexoSegurado(sexo) {
+    const raw = String(sexo || "").toLowerCase().trim();
+    if (raw === "feminino" || raw === "f") return "feminino";
+    return "masculino";
+  }
+
+  /**
+   * Normaliza o identificador do produto MAG.
+   * @param {unknown} produto
+   * @returns {ProdutoSeguroMAG}
+   */
+  function normalizarProdutoMAG(produto) {
+    const raw = String(produto || "").toLowerCase().trim();
+    if (raw === "integral_10" || raw === "3709") return "integral_10";
+    return "sucessao_10";
+  }
+
+  /**
+   * Retorna a contribuição mensal por R$ 100.000,00 para produto, sexo e idade [25..74],
+   * usando exatamente as âncoras MAG e interpolação geométrica entre âncoras intermediárias.
+   * @param {ProdutoSeguroMAG} produto
+   * @param {SexoSegurado} sexo
+   * @param {number} idade
+   * @returns {number}
+   */
+  function obterTaxaMensalMAGPor100k(produto, sexo, idade) {
+    const tab = TABELAS_MAG_SEGURO[produto][sexo];
+    const clamped = Math.min(74, Math.max(25, Math.trunc(idade)));
+    if (tab[clamped] !== undefined) return tab[clamped];
+
+    for (let i = 0; i < ANCORAS_IDADE_MAG.length - 1; i++) {
+      const a0 = ANCORAS_IDADE_MAG[i];
+      const a1 = ANCORAS_IDADE_MAG[i + 1];
+      if (clamped > a0 && clamped < a1) {
+        const y0 = tab[a0];
+        const y1 = tab[a1];
+        const t = (clamped - a0) / (a1 - a0);
+        const interpolado = y0 * Math.pow(y1 / y0, t);
+        return Math.round(interpolado * 100) / 100;
+      }
+    }
+    return tab[25];
+  }
+
+  /** @type {Record<number, number>} */
+  const _tabelaSucessaoLegacy = {};
+  for (let idade = 25; idade <= 74; idade++) {
+    _tabelaSucessaoLegacy[idade] = Math.round(obterTaxaMensalMAGPor100k("integral_10", "masculino", idade) * 12 * 100) / 100;
+  }
+
+  /**
+   * Tabela anual equivalente por R$ 100.000 de Capital Segurado (25 a 74 anos, Integral 10 Anos Masculino).
    * @type {Readonly<Record<number, number>>}
    */
-  const TABELA_SEGURO_SUCESSAO = Object.freeze({
-    25: 3483.96, 26: 3563.00, 27: 3646.00, 28: 3734.00, 29: 3826.00,
-    30: 3923.00, 31: 4024.00, 32: 4130.00, 33: 4237.00, 34: 4341.00,
-    35: 4443.12, 36: 4565.00, 37: 4691.00, 38: 4821.00, 39: 4956.00,
-    40: 5096.00, 41: 5241.00, 42: 5392.00, 43: 5548.00, 44: 5710.00,
-    45: 5878.00, 46: 6053.00, 47: 6234.00, 48: 6421.00, 49: 6615.00,
-    50: 6817.00, 51: 7026.00, 52: 7243.00, 53: 7469.00, 54: 7704.00,
-    55: 7949.00, 56: 8204.00, 57: 8469.00, 58: 8745.00, 59: 9032.00,
-    60: 9332.00, 61: 9445.00, 62: 9555.00, 63: 9638.00, 64: 9662.00,
-    65: 9672.48, 66: 9912.00, 67: 10165.00, 68: 10433.00, 69: 10715.00,
-    70: 11014.00, 71: 11329.00, 72: 11662.00, 73: 12013.00, 74: 12384.00
-  });
+  const TABELA_SEGURO_SUCESSAO = Object.freeze(_tabelaSucessaoLegacy);
 
   const TributarioEngine = {
     // Limite de isenção anual legal do ITCMD (2.500 UFESPs / SP como padrão de referência nacional)
     LIMITE_ISENCAO_ANUAL: 96050,
 
-    // Tabela oficial de faixas etárias do Seguro Sucessão (25 a 74 anos)
+    // Tabelas MAG (3709 Integral 10 Anos e 3715 Sucessão 10 Anos) e âncoras etárias [25..74]
+    ANCORAS_IDADE_MAG,
+    TABELAS_MAG_SEGURO,
     TABELA_SEGURO_SUCESSAO,
 
     /**
@@ -1649,13 +1746,36 @@
     },
 
     /**
-     * 16. Calcula a 5ª Estratégia: Seguro de Vida sem Formação de Reserva (Vitalício sem Resgate).
-     * Aplica a tabela TABELA_SEGURO_SUCESSAO (clamping 25..74) com 35% de desconto sobre a taxa anual
-     * antes da divisão por 12, mantendo quitação em 120 meses e economia estimada idênticas ao Seguro Sucessão.
+     * Normaliza o sexo biológico do segurado ('masculino' | 'feminino').
+     * @param {unknown} sexo
+     * @returns {SexoSegurado}
+     */
+    normalizarSexoSegurado(sexo) {
+      return normalizarSexoSegurado(sexo);
+    },
+
+    /**
+     * Consulta a taxa mensal por R$ 100.000,00 na tabela MAG (clamping 25..74 + interpolação geométrica).
+     * @param {ProdutoSeguroMAG | string} produto
+     * @param {SexoSegurado | string} sexo
+     * @param {number} idade
+     * @returns {number}
+     */
+    obterTaxaMensalMAGPor100k(produto, sexo, idade) {
+      const prodNorm = normalizarProdutoMAG(produto);
+      const sexoNorm = normalizarSexoSegurado(sexo);
+      const idadeNum = Number(idade);
+      if (!Number.isFinite(idadeNum) || idadeNum <= 0) return 0;
+      return obterTaxaMensalMAGPor100k(prodNorm, sexoNorm, idadeNum);
+    },
+
+    /**
+     * Núcleo compartilhado para cálculo de seguro MAG (Estratégia 4 = integral_10 / 3709; Estratégia 5 = sucessao_10 / 3715).
+     * @param {ProdutoSeguroMAG | string} produtoPadrao
      * @param {ParamsSeguroSemReserva | null | undefined} [params={}]
      * @returns {ResultadoSeguroSemReserva}
      */
-    calcularSeguroSemReserva(params = {}) {
+    calcularSeguroMAG(produtoPadrao, params = {}) {
       const p = (params && typeof params === "object") ? params : {};
 
       /**
@@ -1679,8 +1799,8 @@
 
       /** @type {ModalidadeSeguroSemReserva} */
       const modalidade = "vitalicio";
-      const DESCONTO_VITALICIO_SEM_RESERVA = 0.35;
-      const FATOR_DESCONTO = 1 - DESCONTO_VITALICIO_SEM_RESERVA; // 0.65
+      const produto = normalizarProdutoMAG(p.produto || produtoPadrao);
+      const sexo = normalizarSexoSegurado(p.sexo);
 
       const capitalInformado = lerNumeroFinito(p.capitalSegurado);
       const capitalSegurado = capitalInformado !== null
@@ -1695,22 +1815,22 @@
         ? Math.min(74, Math.max(25, idadeSegurado))
         : null;
 
-      const taxaAnualTabela = idadeTabela !== null
-        ? (TABELA_SEGURO_SUCESSAO[idadeTabela] || 0)
+      const taxaMensal100k = idadeTabela !== null
+        ? obterTaxaMensalMAGPor100k(produto, sexo, idadeTabela)
         : 0;
-      const taxaAnualComDesconto = taxaAnualTabela * FATOR_DESCONTO;
+      const taxaAnualTabela = Math.round(taxaMensal100k * 12 * 100) / 100;
 
-      const podeCalcular = capitalSegurado > 0 && idadePreenchida && taxaAnualTabela > 0;
-      const premioAnualInicial = podeCalcular
-        ? (capitalSegurado / 100000) * taxaAnualComDesconto
+      const podeCalcular = capitalSegurado > 0 && idadePreenchida && taxaMensal100k > 0;
+      const parcelaMensal = podeCalcular
+        ? (capitalSegurado / 100000) * taxaMensal100k
         : 0;
-      const parcelaMensal = podeCalcular ? (premioAnualInicial / 12) : 0;
+      const premioAnualInicial = podeCalcular ? (parcelaMensal * 12) : 0;
       const valorQuitar = podeCalcular ? (parcelaMensal * 120) : 0;
       const economiaLiquida = podeCalcular ? (capitalSegurado - valorQuitar) : 0;
       const eficienciaPct = podeCalcular ? ((economiaLiquida / capitalSegurado) * 100) : 0;
 
-      const taxaAnualEstimadaPct = taxaAnualComDesconto > 0
-        ? Math.round((taxaAnualComDesconto / 1000) * 100) / 100
+      const taxaAnualEstimadaPct = taxaAnualTabela > 0
+        ? Math.round((taxaAnualTabela / 1000) * 100) / 100
         : 0;
 
       const premioComReserva = lerNaoNegativo(p.premioComReservaMensal);
@@ -1719,9 +1839,11 @@
         : 0;
 
       /** @type {string[]} */
-      const avisos = [
-        "Sem formação de reserva: valor de resgate igual a R$ 0,00. Em caso de cancelamento ou desistência, não há devolução dos prêmios pagos."
-      ];
+      const avisos = produto === "sucessao_10"
+        ? [
+          "Sem formação de reserva: valor de resgate igual a R$ 0,00. Em caso de cancelamento ou desistência, não há devolução dos prêmios pagos."
+        ]
+        : [];
 
       if (podeCalcular && valorQuitar > capitalSegurado) {
         avisos.push(
@@ -1731,13 +1853,16 @@
 
       return {
         modalidade,
+        produto,
+        sexo,
         capitalSegurado,
         idadeSegurado,
         idadeTabela,
         idadePreenchida,
+        taxaMensal100k,
         taxaAnualTabela,
-        taxaAnualComDesconto,
-        descontoAplicadoPct: 35,
+        taxaAnualComDesconto: taxaAnualTabela,
+        descontoAplicadoPct: 0,
         expectativaVida: 85,
         taxaAnualEstimadaPct,
         premioEstimadoAutomaticamente: true,
@@ -1755,6 +1880,28 @@
         diferencaMensalVsReserva,
         avisos
       };
+    },
+
+    /**
+     * 15b. Calcula a 4ª Estratégia: Seguro Sucessão (3709 — Whole Life Integral 10 Anos).
+     * @param {ParamsSeguroSemReserva | null | undefined} [params={}]
+     * @returns {ResultadoSeguroSemReserva}
+     */
+    calcularSeguroComReserva(params = {}) {
+      const p = (params && typeof params === "object") ? { ...params, produto: "integral_10" } : { produto: "integral_10" };
+      return this.calcularSeguroMAG("integral_10", p);
+    },
+
+    /**
+     * 16. Calcula a 5ª Estratégia: Seguro sem Formação de Reserva (3715 — Whole Life Sucessão 10 Anos).
+     * Usa as cotações reais da MAG por faixa etária (clamping 25..74 + interpolação geométrica) e sexo,
+     * mantendo quitação em 120 meses e economia estimada idênticas ao Seguro Sucessão.
+     * @param {ParamsSeguroSemReserva | null | undefined} [params={}]
+     * @returns {ResultadoSeguroSemReserva}
+     */
+    calcularSeguroSemReserva(params = {}) {
+      const p = (params && typeof params === "object") ? { ...params, produto: "sucessao_10" } : { produto: "sucessao_10" };
+      return this.calcularSeguroMAG("sucessao_10", p);
     }
   };
 
