@@ -1,16 +1,19 @@
 ---
-description: Workflow padronizado de onboarding de assessores (/convidar) para geração segura em lote de links diretos de ativação via Supabase Auth Admin API, decisão automática entre invite e recovery e validação de perfis em public.profiles via supabase_mcp.
+description: Workflow padronizado de onboarding de assessores (/convidar) para geração segura em lote de links diretos de ativação imunes a pré-visualização (token_hash via login.html) pela Supabase Auth Admin API, decisão automática entre invite e recovery e validação de perfis em public.profiles via supabase_mcp.
 ---
 
 # ✉️ Workflow `/convidar` — Onboarding Seguro de Assessores (Whealth Planner Pro)
 
-Este workflow padroniza a geração em lote (1 ou N assessores) de links diretos de ativação (`action_link`) via Supabase Auth Admin API (`POST https://dogyopoylekiqsahadlc.supabase.co/auth/v1/admin/generate_link`), garantindo decisão automática entre convite novo (`invite`) e reemissão para convite expirado (`recovery`), validação do perfil `assessor` em `public.profiles` e proteção estrita da `Secret key`.
+Este workflow padroniza a geração em lote (1 ou N assessores) de links diretos de ativação **imunes a pré-visualização de mensageiros e scanners de e-mail** (`login.html?token_hash=...&type=...`) via Supabase Auth Admin API (`POST https://dogyopoylekiqsahadlc.supabase.co/auth/v1/admin/generate_link`), garantindo decisão automática entre convite novo (`invite`) e reemissão para convite expirado (`recovery`), validação do perfil `assessor` em `public.profiles` e proteção estrita da `Secret key`.
+
+> **Por que usar `token_hash` em `login.html` em vez de `action_link`?**
+> O `action_link` (`/auth/v1/verify?token=...`) consome o token via `GET`, fazendo com que crawlers de pré-visualização (como WhatsApp, Slack, Teams ou scanners antivírus) queimem o convite antes do clique humano. Ao montar o link diretamente para `login.html?token_hash=<hashed_token>&type=<type>`, o crawler lê apenas o HTML estático e `script/auth.js` só executa `verifyOtp()` quando o assessor preenche e envia sua nova senha.
 
 > **Regras Obrigatórias de Segurança (Bloqueantes — Zero-Leakage):**
 > 1. **Nunca gravar a `Secret key` em disco:** é proibido salvar a `Secret key` em `.env`, scripts temporários, arquivos `.md`, `.js`, `.json` ou qualquer caminho do repositório.
 > 2. **Nunca imprimir a `Secret key`:** jamais exibir a chave em `stdout`, `stderr`, logs de erro, `console.log` ou respostas no chat.
 > 3. **Execução 100% em memória:** trafegar a chave exclusivamente via variável de ambiente efêmera da sessão (`SUPABASE_SECRET_KEY`) e removê-la imediatamente após a execução.
-> 4. **Zero-Leakage no Git:** nunca commitar e-mails reais, `action_link`s ou credenciais no repositório.
+> 4. **Zero-Leakage no Git:** nunca commitar e-mails reais, `token_hash`, `action_link`s ou credenciais no repositório.
 
 ---
 
@@ -58,8 +61,8 @@ WHERE lower(u.email) = ANY (ARRAY[
 
 | Estado encontrado em `auth.users` / `public.profiles` | `type` selecionado | Comportamento esperado |
 | :--- | :--- | :--- |
-| **Não existe** em `auth.users` | `"invite"` | Cria o usuário em `auth.users` com `raw_user_meta_data.full_name`, aciona o trigger `public.handle_new_user()` (criando perfil `role = 'assessor'`) e retorna o `action_link` de ativação. |
-| **Já existe** em `auth.users`, com `email_confirmed_at IS NULL` ou `last_sign_in_at IS NULL` (convite expirado/pendente) | `"recovery"` | Evita erro de usuário já registrado e gera novo `action_link` para o assessor definir sua senha em `login.html`. |
+| **Não existe** em `auth.users` | `"invite"` | Cria o usuário em `auth.users` com `raw_user_meta_data.full_name`, aciona o trigger `public.handle_new_user()` (criando perfil `role = 'assessor'`) e gera o link seguro (`login.html?token_hash=...&type=invite`). |
+| **Já existe** em `auth.users`, com `email_confirmed_at IS NULL` ou `last_sign_in_at IS NULL` (convite expirado/pendente) | `"recovery"` | Evita erro de usuário já registrado e gera novo link seguro (`login.html?token_hash=...&type=recovery`) para o assessor definir sua senha em `login.html`. |
 | **Já existe** e já está **ativo** (`email_confirmed_at IS NOT NULL` e `last_sign_in_at IS NOT NULL`) | **Confirmar com operador** | Alertar que o assessor já ativou a conta; gerar `"recovery"` apenas se o operador confirmar explicitamente que deseja redefinição de senha. |
 
 ---
@@ -158,13 +161,31 @@ if (secretKey.startsWith("eyJ")) {
       continue;
     }
 
+    const hashedToken = body.hashed_token || body.properties?.hashed_token || null;
+    const verificationType = body.verification_type || body.properties?.verification_type || type;
+    const safeLink = hashedToken
+      ? `${REDIRECT_TO}?token_hash=${encodeURIComponent(hashedToken)}&type=${encodeURIComponent(verificationType)}`
+      : null;
+
+    if (!safeLink) {
+      results.push({
+        email,
+        full_name,
+        type: verificationType,
+        ok: false,
+        status: res.status,
+        error: "Resposta do Supabase sem hashed_token; não usar action_link vulnerável a preview."
+      });
+      continue;
+    }
+
     results.push({
       email,
       full_name,
-      type,
+      type: verificationType,
       ok: true,
       user_id: body.id || body.user?.id || null,
-      action_link: body.action_link || body.properties?.action_link || null
+      activation_link: safeLink
     });
   }
 
@@ -212,17 +233,18 @@ ORDER BY u.created_at DESC;
 
 ---
 
-## Etapa 4 — Entrega Final (Tabela Markdown de `action_link`s)
+## Etapa 4 — Entrega Final (Tabela Markdown de Links Seguros)
 
 Entregue o resultado consolidado em uma tabela Markdown pronta para cópia e envio individual aos assessores:
 
-| Assessor | E-mail | Tipo | Perfil (`public.profiles`) | Link Direto de Ativação (`action_link`) |
+| Assessor | E-mail | Tipo | Perfil (`public.profiles`) | Link Direto de Ativação (`login.html?token_hash=...`) |
 | :--- | :--- | :--- | :--- | :--- |
-| Nome Completo 1 | `assessor1@exemplo.com` | `invite` | `assessor` (validado) | `<action_link>` |
-| Nome Completo 2 | `assessor2@exemplo.com` | `recovery` | `assessor` (validado) | `<action_link>` |
+| Nome Completo 1 | `assessor1@exemplo.com` | `invite` | `assessor` (validado) | `https://joaopedromenesesdev.github.io/RITMO_Whealth_Pro/login.html?token_hash=...&type=invite` |
+| Nome Completo 2 | `assessor2@exemplo.com` | `recovery` | `assessor` (validado) | `https://joaopedromenesesdev.github.io/RITMO_Whealth_Pro/login.html?token_hash=...&type=recovery` |
 
 ### Checklist Final de Encerramento
 
 - [ ] Confirmar que `SUPABASE_SECRET_KEY` foi removida da memória/sessão e não aparece em nenhum log ou saída.
 - [ ] Confirmar que nenhum arquivo temporário foi criado no workspace (`git status` limpo).
-- [ ] Orientar o operador de que cada `action_link` é de **uso único** e tem validade temporária; evitar ferramentas que façam pré-visualização automática de URL (que podem consumir o token antes do clique) e, caso expire, basta reexecutar `/convidar` (que escolherá `type: "recovery"` automaticamente).
+- [ ] Confirmar que o link entregue usa `login.html?token_hash=...&type=...` (e não `action_link` via `/auth/v1/verify`), garantindo imunidade contra pré-visualizações automáticas (WhatsApp, Slack, Teams e scanners de e-mail), pois o `verifyOtp()` em `script/auth.js` só consome o token quando o assessor preenche e envia a nova senha.
+- [ ] Orientar o operador de que o token tem validade temporária e uso único após a submissão da senha; caso expire, basta reexecutar `/convidar` (que escolherá `type: "recovery"` automaticamente).
