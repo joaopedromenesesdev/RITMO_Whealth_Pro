@@ -293,12 +293,19 @@
  * @typedef {Object} ResultadoSeguroSemReserva
  * @property {ModalidadeSeguroSemReserva} modalidade
  * @property {number} capitalSegurado
- * @property {number} idadeSegurado
+ * @property {number | null} idadeSegurado
+ * @property {number | null} idadeTabela
+ * @property {boolean} idadePreenchida
+ * @property {number} taxaAnualTabela
+ * @property {number} taxaAnualComDesconto
+ * @property {number} descontoAplicadoPct
  * @property {number} expectativaVida
  * @property {number} taxaAnualEstimadaPct
  * @property {boolean} premioEstimadoAutomaticamente
+ * @property {number} parcelaMensal
  * @property {number} premioMensal
  * @property {number} premioAnualInicial
+ * @property {number} valorQuitar
  * @property {number} prazoAnos
  * @property {number} reajusteEtarioAnualPct
  * @property {number} desembolsoTotal
@@ -370,9 +377,30 @@
     ES: 4.0    // Espírito Santo (fixo 4%)
   };
 
+  /**
+   * Tabela oficial de taxas anuais por R$ 100.000 de Capital Segurado (25 a 74 anos)
+   * compartilhada entre o Seguro Sucessão (Estratégia 4) e o Vitalício sem Resgate (Estratégia 5, com 35% de desconto).
+   * @type {Readonly<Record<number, number>>}
+   */
+  const TABELA_SEGURO_SUCESSAO = Object.freeze({
+    25: 3483.96, 26: 3563.00, 27: 3646.00, 28: 3734.00, 29: 3826.00,
+    30: 3923.00, 31: 4024.00, 32: 4130.00, 33: 4237.00, 34: 4341.00,
+    35: 4443.12, 36: 4565.00, 37: 4691.00, 38: 4821.00, 39: 4956.00,
+    40: 5096.00, 41: 5241.00, 42: 5392.00, 43: 5548.00, 44: 5710.00,
+    45: 5878.00, 46: 6053.00, 47: 6234.00, 48: 6421.00, 49: 6615.00,
+    50: 6817.00, 51: 7026.00, 52: 7243.00, 53: 7469.00, 54: 7704.00,
+    55: 7949.00, 56: 8204.00, 57: 8469.00, 58: 8745.00, 59: 9032.00,
+    60: 9332.00, 61: 9445.00, 62: 9555.00, 63: 9638.00, 64: 9662.00,
+    65: 9672.48, 66: 9912.00, 67: 10165.00, 68: 10433.00, 69: 10715.00,
+    70: 11014.00, 71: 11329.00, 72: 11662.00, 73: 12013.00, 74: 12384.00
+  });
+
   const TributarioEngine = {
     // Limite de isenção anual legal do ITCMD (2.500 UFESPs / SP como padrão de referência nacional)
     LIMITE_ISENCAO_ANUAL: 96050,
+
+    // Tabela oficial de faixas etárias do Seguro Sucessão (25 a 74 anos)
+    TABELA_SEGURO_SUCESSAO,
 
     /**
      * Tipos de Conta no Exterior & Regras Sucessórias (Páginas 4 e 5 BTG Pactual).
@@ -1622,7 +1650,8 @@
 
     /**
      * 16. Calcula a 5ª Estratégia: Seguro de Vida sem Formação de Reserva (Vitalício sem Resgate).
-     * Função pura e blindada contra NaN/Infinity; não altera nenhuma fórmula das 4 estratégias legadas.
+     * Aplica a tabela TABELA_SEGURO_SUCESSAO (clamping 25..74) com 35% de desconto sobre a taxa anual
+     * antes da divisão por 12, mantendo quitação em 120 meses e economia estimada idênticas ao Seguro Sucessão.
      * @param {ParamsSeguroSemReserva | null | undefined} [params={}]
      * @returns {ResultadoSeguroSemReserva}
      */
@@ -1650,6 +1679,8 @@
 
       /** @type {ModalidadeSeguroSemReserva} */
       const modalidade = "vitalicio";
+      const DESCONTO_VITALICIO_SEM_RESERVA = 0.35;
+      const FATOR_DESCONTO = 1 - DESCONTO_VITALICIO_SEM_RESERVA; // 0.65
 
       const capitalInformado = lerNumeroFinito(p.capitalSegurado);
       const capitalSegurado = capitalInformado !== null
@@ -1657,54 +1688,34 @@
         : lerNaoNegativo(p.custoInventario);
 
       const idadeInformada = lerNumeroFinito(p.idadeSegurado);
-      const idadeSegurado = (idadeInformada !== null && idadeInformada > 0)
-        ? Math.min(99, Math.max(18, Math.round(idadeInformada)))
-        : 40;
+      const idadeInteira = idadeInformada !== null ? Math.trunc(idadeInformada) : null;
+      const idadePreenchida = idadeInteira !== null && idadeInteira > 0;
+      const idadeSegurado = idadePreenchida ? idadeInteira : null;
+      const idadeTabela = idadeSegurado !== null
+        ? Math.min(74, Math.max(25, idadeSegurado))
+        : null;
 
-      const expectativaInformada = lerNumeroFinito(p.expectativaVida);
-      const expectativaVida = (expectativaInformada !== null && expectativaInformada > 0)
-        ? Math.min(120, Math.max(50, Math.round(expectativaInformada)))
-        : 85;
-
-      const horizonte = Math.round(expectativaVida - idadeSegurado);
-      const prazoAnos = horizonte > 0 ? Math.min(80, horizonte) : 5;
-      const reajusteEtarioAnualPct = 0;
-
-      const taxaBasePadrao = 0.0065 + Math.max(0, idadeSegurado - 30) * 0.00045;
-      const taxaInformadaPct = lerNumeroFinito(p.taxaAnualPct);
-      const taxaAnualDecimal = (taxaInformadaPct !== null && taxaInformadaPct > 0)
-        ? (Math.min(50, taxaInformadaPct) / 100)
-        : taxaBasePadrao;
-      const taxaAnualEstimadaPct = Math.round(taxaAnualDecimal * 10000) / 100;
-
-      const premioInformado = lerNumeroFinito(p.premioMensal);
-      const premioEstimadoAutomaticamente = !(premioInformado !== null && premioInformado > 0);
-      const premioMensalBruto = !premioEstimadoAutomaticamente
-        ? /** @type {number} */ (premioInformado)
-        : (capitalSegurado > 0 ? (capitalSegurado * taxaAnualDecimal) / 12 : 0);
-
-      const premioMensal = Math.round(Math.max(0, premioMensalBruto) * 100) / 100;
-      const premioAnualInicial = Math.round(premioMensal * 12 * 100) / 100;
-
-      const desembolsoBruto = (premioAnualInicial > 0 && prazoAnos > 0)
-        ? (premioAnualInicial * prazoAnos)
+      const taxaAnualTabela = idadeTabela !== null
+        ? (TABELA_SEGURO_SUCESSAO[idadeTabela] || 0)
         : 0;
-      const desembolsoTotal = Number.isFinite(desembolsoBruto)
-        ? Math.round(Math.max(0, desembolsoBruto) * 100) / 100
-        : 0;
+      const taxaAnualComDesconto = taxaAnualTabela * FATOR_DESCONTO;
 
-      const alavancagem = (capitalSegurado > 0 && desembolsoTotal > 0)
-        ? Math.round((capitalSegurado / desembolsoTotal) * 100) / 100
+      const podeCalcular = capitalSegurado > 0 && idadePreenchida && taxaAnualTabela > 0;
+      const premioAnualInicial = podeCalcular
+        ? (capitalSegurado / 100000) * taxaAnualComDesconto
         : 0;
+      const parcelaMensal = podeCalcular ? (premioAnualInicial / 12) : 0;
+      const valorQuitar = podeCalcular ? (parcelaMensal * 120) : 0;
+      const economiaLiquida = podeCalcular ? (capitalSegurado - valorQuitar) : 0;
+      const eficienciaPct = podeCalcular ? ((economiaLiquida / capitalSegurado) * 100) : 0;
 
-      const economiaLiquida = Math.round((capitalSegurado - desembolsoTotal) * 100) / 100;
-      const eficienciaPct = capitalSegurado > 0
-        ? Math.round(((capitalSegurado - desembolsoTotal) / capitalSegurado) * 10000) / 100
+      const taxaAnualEstimadaPct = taxaAnualComDesconto > 0
+        ? Math.round((taxaAnualComDesconto / 1000) * 100) / 100
         : 0;
 
       const premioComReserva = lerNaoNegativo(p.premioComReservaMensal);
-      const diferencaMensalVsReserva = premioComReserva > 0
-        ? Math.round((premioMensal - premioComReserva) * 100) / 100
+      const diferencaMensalVsReserva = (podeCalcular && premioComReserva > 0)
+        ? Math.round((parcelaMensal - premioComReserva) * 100) / 100
         : 0;
 
       /** @type {string[]} */
@@ -1712,7 +1723,7 @@
         "Sem formação de reserva: valor de resgate igual a R$ 0,00. Em caso de cancelamento ou desistência, não há devolução dos prêmios pagos."
       ];
 
-      if (capitalSegurado > 0 && desembolsoTotal > capitalSegurado) {
+      if (podeCalcular && valorQuitar > capitalSegurado) {
         avisos.push(
           "Atenção: o desembolso acumulado estimado supera o capital segurado neste horizonte."
         );
@@ -1722,15 +1733,22 @@
         modalidade,
         capitalSegurado,
         idadeSegurado,
-        expectativaVida,
+        idadeTabela,
+        idadePreenchida,
+        taxaAnualTabela,
+        taxaAnualComDesconto,
+        descontoAplicadoPct: 35,
+        expectativaVida: 85,
         taxaAnualEstimadaPct,
-        premioEstimadoAutomaticamente,
-        premioMensal,
+        premioEstimadoAutomaticamente: true,
+        parcelaMensal,
+        premioMensal: parcelaMensal,
         premioAnualInicial,
-        prazoAnos,
-        reajusteEtarioAnualPct,
-        desembolsoTotal,
-        alavancagem,
+        valorQuitar,
+        prazoAnos: 10,
+        reajusteEtarioAnualPct: 0,
+        desembolsoTotal: valorQuitar,
+        alavancagem: (podeCalcular && valorQuitar > 0) ? (capitalSegurado / valorQuitar) : 0,
         economiaLiquida,
         eficienciaPct,
         valorResgate: 0,

@@ -2823,95 +2823,97 @@
     // =========================================================================
     console.log("\n-> Teste 51: 5ª Estratégia — Seguro sem Formação de Reserva (Vitalício sem Resgate)");
 
-    // 51.A — Vitalício sem Resgate com prêmio explícito, horizonte por expectativa de vida e comparativo vs Estratégia 4
-    const ssrVitManual = engine.calcularSeguroSemReserva({
-      capitalSegurado: 1000000,
-      idadeSegurado: 45,
-      expectativaVida: 85,
-      premioMensal: 500,
-      premioComReservaMensal: 4246.67
+    // 51.A — Todas as faixas etárias de 25 a 74 anos (TABELA_SEGURO_SUCESSAO com 35% de desconto antes de /12)
+    const tabelaSS = engine.TABELA_SEGURO_SUCESSAO;
+    const todasIdadesTabela = Array.from({ length: 50 }, (_, idx) => 25 + idx);
+    const capitalTeste51 = 1000000;
+    const todasFaixasOk = Boolean(tabelaSS) && todasIdadesTabela.every(idade => {
+      const taxa = tabelaSS[idade];
+      const esperadoParcela = ((capitalTeste51 / 100000) * (taxa * 0.65)) / 12;
+      const esperadoQuitar = esperadoParcela * 120;
+      const esperadaEconomia = capitalTeste51 - esperadoQuitar;
+      const esperadoPct = (esperadaEconomia / capitalTeste51) * 100;
+      const res = engine.calcularSeguroSemReserva({
+        capitalSegurado: capitalTeste51,
+        idadeSegurado: idade,
+        modalidade: "temporario"
+      });
+      return (
+        res.modalidade === "vitalicio" &&
+        res.idadePreenchida === true &&
+        res.idadeSegurado === idade &&
+        res.idadeTabela === idade &&
+        res.descontoAplicadoPct === 35 &&
+        res.reajusteEtarioAnualPct === 0 &&
+        res.valorResgate === 0 &&
+        Math.abs(res.parcelaMensal - esperadoParcela) < 1e-9 &&
+        Math.abs(res.premioMensal - esperadoParcela) < 1e-9 &&
+        Math.abs(res.valorQuitar - esperadoQuitar) < 1e-9 &&
+        Math.abs(res.economiaLiquida - esperadaEconomia) < 1e-9 &&
+        Math.abs(res.eficienciaPct - esperadoPct) < 1e-9 &&
+        Array.isArray(res.avisos) &&
+        res.avisos.some(a => a.toLowerCase().includes("resgate")) &&
+        semNaN(res)
+      );
+    });
+    const ssrFallbackCusto = engine.calcularSeguroSemReserva({
+      custoInventario: 500000,
+      idadeSegurado: 45
     });
     assert(
-      ssrVitManual.modalidade === "vitalicio" &&
-      ssrVitManual.capitalSegurado === 1000000 &&
-      ssrVitManual.premioMensal === 500 &&
-      ssrVitManual.premioAnualInicial === 6000 &&
-      ssrVitManual.prazoAnos === 40 &&
-      ssrVitManual.reajusteEtarioAnualPct === 0 &&
-      ssrVitManual.desembolsoTotal === 240000 &&
-      ssrVitManual.alavancagem === 4.17 &&
-      ssrVitManual.economiaLiquida === 760000 &&
-      ssrVitManual.eficienciaPct === 76 &&
-      ssrVitManual.valorResgate === 0 &&
-      ssrVitManual.premioEstimadoAutomaticamente === false &&
-      ssrVitManual.diferencaMensalVsReserva === -3746.67 &&
-      Array.isArray(ssrVitManual.avisos) &&
-      ssrVitManual.avisos.some(a => a.toLowerCase().includes("resgate")) &&
-      !ssrVitManual.avisos.some(a => a.toLowerCase().includes("prazo determinado")) &&
-      semNaN(ssrVitManual),
-      "SeguroSemReserva[Vitalício Manual]: calcula desembolso R$ 240k (40 anos), alavancagem 4,17x, eficiência 76%, reajuste 0 e resgate 0"
+      todasFaixasOk &&
+      ssrFallbackCusto.capitalSegurado === 500000 &&
+      Math.abs(ssrFallbackCusto.parcelaMensal - (((500000 / 100000) * (tabelaSS[45] * 0.65)) / 12)) < 1e-9 &&
+      semNaN(ssrFallbackCusto),
+      "SeguroSemReserva[Faixas 25..74 + -35%]: todas as 50 faixas etárias aplicam 35% de desconto antes da divisão por 12, 120x e economia exata"
     );
 
-    // 51.B — Estimativa automática pela idade, fallback seguro de prazo e consolidação exclusiva em Vitalício
-    const ssrVit = engine.calcularSeguroSemReserva({
-      custoInventario: 1000000,
-      modalidade: "temporario",
-      idadeSegurado: 45,
-      expectativaVida: 85,
-      reajusteEtarioAnualPct: 5
-    });
-    const ssrVitFallbackPrazo = engine.calcularSeguroSemReserva({
-      capitalSegurado: 500000,
-      idadeSegurado: 90,
-      expectativaVida: 85
-    });
+    // 51.B — Clamping de idade (<25 -> 25 e >74 -> 74)
+    const ssrMenor18 = engine.calcularSeguroSemReserva({ capitalSegurado: 1000000, idadeSegurado: 18 });
+    const ssrMenor24 = engine.calcularSeguroSemReserva({ capitalSegurado: 1000000, idadeSegurado: 24 });
+    const ssr25 = engine.calcularSeguroSemReserva({ capitalSegurado: 1000000, idadeSegurado: 25 });
+    const ssrMaior75 = engine.calcularSeguroSemReserva({ capitalSegurado: 1000000, idadeSegurado: 75 });
+    const ssrMaior90 = engine.calcularSeguroSemReserva({ capitalSegurado: 1000000, idadeSegurado: 90 });
+    const ssr74 = engine.calcularSeguroSemReserva({ capitalSegurado: 1000000, idadeSegurado: 74 });
     assert(
-      ssrVit.modalidade === "vitalicio" &&
-      ssrVit.capitalSegurado === 1000000 &&
-      ssrVit.prazoAnos === 40 &&
-      ssrVit.reajusteEtarioAnualPct === 0 &&
-      ssrVit.premioEstimadoAutomaticamente === true &&
-      ssrVit.premioMensal > 0 &&
-      ssrVit.desembolsoTotal === Math.round(ssrVit.premioAnualInicial * 40 * 100) / 100 &&
-      ssrVit.alavancagem > 0 &&
-      ssrVit.valorResgate === 0 &&
-      ssrVit.diferencaMensalVsReserva === 0 &&
-      ssrVit.avisos.some(a => a.toLowerCase().includes("resgate")) &&
-      !ssrVit.avisos.some(a => a.toLowerCase().includes("reajuste etário")) &&
-      ssrVitFallbackPrazo.prazoAnos === 5 &&
-      semNaN(ssrVit) && semNaN(ssrVitFallbackPrazo),
-      "SeguroSemReserva[Vitalício Auto]: força modalidade vitalício com reajuste 0, estima prêmio pela idade e aplica fallback seguro (5 anos)"
+      ssrMenor18.idadeTabela === 25 && ssrMenor18.parcelaMensal === ssr25.parcelaMensal &&
+      ssrMenor24.idadeTabela === 25 && ssrMenor24.parcelaMensal === ssr25.parcelaMensal &&
+      ssrMaior75.idadeTabela === 74 && ssrMaior75.parcelaMensal === ssr74.parcelaMensal &&
+      ssrMaior90.idadeTabela === 74 && ssrMaior90.parcelaMensal === ssr74.parcelaMensal &&
+      ssrMenor18.valorQuitar === ssr25.valorQuitar &&
+      ssrMaior90.valorQuitar === ssr74.valorQuitar &&
+      semNaN(ssrMenor18) && semNaN(ssrMaior90),
+      "SeguroSemReserva[Clamping]: idades <25 usam faixa 25 e idades >74 usam faixa 74 com valores idênticos"
     );
 
-    // 51.C — Alerta quando desembolso acumulado supera o capital segurado no horizonte vitalício
-    const ssrCustoMaiorCapital = engine.calcularSeguroSemReserva({
-      capitalSegurado: 100000,
-      idadeSegurado: 40,
-      expectativaVida: 85,
-      premioMensal: 500
-    });
+    // 51.C — Idade não preenchida com capital > 0 mantém coerência sem fallback artificial para 40
+    const ssrSemIdade = [null, undefined, "", 0, -10, NaN].map(idadeVazia =>
+      engine.calcularSeguroSemReserva({ capitalSegurado: 1000000, idadeSegurado: idadeVazia })
+    );
     assert(
-      ssrCustoMaiorCapital.prazoAnos === 45 &&
-      ssrCustoMaiorCapital.desembolsoTotal === 270000 &&
-      ssrCustoMaiorCapital.economiaLiquida === -170000 &&
-      ssrCustoMaiorCapital.eficienciaPct === -170 &&
-      ssrCustoMaiorCapital.avisos.some(a => a.toLowerCase().includes("supera o capital")) &&
-      semNaN(ssrCustoMaiorCapital),
-      "SeguroSemReserva[Alerta Custo]: emite alerta quando desembolso acumulado vitalício supera capital segurado"
+      ssrSemIdade.every(r =>
+        r.capitalSegurado === 1000000 &&
+        r.idadePreenchida === false &&
+        r.idadeSegurado === null &&
+        r.idadeTabela === null &&
+        r.parcelaMensal === 0 &&
+        r.premioMensal === 0 &&
+        r.valorQuitar === 0 &&
+        r.economiaLiquida === 0 &&
+        r.eficienciaPct === 0 &&
+        r.valorResgate === 0 &&
+        Array.isArray(r.avisos) && r.avisos.length >= 1 &&
+        semNaN(r)
+      ),
+      "SeguroSemReserva[Idade Vazia]: sem idade preenchida retorna idadePreenchida=false e outputs zerados sem fallback artificial"
     );
 
-    // 51.D — Taxa anual parametrizável e casos de borda anti-NaN (null, undefined, zeros, negativos, strings e Infinity)
-    const ssrTaxaCustom = engine.calcularSeguroSemReserva({
-      capitalSegurado: 600000,
-      taxaAnualPct: 1,
-      idadeSegurado: 45,
-      expectativaVida: 55
-    });
+    // 51.D — Capital zero/negativo e casos de borda anti-NaN (null, undefined, strings, Infinity)
     const ssrBordas = [
       engine.calcularSeguroSemReserva(null),
       engine.calcularSeguroSemReserva(undefined),
       engine.calcularSeguroSemReserva({}),
-      engine.calcularSeguroSemReserva({ capitalSegurado: 0, premioMensal: 0, prazoAnos: 0 }),
+      engine.calcularSeguroSemReserva({ capitalSegurado: 0, idadeSegurado: 45 }),
       engine.calcularSeguroSemReserva({
         capitalSegurado: -500000,
         custoInventario: "abc",
@@ -2925,21 +2927,20 @@
       })
     ];
     assert(
-      ssrTaxaCustom.premioAnualInicial === 6000 &&
-      ssrTaxaCustom.premioMensal === 500 &&
-      ssrTaxaCustom.valorResgate === 0 &&
       ssrBordas.every(r =>
         r.modalidade === "vitalicio" &&
         r.reajusteEtarioAnualPct === 0 &&
         r.capitalSegurado === 0 &&
-        r.desembolsoTotal === 0 &&
-        r.alavancagem === 0 &&
+        r.parcelaMensal === 0 &&
+        r.premioMensal === 0 &&
+        r.valorQuitar === 0 &&
+        r.economiaLiquida === 0 &&
         r.eficienciaPct === 0 &&
         r.valorResgate === 0 &&
         r.diferencaMensalVsReserva === 0 &&
         semNaN(r)
       ),
-      "SeguroSemReserva[Anti-NaN]: trata taxa customizada e sanitiza null/undefined/zeros/negativos/strings/Infinity sem NaN"
+      "SeguroSemReserva[Anti-NaN / Capital Zero]: sanitiza null/undefined/zeros/negativos/strings/Infinity sem NaN"
     );
 
     // 51.E — Retrocompatibilidade do AppState (relatórios antigos ou com modalidade temporário/reajuste são migrados para vitalício sem reajuste)
@@ -2993,30 +2994,68 @@
     if (typeof require === "function") {
       const fs50 = require("fs");
       const path50 = require("path");
+      const vm50 = require("vm");
       const html50 = fs50.readFileSync(path50.join(__dirname, "../tributario.html"), "utf8");
+      const js50 = fs50.readFileSync(path50.join(__dirname, "../script/tributario.js"), "utf8");
       const css50 = fs50.readFileSync(path50.join(__dirname, "../style/tributario.css"), "utf8");
       const card5Start = html50.indexOf('id="card_estrategia_sem_reserva"');
       const card5End = html50.indexOf('<!-- NAVEGAÇÃO E VISUALIZAÇÃO -->');
       const card5Snippet = card5Start >= 0 && card5End > card5Start ? html50.slice(card5Start, card5End) : "";
 
+      let sintaxeTribOk = true;
+      try {
+        new vm50.Script(js50, { filename: "script/tributario.js" });
+      } catch (errTrib) {
+        sintaxeTribOk = false;
+        console.error("  [FAIL] Erro de sintaxe em script/tributario.js:", errTrib);
+      }
+
       assert(
+        sintaxeTribOk &&
         !card5Snippet.includes('id="btn_modalidade_sr_temporario"') &&
         !card5Snippet.includes('id="btn_modalidade_sr_vitalicio"') &&
         !card5Snippet.includes('id="input_seguro_sr_prazo"') &&
         !card5Snippet.includes('id="input_seguro_sr_reajuste"') &&
+        !card5Snippet.includes('id="input_seguro_sr_expectativa"') &&
+        !card5Snippet.includes('id="campo_seguro_sr_expectativa"') &&
+        !card5Snippet.includes('id="input_seguro_sr_premio"') &&
+        !card5Snippet.includes('id="badge_seguro_sr_premio_origem"') &&
+        !card5Snippet.includes('id="seguro_sr_premio_hint"') &&
+        !card5Snippet.includes('id="seguro_sr_label_desembolso"') &&
+        !card5Snippet.includes('id="seguro_sr_resultado_desembolso"') &&
+        !card5Snippet.includes('id="seguro_sr_resultado_alavancagem"') &&
+        !card5Snippet.includes('id="seguro_sr_resultado_resgate"') &&
+        !card5Snippet.includes('id="seguro_sr_resultado_diff_reserva"') &&
+        card5Snippet.includes('id="input_seguro_sr_idade"') &&
+        card5Snippet.includes('id="input_seguro_sr_capital"') &&
+        card5Snippet.includes('id="seguro_sr_resultado_capital"') &&
+        card5Snippet.includes('id="seguro_sr_resultado_parcela"') &&
+        card5Snippet.includes('id="seguro_sr_resultado_quitar"') &&
+        card5Snippet.includes('id="seguro_sr_resultado_economia"') &&
+        card5Snippet.includes('Encerramento dos Aportes:') &&
+        card5Snippet.includes('Economia Estimada:') &&
         card5Snippet.includes('Vitalício sem Resgate') &&
-        card5Snippet.includes('id="input_seguro_sr_expectativa"') &&
-        card5Snippet.includes('id="badge_seguro_sr_premio_origem"') &&
         card5Snippet.includes('id="seguro_sr_avisos_box"') &&
         !/\bon(?:click|input|change)\s*=/i.test(card5Snippet) &&
         !html50.includes('id="resumo_comparativo_estrategias"') &&
         !html50.includes('id="pdf_resumo_comparativo_estrategias"') &&
         html50.includes('id="pdf_seguro_sr_modalidade_badge"') &&
+        html50.includes('id="pdf_seguro_sr_capital"') &&
+        html50.includes('id="pdf_seguro_sr_parcela"') &&
+        html50.includes('id="pdf_seguro_sr_quitar"') &&
+        html50.includes('id="pdf_seguro_sr_economia"') &&
+        html50.includes('id="pdf_seguro_sr_aviso"') &&
+        !html50.includes('id="pdf_seguro_sr_prazo"') &&
+        !html50.includes('id="pdf_seguro_sr_desembolso"') &&
+        !html50.includes('id="pdf_seguro_sr_alavancagem"') &&
+        !html50.includes('id="pdf_seguro_sr_resgate"') &&
+        !html50.includes('id="pdf_seguro_sr_diff_reserva"') &&
         html50.includes('VITALÍCIO SEM RESGATE') &&
         html50.includes('id="pdf_disclaimer_institucional"') &&
+        js50.includes('"Informe a idade"') &&
         css50.includes(".reducao-card-sem-reserva") &&
         css50.includes(".badge-modalidade-sr-fixa"),
-        "SeguroSemReserva[UI/CSP/PDF]: 5º card apenas Vitalício sem Resgate, sem temporário nem reajuste etário, sem handlers inline e PDF completos"
+        "SeguroSemReserva[UI/CSP/PDF]: 5º card com exatamente os 4 outputs do Seguro Sucessão, avisos preservados, zero handlers inline e PDF sincronizado"
       );
     }
 

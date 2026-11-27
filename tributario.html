@@ -495,7 +495,7 @@
           <!-- OPÇÃO 4: Seguro Sucessão -->
           <div class="reducao-card reducao-card-seguro">
             <div class="reducao-col">
-              <label class="input-title">4 - Seguro Sucessão</label>
+              <label class="input-title">4 - Seguro Sucessão com Formação de Reserva</label>
               <p class="seguro-descricao">
                 Garante liquidez imediata para a família arcar com as despesas do inventário sem a necessidade de
                 dilapidar o patrimônio.
@@ -552,7 +552,8 @@
             <div class="seguro-sr-layout">
               <div class="reducao-col">
                 <div class="seguro-sr-header">
-                  <span class="input-title">5 - Seguro sem Formação de Reserva</span>
+                  <label class="input-title" for="input_seguro_sr_idade">5 - Seguro Sucessão sem Formação de
+                    Reserva</label>
                   <span class="badge-modalidade-sr-fixa">Vitalício sem Resgate</span>
                 </div>
                 <p class="seguro-descricao" id="seguro_sr_descricao">
@@ -577,32 +578,6 @@
                         autocomplete="off">
                     </div>
                   </div>
-
-                  <div class="seguro-sr-field">
-                    <div class="seguro-sr-label-row">
-                      <label for="input_seguro_sr_premio">Parcela Mensal</label>
-                      <span class="badge-estimativa-sr" id="badge_seguro_sr_premio_origem">Estimativa editável</span>
-                    </div>
-                    <div class="input-wrapper" style="margin-bottom: 0;">
-                      <span class="currency-symbol">R$</span>
-                      <input type="text" id="input_seguro_sr_premio" placeholder="Estimativa automática"
-                        autocomplete="off">
-                    </div>
-                    <span class="seguro-sr-hint" id="seguro_sr_premio_hint">Estimativa automática pela idade (editável
-                      pelo assessor)</span>
-                  </div>
-
-                  <div class="seguro-sr-field" id="campo_seguro_sr_expectativa">
-                    <div class="seguro-sr-label-row">
-                      <label for="input_seguro_sr_expectativa">Expectativa de Vida (anos)</label>
-                      <span class="badge-estimativa-sr badge-horizonte-sr" id="seguro_sr_horizonte_badge">Horizonte: 45
-                        anos</span>
-                    </div>
-                    <div class="input-wrapper" style="margin-bottom: 0;">
-                      <input type="number" id="input_seguro_sr_expectativa" value="85" min="50" max="120"
-                        autocomplete="off" class="input-no-prefix">
-                    </div>
-                  </div>
                 </div>
               </div>
 
@@ -618,25 +593,12 @@
                     <span class="result-badge" id="seguro_sr_resultado_parcela">—</span>
                   </div>
                   <div class="result-item">
-                    <span class="result-label" id="seguro_sr_label_desembolso">Desembolso Estimado (45 anos):</span>
-                    <span class="result-badge" id="seguro_sr_resultado_desembolso">—</span>
+                    <span class="result-label">Encerramento dos Aportes:</span>
+                    <span class="result-badge" id="seguro_sr_resultado_quitar">—</span>
                   </div>
                   <div class="result-item">
-                    <span class="result-label">Alavancagem Patrimonial:</span>
-                    <span class="result-badge" id="seguro_sr_resultado_alavancagem">—</span>
-                  </div>
-                  <div class="result-item">
-                    <span class="result-label">Economia / Eficiência:</span>
+                    <span class="result-label">Economia Estimada:</span>
                     <span class="result-badge result-badge-total" id="seguro_sr_resultado_economia">—</span>
-                  </div>
-                  <div class="result-item">
-                    <span class="result-label">Valor de Resgate:</span>
-                    <span class="result-badge result-badge-danger" id="seguro_sr_resultado_resgate">R$ 0,00 (Sem
-                      reserva)</span>
-                  </div>
-                  <div class="result-item">
-                    <span class="result-label">Diferença Mensal vs. Estratégia 4:</span>
-                    <span class="result-badge" id="seguro_sr_resultado_diff_reserva">—</span>
                   </div>
                 </div>
               </div>
@@ -1050,21 +1012,16 @@
           </div>
           <p id="pdf_seguro_sr_descricao"
             style="margin: 0 0 6px 0; font-size: 10px; color: #475569; line-height: 1.35;">
-            Proteção vitalícia de puro risco sem formação de reserva resgatável (resgate R$ 0,00), com foco em liquidez sucessória permanente.
+            Proteção vitalícia de puro risco sem formação de reserva resgatável (resgate R$ 0,00), com foco em liquidez
+            sucessória permanente.
           </p>
           <div
-            style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px 8px; font-size: 10.5px; background: #fff; padding: 6px 10px; border-radius: 7px; border: 1px solid #e2e8f0; margin-bottom: 6px;">
-            <div><strong>Capital:</strong> <span id="pdf_seguro_sr_capital">—</span></div>
+            style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px 10px; font-size: 11px; background: #fff; padding: 6px 10px; border-radius: 7px; border: 1px solid #e2e8f0; margin-bottom: 6px;">
+            <div><strong>Capital Segurado:</strong> <span id="pdf_seguro_sr_capital">—</span></div>
             <div><strong>Parcela Mensal:</strong> <span id="pdf_seguro_sr_parcela">—</span></div>
-            <div><strong>Prazo:</strong> <span id="pdf_seguro_sr_prazo">—</span></div>
-            <div><strong>Desembolso:</strong> <span id="pdf_seguro_sr_desembolso">—</span></div>
-            <div><strong>Alavancagem:</strong> <span id="pdf_seguro_sr_alavancagem">—</span></div>
-            <div><strong>Eficiência:</strong> <span id="pdf_seguro_sr_economia"
+            <div><strong>Encerramento (120x):</strong> <span id="pdf_seguro_sr_quitar">—</span></div>
+            <div><strong>Economia Estimada:</strong> <span id="pdf_seguro_sr_economia"
                 style="color: #1D6F42; font-weight: 700;">—</span></div>
-            <div><strong>Resgate:</strong> <span id="pdf_seguro_sr_resgate" style="color: #b91c1c; font-weight: 700;">R$
-                0,00</span></div>
-            <div style="grid-column: span 2;"><strong>Vs. Estratégia 4:</strong> <span
-                id="pdf_seguro_sr_diff_reserva">—</span></div>
           </div>
           <div id="pdf_seguro_sr_aviso"
             style="padding: 5px 9px; background: rgba(245, 158, 11, 0.1); border-left: 3px solid #d97706; border-radius: 5px; font-size: 9.5px; color: #92400e; line-height: 1.3;">
