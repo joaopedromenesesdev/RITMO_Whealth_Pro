@@ -127,7 +127,7 @@ function renderizarEstruturaFamiliar() {
   let html = `
     <div class="pdf-organograma-box">
       <div class="pdf-organograma-header">
-        <h4 style="margin:0; font-size:14px; font-weight:700; color:#09090b; letter-spacing:-0.2px;">
+        <h4 style="margin:0; font-size:14px; font-weight:700; color:#0a1b37; letter-spacing:-0.2px;">
           Mapeamento da Estrutura Familiar & Sucessória
         </h4>
         <div class="pdf-organograma-pills">
@@ -336,12 +336,12 @@ function renderizarGraficoEvolucao(scope = document) {
 
   // Criar gradiente de fundo azul transparente elegante
   const canvasCtx = ctx.getContext ? ctx.getContext('2d') : null;
-  let bgGradient = "rgba(9, 9, 11, 0.05)";
+  let bgGradient = "rgba(29, 78, 216, 0.06)";
   if (canvasCtx && canvasCtx.createLinearGradient) {
     bgGradient = canvasCtx.createLinearGradient(0, 0, 0, 300);
-    bgGradient.addColorStop(0, "rgba(9, 9, 11, 0.18)");
-    bgGradient.addColorStop(0.7, "rgba(9, 9, 11, 0.03)");
-    bgGradient.addColorStop(1, "rgba(9, 9, 11, 0.0)");
+    bgGradient.addColorStop(0, "rgba(29, 78, 216, 0.18)");
+    bgGradient.addColorStop(0.7, "rgba(29, 78, 216, 0.04)");
+    bgGradient.addColorStop(1, "rgba(29, 78, 216, 0.0)");
   }
 
   // Recuperar premissas globais salvas como fallback 2
@@ -406,17 +406,17 @@ function renderizarGraficoEvolucao(scope = document) {
   const datasets = [{
     label: labelPat,
     data: resultados,
-    borderColor: "#09090b",
+    borderColor: "#0a1b37",
     backgroundColor: bgGradient,
     borderWidth: 3,
     tension: 0.35,
     clip: false,
     pointBackgroundColor: "#ffffff",
-    pointBorderColor: "#09090b",
+    pointBorderColor: "#0a1b37",
     pointBorderWidth: 2,
     pointRadius: 4,
     pointHoverRadius: 6,
-    pointHoverBackgroundColor: "#09090b",
+    pointHoverBackgroundColor: "#0a1b37",
     pointHoverBorderColor: "#ffffff",
     pointHoverBorderWidth: 2,
     fill: true

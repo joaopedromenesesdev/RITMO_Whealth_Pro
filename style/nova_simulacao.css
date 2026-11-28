@@ -11,9 +11,9 @@
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      background-color: #09090b;
+      background-color: #071226;
       background-image: 
-        radial-gradient(circle at center, rgba(15, 23, 42, 0.38) 0%, rgba(9, 9, 11, 0.72) 100%),
+        radial-gradient(circle at center, rgba(15, 39, 74, 0.45) 0%, rgba(7, 18, 38, 0.84) 100%),
         url('../img/pace_logo_bg.jpg');
       background-size: cover;
       background-position: center;
@@ -34,7 +34,7 @@
       padding: 56px 52px;
       width: 100%;
       max-width: 480px;
-      box-shadow: 0 40px 100px rgba(0, 0, 50, 0.35);
+      box-shadow: 0 40px 100px rgba(7, 18, 38, 0.35);
       opacity: 0;
       animation: cardEntrar 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       animation-delay: 4.6s;
@@ -75,7 +75,7 @@
     }
 
     .link-voltar-dash {
-      color: #71717a;
+      color: #64748b;
       text-decoration: none;
       font-size: 13px;
       font-weight: 600;
@@ -87,7 +87,7 @@
     }
 
     .link-voltar-dash:hover {
-      color: #09090b;
+      color: #0a1b37;
     }
 
     @keyframes cardEntrar {
@@ -107,7 +107,7 @@
       font-family: 'Inter', sans-serif;
       font-size: 26px;
       font-weight: 800;
-      color: #09090b;
+      color: #0a1b37;
       letter-spacing: -0.5px;
       margin-bottom: 6px;
       text-transform: uppercase;
@@ -120,7 +120,7 @@
 
     .landing-subtitle {
       font-size: 13px;
-      color: #71717a;
+      color: #64748b;
       font-weight: 500;
       letter-spacing: 0.5px;
       text-transform: uppercase;
@@ -130,7 +130,7 @@
     /* ── Linha separadora ── */
     .landing-divider {
       height: 1px;
-      background: linear-gradient(90deg, #09090b, rgba(0, 0, 0, 0.1));
+      background: linear-gradient(90deg, #0a1b37, rgba(0, 0, 0, 0.1));
       margin-bottom: 36px;
     }
 
@@ -139,14 +139,14 @@
       font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
       letter-spacing: -0.01em;
       font-size: 28px;
-      color: #09090b;
+      color: #0a1b37;
       margin: 0 0 8px;
       font-weight: 700;
     }
 
     .landing-desc {
       font-size: 14px;
-      color: #71717a;
+      color: #64748b;
       margin-bottom: 32px;
       line-height: 1.6;
     }
@@ -160,7 +160,7 @@
       display: block;
       font-size: 11px;
       font-weight: 700;
-      color: #71717a;
+      color: #64748b;
       text-transform: uppercase;
       letter-spacing: 0.8px;
       margin-bottom: 8px;
@@ -169,12 +169,12 @@
     .field input {
       width: 100%;
       padding: 14px 18px;
-      border: 1.5px solid #e4e4e7;
+      border: 1.5px solid #e2e8f0;
       border-radius: 12px;
       font-family: 'Inter', sans-serif;
       font-size: 15px;
-      color: #09090b;
-      background: #fafafa;
+      color: #0a1b37;
+      background: #f8fafc;
       box-sizing: border-box;
       transition: all 0.25s ease;
       outline: none;
@@ -182,13 +182,13 @@
     }
 
     .field input:focus {
-      border-color: #09090b;
+      border-color: #0a1b37;
       background: #fff;
       box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.08);
     }
 
     .field input::placeholder {
-      color: #a1a1aa;
+      color: #94a3b8;
     }
 
     /* ── Botão ── */
@@ -196,9 +196,9 @@
       width: 100%;
       padding: 16px;
       margin-top: 8px;
-      background: #09090b;
+      background: #0a1b37;
       color: white;
-      border: 1px solid #27272a;
+      border: 1px solid #16386b;
       border-radius: 100px;
       font-family: 'Inter', sans-serif;
       font-size: 15px;
@@ -229,7 +229,7 @@
 
     .btn-iniciar:hover {
       transform: translateY(-3px);
-      background: #18181b;
+      background: #0f274a;
       box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
     }
 
@@ -268,7 +268,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #09090b;
+      background: #0a1b37;
       overflow: hidden;
       transition: opacity 2.0s cubic-bezier(0.25, 1, 0.5, 1),
         transform 2.0s cubic-bezier(0.25, 1, 0.5, 1),
@@ -285,8 +285,8 @@
       background-size: cover;
       background-position: center;
       animation: slowZoom 8s linear forwards;
-      opacity: 0.35;
-      filter: grayscale(100%) contrast(1.2) brightness(0.65);
+      opacity: 0.38;
+      filter: saturate(0.45) contrast(1.15) brightness(0.58) hue-rotate(15deg);
     }
 
     @keyframes slowZoom {
@@ -305,7 +305,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: radial-gradient(circle at center, rgba(0, 0, 0, 0.4) 0%, #09090b 85%);
+      background: radial-gradient(circle at center, rgba(15, 39, 74, 0.45) 0%, #071226 85%);
       z-index: 1;
     }
 

@@ -35,9 +35,9 @@
 }
 
 .insight-card.highlight {
-  background: #09090b;
+  background: #0a1b37;
   color: white;
-  border: 1px solid #27272a;
+  border: 1px solid #16386b;
 }
 
 .insight-card.highlight label {
@@ -52,7 +52,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #09090b;
+  color: #0a1b37;
 }
 
 .highlight .insight-icon {
@@ -101,14 +101,14 @@
 .value-display {
   font-size: 14px;
   font-weight: 700;
-  color: #09090b;
-  background: #f4f4f5;
+  color: #0a1b37;
+  background: #f1f5f9;
   padding: 4px 12px;
   border-radius: 100px;
 }
 
 .value-display.highlight {
-  background: #09090b;
+  background: #0a1b37;
   color: white;
 }
 
@@ -116,18 +116,18 @@
   width: 100%;
   padding: 14px 18px;
   border-radius: 12px;
-  border: 2px solid #e4e4e7;
+  border: 2px solid #e2e8f0;
   background: #f8fafc;
   font-size: 16px;
   font-weight: 600;
-  color: #09090b;
+  color: #0a1b37;
   transition: all 0.3s ease;
   outline: none;
   font-family: 'Inter', sans-serif;
 }
 
 .input-premium:focus {
-  border-color: #09090b;
+  border-color: #0a1b37;
   background: white;
   box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.08);
 }
@@ -138,7 +138,7 @@
   padding: 0 !important;
   margin: 0 !important;
   font-weight: 700;
-  color: #09090b;
+  color: #0a1b37;
   font-size: 18px !important;
   pointer-events: none;
 }
@@ -164,7 +164,7 @@
   font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
   letter-spacing: -0.01em;
   font-size: 18px;
-  color: #09090b;
+  color: #0a1b37;
 }
 
 .chart-legend-custom {
@@ -172,7 +172,7 @@
   gap: 15px;
   font-size: 12px;
   font-weight: 600;
-  color: #71717a;
+  color: #64748b;
 }
 
 .dot {
@@ -183,7 +183,7 @@
   margin-right: 4px;
 }
 
-.sua-projecao { background: #09090b; }
+.sua-projecao { background: #0a1b37; }
 .cdi { background: #10B981; }
 .ipca { background: #EF4444; }
 
@@ -221,27 +221,27 @@
 }
 
 .botoes .btn-main {
-  background: #09090b;
+  background: #0a1b37;
   color: white;
-  border: 1px solid #27272a;
+  border: 1px solid #16386b;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
 }
 
 .botoes .btn-main:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-  background: #18181b;
+  background: #0f274a;
 }
 
 .botoes .btn-secundario {
   background: #ffffff;
-  color: #09090b;
-  border: 1px solid #e4e4e7;
+  color: #0a1b37;
+  border: 1px solid #e2e8f0;
 }
 
 .botoes .btn-secundario:hover {
-  background: #f4f4f5;
-  color: #000000;
+  background: #f1f5f9;
+  color: #071226;
   transform: translateY(-2px);
 }
 
@@ -250,9 +250,9 @@
   display: inline-flex;
   align-items: center;
   gap: 15px;
-  background: #09090b;
+  background: #0a1b37;
   color: white;
-  border: 1px solid #27272a;
+  border: 1px solid #16386b;
   padding: 18px 45px;
   border-radius: 100px;
   text-decoration: none;
@@ -264,7 +264,7 @@
 .btn-next:hover {
   transform: translateY(-5px) scale(1.02);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
-  background: #18181b;
+  background: #0f274a;
 }
 
 /* --- RESPONSIVIDADE COMPLETA --- */

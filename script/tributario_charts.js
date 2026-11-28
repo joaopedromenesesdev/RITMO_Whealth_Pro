@@ -208,7 +208,7 @@
 
         legendaContainer.innerHTML = `
           <div class="legenda-item">
-            <span class="legenda-dot" style="background: #0f172a;"></span>
+            <span class="legenda-dot" style="background: #0a1b37;"></span>
             <span class="legenda-texto"><strong>Liquidez Financeira Disponível</strong> (${descSegura}${notaProjSegura})</span>
           </div>
           <div class="legenda-item">
@@ -219,7 +219,7 @@
             <span class="legenda-dot" style="background: #f59e0b;"></span>
             <span class="legenda-texto"><strong>Risco Operacional:</strong> Contas bancárias e investimentos bloqueados até alvará</span>
           </div>
-          <div class="legenda-item" style="flex-basis: 100%; align-items: flex-start; padding-top: 8px; border-top: 1px dashed #e4e4e7;">
+          <div class="legenda-item" style="flex-basis: 100%; align-items: flex-start; padding-top: 8px; border-top: 1px dashed #e2e8f0;">
             <span class="legenda-texto" style="line-height: 1.5;"><strong>Como ler as barras azuis:</strong> ${notaComoLer}</span>
           </div>
         `;
@@ -246,7 +246,7 @@
           </div>
           <div class="erosao-kpi-card ${isDeficit ? 'kpi-perigo-critico' : ''}">
             <span class="kpi-label">${isDeficit ? 'Déficit Imediato de Caixa' : 'Caixa Restante para Sobrevivência'}</span>
-            <span class="kpi-valor" style="color: ${isDeficit ? '#dc2626' : '#0f172a'};">
+            <span class="kpi-valor" style="color: ${isDeficit ? '#dc2626' : '#0a1b37'};">
               ${isDeficit ? '- R$ ' + metricas.deficitAtual.toLocaleString("pt-BR", { maximumFractionDigits: 0 }) : 'R$ ' + metricas.caixaRestanteAtual.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
             </span>
             <span class="kpi-sub">${isDeficit ? 'A família precisará vender imóveis/bens com deságio' : 'Saldo livre após pagar guias fiscais e custas'}</span>
@@ -286,7 +286,7 @@
             {
               label: `Liquidez Disponível (${siglaComposicao})`,
               data: [liquidezAtual, liquidezProjetada],
-              backgroundColor: '#0f172a',
+              backgroundColor: '#0a1b37',
               borderRadius: 6,
               barPercentage: 0.6,
               categoryPercentage: 0.7
@@ -322,14 +322,14 @@
               grid: { display: false },
               ticks: {
                 font: { size: 12, weight: '700', family: 'Outfit' },
-                color: '#09090b'
+                color: '#0a1b37'
               }
             }
           },
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#09090b',
+              backgroundColor: '#0a1b37',
               titleFont: { family: 'Outfit', size: 13, weight: '700' },
               bodyFont: { family: 'Outfit', size: 12 },
               padding: 12,
@@ -453,7 +453,7 @@
             {
               label: 'Patrimônio Preservado',
               data: [liquidoAtual, liquidoProjetado],
-              backgroundColor: '#09090b',
+              backgroundColor: '#0a1b37',
               borderRadius: { topLeft: 6, bottomLeft: 6, topRight: 0, bottomRight: 0 },
               borderSkipped: false,
               barPercentage: 0.55,
@@ -493,14 +493,14 @@
               grid: { display: false },
               ticks: {
                 font: { size: 12, weight: '600', family: 'Outfit' },
-                color: '#09090b'
+                color: '#0a1b37'
               }
             }
           },
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#09090b',
+              backgroundColor: '#0a1b37',
               titleFont: { family: 'Outfit', size: 13, weight: '700' },
               bodyFont: { family: 'Outfit', size: 12 },
               padding: 12,
@@ -558,7 +558,7 @@
             <span class="legenda-texto"><strong>Deságio Médio por Venda Forçada</strong> (20% a 25% de perda para levantar caixa)</span>
           </div>
           <div class="legenda-item">
-            <span class="legenda-dot" style="background: #09090b;"></span>
+            <span class="legenda-dot" style="background: #0a1b37;"></span>
             <span class="legenda-texto"><strong>Destruição Real Total:</strong> A conta invisível da falta de planejamento</span>
           </div>
         `;
@@ -634,7 +634,7 @@
               grid: { display: false },
               ticks: {
                 font: { size: 12, weight: '700', family: 'Outfit' },
-                color: '#09090b'
+                color: '#0a1b37'
               }
             },
             y: {
@@ -655,7 +655,7 @@
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#09090b',
+              backgroundColor: '#0a1b37',
               titleFont: { family: 'Outfit', size: 13, weight: '700' },
               bodyFont: { family: 'Outfit', size: 12 },
               padding: 12,
@@ -710,7 +710,7 @@
       if (legendaContainer) {
         legendaContainer.innerHTML = `
           <div class="legenda-item">
-            <span class="legenda-dot" style="background: #0f172a;"></span>
+            <span class="legenda-dot" style="background: #0a1b37;"></span>
             <span class="legenda-texto"><strong>Herança Líquida da Família</strong> (Bens sujeitos a inventário travado)</span>
           </div>
           <div class="legenda-item">
@@ -735,7 +735,7 @@
           </div>
           <div class="erosao-kpi-card">
             <span class="kpi-label">Prioridade na Mesa de Partilha</span>
-            <span class="kpi-valor" style="color: #0f172a;">1º da Fila</span>
+            <span class="kpi-valor" style="color: #0a1b37;">1º da Fila</span>
             <span class="kpi-sub">Nenhum filho recebe certidão ou posse antes de pagar o Estado</span>
           </div>
           <div class="erosao-kpi-card">
@@ -768,7 +768,7 @@
             {
               label: 'Herança Líquida da Família (Bens Bloqueados)',
               data: [herancaLiquidaAtual, herancaLiquidaProjetada],
-              backgroundColor: '#0f172a',
+              backgroundColor: '#0a1b37',
               borderRadius: 6,
               barPercentage: 0.6,
               categoryPercentage: 0.7
@@ -804,14 +804,14 @@
               grid: { display: false },
               ticks: {
                 font: { size: 12, weight: '700', family: 'Outfit' },
-                color: '#09090b'
+                color: '#0a1b37'
               }
             }
           },
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#09090b',
+              backgroundColor: '#0a1b37',
               titleFont: { family: 'Outfit', size: 13, weight: '700' },
               bodyFont: { family: 'Outfit', size: 12 },
               padding: 12,
@@ -905,7 +905,7 @@
             <span class="legenda-texto"><strong>Prejuízo Tributário à Vista</strong> (Montante que a família perde)</span>
           </div>
           <div class="legenda-item">
-            <span class="legenda-dot" style="background: #09090b;"></span>
+            <span class="legenda-dot" style="background: #0a1b37;"></span>
             <span class="legenda-texto"><strong>Equivalência Patrimonial:</strong> O que esse valor compraria em bens reais</span>
           </div>
           <div class="legenda-item">
@@ -932,7 +932,7 @@
           </div>
           <div class="erosao-kpi-card">
             <span class="kpi-label">Rendimento Queimado (Hoje vs. Futuro)</span>
-            <span class="kpi-valor" style="color: #0f172a;">${this.escapeTexto(mat.textoMeses)}</span>
+            <span class="kpi-valor" style="color: #0a1b37;">${this.escapeTexto(mat.textoMeses)}</span>
             <span class="kpi-sub">${this.escapeTexto(mat.subtituloMeses)}</span>
           </div>
           <div class="erosao-kpi-card kpi-alerta">
@@ -988,14 +988,14 @@
               grid: { display: false },
               ticks: {
                 font: { size: 12, weight: '700', family: 'Outfit' },
-                color: '#09090b'
+                color: '#0a1b37'
               }
             }
           },
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#09090b',
+              backgroundColor: '#0a1b37',
               titleFont: { family: 'Outfit', size: 13, weight: '700' },
               bodyFont: { family: 'Outfit', size: 12 },
               padding: 12,
@@ -1056,7 +1056,7 @@
       const legendaContainer = document.getElementById("erosao_legenda_container");
       if (legendaContainer) {
         legendaContainer.innerHTML = `
-          <div class="legenda-item"><span class="legenda-dot" style="background:#09090b;"></span><span class="legenda-texto"><strong>1. Patrimônio Bruto</strong></span></div>
+          <div class="legenda-item"><span class="legenda-dot" style="background:#0a1b37;"></span><span class="legenda-texto"><strong>1. Patrimônio Bruto</strong></span></div>
           <div class="legenda-item"><span class="legenda-dot" style="background:#ef4444;"></span><span class="legenda-texto"><strong>2. (-) ITCMD Estadual</strong></span></div>
           <div class="legenda-item"><span class="legenda-dot" style="background:#f97316;"></span><span class="legenda-texto"><strong>3. (-) Honorários Advocatícios</strong></span></div>
           <div class="legenda-item"><span class="legenda-dot" style="background:#eab308;"></span><span class="legenda-texto"><strong>4. (-) Custas Judiciais</strong></span></div>
@@ -1114,7 +1114,7 @@
             label: 'Valor',
             data: [step1, step2, step3, step4, step5],
             backgroundColor: [
-              '#09090b', // 1. Bruto
+              '#0a1b37', // 1. Bruto
               '#ef4444', // 2. ITCMD
               '#f97316', // 3. Honorários
               '#eab308', // 4. Custas
@@ -1147,14 +1147,14 @@
               grid: { display: false },
               ticks: {
                 font: { size: 12, weight: '600', family: 'Outfit' },
-                color: '#09090b'
+                color: '#0a1b37'
               }
             }
           },
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#09090b',
+              backgroundColor: '#0a1b37',
               titleFont: { family: 'Outfit', size: 13, weight: '700' },
               bodyFont: { family: 'Outfit', size: 12 },
               padding: 12,
@@ -1178,7 +1178,7 @@
               color: (context) => {
                 const idx = context.dataIndex;
                 if (idx === 0 || idx === 4) return '#ffffff';
-                return '#09090b';
+                return '#0a1b37';
               },
               anchor: (context) => {
                 const idx = context.dataIndex;
@@ -1255,7 +1255,7 @@
       const legendaContainer = document.getElementById("erosao_legenda_container");
       if (legendaContainer) {
         legendaContainer.innerHTML = `
-          <div class="legenda-item"><span class="legenda-dot" style="background:#09090b;"></span><span class="legenda-texto"><strong>Patrimônio Preservado</strong> (Herança Líquida)</span></div>
+          <div class="legenda-item"><span class="legenda-dot" style="background:#0a1b37;"></span><span class="legenda-texto"><strong>Patrimônio Preservado</strong> (Herança Líquida)</span></div>
           <div class="legenda-item"><span class="legenda-dot" style="background:#ef4444;"></span><span class="legenda-texto"><strong>(-) ITCMD</strong></span></div>
           <div class="legenda-item"><span class="legenda-dot" style="background:#f97316;"></span><span class="legenda-texto"><strong>(-) Honorários</strong></span></div>
           <div class="legenda-item"><span class="legenda-dot" style="background:#eab308;"></span><span class="legenda-texto"><strong>(-) Custas</strong></span></div>
@@ -1268,12 +1268,12 @@
         kpisGrid.innerHTML = `
           <div class="erosao-kpi-card">
             <span class="kpi-label">Preservação no Cenário Atual</span>
-            <span class="kpi-valor" style="color: #09090b;">${pctPreservadoAtual.toFixed(1).replace(".", ",")}% da herança</span>
+            <span class="kpi-valor" style="color: #0a1b37;">${pctPreservadoAtual.toFixed(1).replace(".", ",")}% da herança</span>
             <span class="kpi-sub">R$ ${liquidoAtual.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} líquidos entregues</span>
           </div>
           <div class="erosao-kpi-card">
             <span class="kpi-label">Preservação na Projeção Futura</span>
-            <span class="kpi-valor" style="color: #09090b;">${pctPreservadoProjetado.toFixed(1).replace(".", ",")}% da herança</span>
+            <span class="kpi-valor" style="color: #0a1b37;">${pctPreservadoProjetado.toFixed(1).replace(".", ",")}% da herança</span>
             <span class="kpi-sub">R$ ${liquidoProjetado.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} líquidos entregues</span>
           </div>
           <div class="erosao-kpi-card kpi-alerta">
@@ -1293,7 +1293,7 @@
           datasets: [{
             data: dataValues,
             backgroundColor: [
-              '#09090b', // Preservado
+              '#0a1b37', // Preservado
               '#ef4444', // ITCMD
               '#f97316', // Honorários
               '#eab308'  // Custas
@@ -1310,7 +1310,7 @@
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#09090b',
+              backgroundColor: '#0a1b37',
               titleFont: { family: 'Outfit', size: 12, weight: '700' },
               bodyFont: { family: 'Outfit', size: 11.5 },
               padding: 10,

@@ -1,16 +1,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@300;400;600;700;800&display=swap');
 
 :root {
-  --primary: #09090b;
-  --primary-dark: #000000;
-  --secondary: #27272a;
-  --accent: #18181b;
-  --bg-dashboard: #f4f4f5;
-  --card-bg: rgba(255, 255, 255, 0.95);
-  --text-main: #09090b;
-  --text-muted: #71717a;
-  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.1);
+  --primary: #0a1b37;
+  --primary-dark: #071226;
+  --secondary: #16386b;
+  --accent: #1d4ed8;
+  --bg-dashboard: #f1f5f9;
+  --card-bg: rgba(255, 255, 255, 0.96);
+  --text-main: #0a1b37;
+  --text-muted: #64748b;
+  --shadow-sm: 0 4px 12px rgba(7, 18, 38, 0.06);
+  --shadow-lg: 0 10px 30px rgba(7, 18, 38, 0.12);
 }
 
 body {
@@ -181,7 +181,7 @@ body {
 .input-with-suffix input:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(9, 9, 11, 0.1);
+  box-shadow: 0 0 0 3px rgba(10, 27, 55, 0.1);
 }
 
 .input-with-suffix span {
@@ -264,13 +264,13 @@ body {
 
 .card-hoje {
   background: #ffffff;
-  border: 1px solid #e4e4e7;
+  border: 1px solid #e2e8f0;
 }
 
 .card-futuro {
-  background: #09090b;
+  background: #0a1b37;
   color: white;
-  border: 1px solid #27272a;
+  border: 1px solid #16386b;
 }
 
 .label-periodo {
@@ -404,7 +404,7 @@ body {
 
 .card-erosao-patrimonial {
   background: #ffffff;
-  border: 1px solid #e4e4e7;
+  border: 1px solid #e2e8f0;
   border-radius: 20px;
   padding: 24px 28px;
   margin-top: 25px;
@@ -523,8 +523,8 @@ body {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #71717a;
-  background: #f4f4f5;
+  color: #64748b;
+  background: #f1f5f9;
   padding: 3px 8px;
   border-radius: 4px;
 }
@@ -539,14 +539,14 @@ body {
   margin: 6px 0 4px 0;
   font-size: 18px;
   font-weight: 700;
-  color: #09090b;
+  color: #0a1b37;
   font-family: 'Outfit', sans-serif;
 }
 
 .erosao-subtitle {
   margin: 0;
   font-size: 13px;
-  color: #71717a;
+  color: #64748b;
   line-height: 1.5;
 }
 
@@ -557,8 +557,8 @@ body {
   flex-wrap: wrap;
   margin-bottom: 14px;
   padding: 10px 14px;
-  background: #fafafa;
-  border: 1px solid #f4f4f5;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
   border-radius: 10px;
 }
 
@@ -567,7 +567,7 @@ body {
   align-items: center;
   gap: 8px;
   font-size: 12.5px;
-  color: #3f3f46;
+  color: #1e3a5f;
 }
 
 .legenda-dot {
@@ -578,7 +578,7 @@ body {
 }
 
 .cor-preservado {
-  background: #09090b;
+  background: #0a1b37;
 }
 
 .cor-corroido {
@@ -630,14 +630,14 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   background: #ffffff;
-  color: #09090b;
+  color: #0a1b37;
   padding: 3px 8px;
   border-radius: 6px;
   border: 1px solid #e2e8f0;
 }
 
 .donut-tag.tag-futuro {
-  background: #09090b;
+  background: #0a1b37;
   color: #ffffff;
   border: none;
 }
@@ -650,7 +650,7 @@ body {
 }
 
 .donut-title strong {
-  color: #09090b;
+  color: #0a1b37;
 }
 
 .donut-canvas-wrapper {
@@ -686,7 +686,7 @@ body {
 .donut-center-kpi .center-val {
   font-size: 12.5px;
   font-weight: 700;
-  color: #09090b;
+  color: #0a1b37;
   font-family: 'Outfit', sans-serif;
   margin-top: 2px;
 }
@@ -694,7 +694,7 @@ body {
 .donut-center-kpi .center-label {
   font-size: 9px;
   font-weight: 700;
-  color: #71717a;
+  color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -704,7 +704,7 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 14px;
   padding-top: 16px;
-  border-top: 1px dashed #e4e4e7;
+  border-top: 1px dashed #e2e8f0;
 }
 
 .erosao-kpi-card {
@@ -858,7 +858,7 @@ body.pdf-exporting .capa {
   margin: 0 !important;
   width: 794px !important;
   height: 1123px !important;
-  background: #09090b !important;
+  background: linear-gradient(155deg, #071226 0%, #0a1b37 52%, #132f5b 100%) !important;
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
@@ -870,7 +870,7 @@ body.pdf-exporting .capa {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  background: #09090b;
+  background: linear-gradient(155deg, #071226 0%, #0a1b37 52%, #132f5b 100%);
   position: relative;
   color: white;
   text-align: center;
@@ -883,8 +883,8 @@ body.pdf-exporting .capa {
   bottom: 0;
   width: 100%;
   height: 4px;
-  background: linear-gradient(90deg, transparent, #71717a, transparent);
-  opacity: 0.6;
+  background: linear-gradient(90deg, transparent, #c9a84c, transparent);
+  opacity: 0.8;
 }
 
 .capa h1 {
@@ -899,18 +899,18 @@ body.pdf-exporting .capa {
   margin-top: 10px;
   font-weight: 300;
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.7);
   text-transform: uppercase;
   letter-spacing: 4px;
 }
 
 .capa-divider {
-  width: 60px;
+  width: 72px;
   height: 2px;
-  background: #ffffff;
+  background: linear-gradient(90deg, transparent, #c9a84c, #f0d78c, #c9a84c, transparent);
   margin: 20px auto;
   /* centered horizontally */
-  opacity: 0.8;
+  opacity: 0.95;
 }
 
 .capa-bg-glow {
@@ -919,7 +919,7 @@ body.pdf-exporting .capa {
   left: 50%;
   width: 600px;
   height: 600px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(29, 78, 216, 0.16) 0%, rgba(19, 47, 91, 0.08) 45%, transparent 72%);
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
@@ -995,14 +995,14 @@ body.pdf-exporting .capa {
 }
 
 #total_pdf {
-  color: #000080;
+  color: #0a1b37;
   font-size: 52px;
   font-weight: 700;
   letter-spacing: -2px;
 }
 
 #total_projetado_pdf {
-  color: #000080;
+  color: #0a1b37;
   font-size: 42px;
   font-weight: 700;
 }
@@ -1140,7 +1140,7 @@ body.pdf-exporting .capa {
 }
 
 .pdf-regime-badge {
-  background: #09090b;
+  background: #0a1b37;
   color: #ffffff;
   font-size: 10px;
   font-weight: 600;
@@ -1163,9 +1163,9 @@ body.pdf-exporting .capa {
 }
 
 .pdf-node-titular {
-  border-color: #09090b;
-  background: #fafafa;
-  border-left: 3px solid #09090b;
+  border-color: #0a1b37;
+  background: #f8fafc;
+  border-left: 3px solid #0a1b37;
 }
 
 .pdf-node-conjuge {
@@ -1197,7 +1197,7 @@ body.pdf-exporting .capa {
 .pdf-node-name {
   font-size: 12px;
   font-weight: 700;
-  color: #09090b;
+  color: #0a1b37;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1268,7 +1268,7 @@ body.pdf-exporting .capa {
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
-  border: 1px solid #27272a;
+  border: 1px solid #16386b;
   position: relative;
   z-index: 1000000;
 }
@@ -1279,7 +1279,7 @@ body.pdf-exporting .capa {
   align-items: center;
   justify-content: center;
   text-align: center;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: 2px solid #e2e8f0;
   padding-bottom: 15px;
   margin-bottom: 30px;
   gap: 4px;
@@ -1289,7 +1289,7 @@ body.pdf-exporting .capa {
   display: block;
   font-weight: 800;
   font-size: 19px;
-  color: var(--primary);
+  color: #0a1b37;
   font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -1302,7 +1302,7 @@ body.pdf-exporting .capa {
   text-transform: uppercase;
   letter-spacing: 3px;
   background: transparent;
-  color: var(--text-muted);
+  color: #16386b;
   font-weight: 600;
   margin: 0;
 }
@@ -1412,7 +1412,7 @@ body.pdf-exporting .capa {
 #area-relatorio-clone .grafico-item h4 {
   font-size: 14px !important;
   font-weight: 700 !important;
-  color: #0F2C59 !important;
+  color: #0a1b37 !important;
   margin: 0 0 8px 0 !important;
   text-align: left !important;
   border-bottom: 1px solid #f1f5f9 !important;
@@ -1478,7 +1478,7 @@ body.pdf-exporting .capa {
 }
 
 .pdf-legend-pct {
-  color: #0F2C59 !important;
+  color: #0a1b37 !important;
   font-weight: 700 !important;
   margin-left: 3px !important;
 }
@@ -1505,21 +1505,21 @@ body.pdf-exporting .capa {
 
 .btn-pdf-off {
   background: #ffffff;
-  color: #09090b;
-  border: 1.5px solid #09090b;
+  color: #0a1b37;
+  border: 1.5px solid #0a1b37;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
 }
 
 .btn-pdf-off:hover {
-  background: #f4f4f5;
-  color: #09090b;
-  border-color: #09090b;
+  background: #f1f5f9;
+  color: #0a1b37;
+  border-color: #0a1b37;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
 }
 
 .btn-pdf-on:focus-visible,
 .btn-pdf-off:focus-visible {
-  outline: 2px solid #09090b;
+  outline: 2px solid #0a1b37;
   outline-offset: 3px;
 }
 
@@ -1606,7 +1606,7 @@ body.pdf-exporting .capa {
 .input-wrapper input:focus,
 .input-wrapper select:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(9, 9, 11, 0.1);
+  box-shadow: 0 0 0 4px rgba(10, 27, 55, 0.1);
   background: #ffffff;
 }
 
@@ -1691,7 +1691,7 @@ body.pdf-exporting .capa {
 }
 
 .result-badge {
-  background: rgba(9, 9, 11, 0.06);
+  background: rgba(10, 27, 55, 0.06);
   color: var(--primary);
   font-weight: 700;
   padding: 6px 12px;
@@ -2122,15 +2122,15 @@ body.pdf-exporting .add-note-toolbar {
 }
 
 .btn-add-note-chip:hover {
-  background: #09090b;
+  background: #0a1b37;
   color: #ffffff;
-  border-color: #09090b;
+  border-color: #0a1b37;
 }
 
 .btn-add-nota-pagina {
   background: rgba(0, 0, 0, 0.05);
-  border: 1px dashed #09090b;
-  color: #09090b;
+  border: 1px dashed #0a1b37;
+  color: #0a1b37;
   padding: 8px 16px;
   border-radius: 8px;
   font-size: 12px;
@@ -2143,7 +2143,7 @@ body.pdf-exporting .add-note-toolbar {
 }
 
 .btn-add-nota-pagina:hover {
-  background: #09090b;
+  background: #0a1b37;
   color: #ffffff;
   border-style: solid;
 }
@@ -2152,12 +2152,12 @@ body.pdf-exporting .add-note-toolbar {
   margin-top: 15px;
   margin-bottom: 15px;
   padding: 14px 18px 44px 18px;
-  background: #fafafa;
-  border-left: 4px solid #09090b;
+  background: #f8fafc;
+  border-left: 4px solid #0a1b37;
   border-radius: 8px;
-  border-top: 1px solid #e4e4e7;
-  border-right: 1px solid #e4e4e7;
-  border-bottom: 1px solid #e4e4e7;
+  border-top: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
   position: relative;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
@@ -2165,7 +2165,7 @@ body.pdf-exporting .add-note-toolbar {
 .nota-titulo-input {
   font-weight: 700;
   font-size: 13px;
-  color: #000080;
+  color: #0a1b37;
   border: none;
   background: transparent;
   width: 100%;
@@ -2271,7 +2271,7 @@ body.pdf-exporting .add-note-toolbar {
   display: block;
   font-size: 26px;
   font-weight: 800;
-  color: #09090b;
+  color: #0a1b37;
   margin: 4px 0;
   letter-spacing: -0.5px;
 }
@@ -2330,9 +2330,9 @@ body.pdf-exporting .add-note-toolbar {
 }
 
 .cenario-protegido {
-  background: #fafafa;
-  border: 1px solid #e4e4e7;
-  border-top: 4px solid #09090b;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-top: 4px solid #0a1b37;
 }
 
 .cenario-badge {
@@ -2347,7 +2347,7 @@ body.pdf-exporting .add-note-toolbar {
 }
 
 .badge-protegido {
-  color: #09090b;
+  color: #0a1b37;
 }
 
 .cenario-titulo {
@@ -2390,7 +2390,7 @@ body.pdf-exporting .add-note-toolbar {
 
 .resultado-protegido {
   background: rgba(0, 0, 0, 0.05);
-  color: #09090b;
+  color: #0a1b37;
 }
 
 .resultado-protegido strong {
@@ -2401,7 +2401,7 @@ body.pdf-exporting .add-note-toolbar {
 /* ===== DROPDOWN MENU ADICIONAR NOTA ===== */
 .btn-add-note-dropdown-toggle {
   background: #ffffff;
-  color: #09090b;
+  color: #0a1b37;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   padding: 6px 14px;
@@ -2417,8 +2417,8 @@ body.pdf-exporting .add-note-toolbar {
 
 .btn-add-note-dropdown-toggle:hover {
   background: #f8fafc;
-  border-color: #09090b;
-  color: #09090b;
+  border-color: #0a1b37;
+  color: #0a1b37;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
 }
 
@@ -2463,12 +2463,12 @@ body.pdf-exporting .add-note-toolbar {
 
 .dropdown-item:hover {
   background: #f1f5f9;
-  color: #09090b;
+  color: #0a1b37;
 }
 
 .dropdown-item .page-badge {
   background: rgba(0, 0, 0, 0.06);
-  color: #09090b;
+  color: #0a1b37;
   font-size: 10px;
   font-weight: 800;
   padding: 2px 6px;
