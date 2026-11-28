@@ -2703,9 +2703,9 @@
         globalUiSrc48.includes('id="tab_btn_master_vendas"') &&
         globalUiSrc48.includes('id="venda_input_produto"') &&
         globalUiSrc48.includes('value="Seguro de Vida"') &&
-        globalUiSrc48.includes('id="venda_input_comissionamento"') &&
+        !globalUiSrc48.includes('id="venda_input_comissionamento"') &&
         cssMain48.includes("grid-template-columns: repeat(3, 1fr);"),
-        "Vendas[UI]: 6º card KPI 3x2 + 3ª aba no Painel Master + produto travado Seguro de Vida + comissionamento + 4º card e botão no Dashboard presentes"
+        "Vendas[UI]: 6º card KPI 3x2 + 3ª aba no Painel Master + produto travado Seguro de Vida (sem campo comissionamento no modal) + 4º card e botão no Dashboard presentes"
       );
 
       let sintaxeOk48 = true;
@@ -3194,13 +3194,11 @@
         globalUi52.includes('id="venda_input_produto"') &&
         globalUi52.includes('value="Seguro de Vida" readonly') &&
         !globalUi52.includes('pace_produtos_venda_datalist') &&
-        globalUi52.includes('id="venda_input_comissionamento"') &&
-        globalUi52.includes('value="MAG"') &&
-        globalUi52.includes('value="POB"') &&
-        globalUi52.includes('id="venda_comissao_preview"') &&
+        !globalUi52.includes('id="venda_input_comissionamento"') &&
+        !globalUi52.includes('id="venda_comissao_preview"') &&
         css52.includes(".pace-venda-locked") &&
         css52.includes(".pace-venda-commission-preview"),
-        "Comissao[UI]: produto travado em Seguro de Vida (sem datalist), select MAG/POB opcional e prévia em tempo real presentes"
+        "Comissao[UI]: produto travado em Seguro de Vida (sem datalist) e campo/prévia de comissionamento removidos do modal de registrar venda"
       );
     }
 

@@ -1909,27 +1909,11 @@ window.fecharPainelUsabilidadeMaster = function() {
 window.__paceVendaModalState = {
     vendaId: null,
     isMaster: false,
+    comissionamento: null,
     onSaved: null,
     relatoriosMap: new Map(),
     usuariosMap: new Map()
 };
-
-function _atualizarPreviewComissaoModalVenda() {
-    const previewEl = document.getElementById("venda_comissao_preview");
-    if (!previewEl) return;
-
-    const valorRaw = document.getElementById("venda_input_valor")?.value || "";
-    const comissCode = document.getElementById("venda_input_comissionamento")?.value || "";
-    const calc = _calcularComissaoVendaUI(valorRaw, comissCode);
-
-    if (calc.comissionamento) {
-        previewEl.className = "pace-venda-commission-preview is-active";
-        previewEl.textContent = `${calc.comissionamento} (${calc.percentualComissao}%) — Comissão calculada: ${_formatarMoedaBRLVenda(calc.valorComissao, 2)}`;
-    } else {
-        previewEl.className = "pace-venda-commission-preview";
-        previewEl.textContent = "Comissionamento opcional — selecione MAG (57%) ou POB (70%) para calcular a comissão.";
-    }
-}
 
 function _criarModalVendaDOM() {
     let overlay = document.getElementById("modal_venda_pace_overlay");
@@ -1985,16 +1969,6 @@ function _criarModalVendaDOM() {
             </div>
           </div>
 
-          <div class="pace-venda-field">
-            <label for="venda_input_comissionamento">Comissionamento (Opcional)</label>
-            <select id="venda_input_comissionamento" class="pace-venda-control">
-              <option value="">Não informado (Opcional)</option>
-              <option value="MAG">MAG — 57% de comissão</option>
-              <option value="POB">POB — 70% de comissão</option>
-            </select>
-            <div class="pace-venda-commission-preview" id="venda_comissao_preview" aria-live="polite"></div>
-          </div>
-
           <div class="pace-venda-field" id="venda_group_assessor" style="display: none;">
             <label for="venda_input_assessor">Assessor Responsável</label>
             <select id="venda_input_assessor" class="pace-venda-control"></select>
@@ -2041,23 +2015,16 @@ function _criarModalVendaDOM() {
     });
 
     const inputValor = overlay.querySelector("#venda_input_valor");
-    const selectComiss = overlay.querySelector("#venda_input_comissionamento");
     inputValor?.addEventListener("input", () => {
         inputValor.value = _formatarMascaraMoedaDigitacao(inputValor.value);
-        _atualizarPreviewComissaoModalVenda();
     });
     inputValor?.addEventListener("blur", () => {
         if (!String(inputValor.value || "").trim()) {
             inputValor.value = "";
-            _atualizarPreviewComissaoModalVenda();
             return;
         }
         const num = _parseValorMonetarioVendaUI(inputValor.value);
         inputValor.value = _formatarMoedaBRLVenda(num, 2);
-        _atualizarPreviewComissaoModalVenda();
-    });
-    selectComiss?.addEventListener("change", () => {
-        _atualizarPreviewComissaoModalVenda();
     });
 
     overlay.querySelector("#form_pace_venda")?.addEventListener("submit", async (e) => {
@@ -2095,17 +2062,12 @@ async function _submeterFormularioVenda() {
     const nomeCliente = (document.getElementById("venda_input_cliente")?.value || "").trim();
     const produto = PACE_PRODUTO_VENDA_PADRAO_UI;
     const valorRaw = document.getElementById("venda_input_valor")?.value || "0";
-    const comissionamentoRaw = (document.getElementById("venda_input_comissionamento")?.value || "").trim().toUpperCase();
     const dataVenda = document.getElementById("venda_input_data")?.value || _obterDataHojeISO();
     const observacao = (document.getElementById("venda_input_observacao")?.value || "").trim();
     const selectAssessor = document.getElementById("venda_input_assessor");
 
     if (!nomeCliente) {
         mostrarErro("Informe o nome do cliente.");
-        return;
-    }
-    if (comissionamentoRaw && comissionamentoRaw !== "MAG" && comissionamentoRaw !== "POB") {
-        mostrarErro("Comissionamento inválido. Selecione MAG (57%), POB (70%) ou deixe opcional.");
         return;
     }
 
@@ -2145,7 +2107,7 @@ async function _submeterFormularioVenda() {
             nomeAssessor,
             produto,
             valorVenda: valorRaw,
-            comissionamento: comissionamentoRaw || null,
+            comissionamento: state.comissionamento || null,
             dataVenda,
             observacao
         });
@@ -2183,6 +2145,7 @@ window.abrirModalVenda = async function(opcoes = {}) {
 
     state.vendaId = venda?.id || null;
     state.isMaster = isMaster;
+    state.comissionamento = String(venda?.comissionamento || "").trim().toUpperCase() || null;
     state.onSaved = typeof opcoes.onSaved === "function" ? opcoes.onSaved : null;
     state.relatoriosMap = new Map();
     state.usuariosMap = new Map();
@@ -2255,7 +2218,6 @@ window.abrirModalVenda = async function(opcoes = {}) {
     const inputCliente = document.getElementById("venda_input_cliente");
     const inputProduto = document.getElementById("venda_input_produto");
     const inputValor = document.getElementById("venda_input_valor");
-    const selectComiss = document.getElementById("venda_input_comissionamento");
     const inputData = document.getElementById("venda_input_data");
     const inputObs = document.getElementById("venda_input_observacao");
 
@@ -2270,13 +2232,8 @@ window.abrirModalVenda = async function(opcoes = {}) {
     if (inputValor) {
         inputValor.value = venda ? _formatarMoedaBRLVenda(venda.valorVenda || 0, 2) : "";
     }
-    if (selectComiss) {
-        const comissAtual = String(venda?.comissionamento || "").trim().toUpperCase();
-        selectComiss.value = (comissAtual === "MAG" || comissAtual === "POB") ? comissAtual : "";
-    }
     if (inputData) inputData.value = venda?.dataVenda || _obterDataHojeISO();
     if (inputObs) inputObs.value = venda?.observacao || "";
-    _atualizarPreviewComissaoModalVenda();
 
     overlay.classList.remove("hidden");
     overlay.style.display = "flex";
