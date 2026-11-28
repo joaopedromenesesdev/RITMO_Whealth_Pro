@@ -383,8 +383,8 @@ function renderChart(labels, data, cdi, ipca) {
 
   // Gradient Background
   const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-  gradient.addColorStop(0, "rgba(9, 9, 11, 0.20)");
-  gradient.addColorStop(1, "rgba(9, 9, 11, 0.0)");
+  gradient.addColorStop(0, "rgba(29, 78, 216, 0.18)");
+  gradient.addColorStop(1, "rgba(29, 78, 216, 0.0)");
 
   if (grafico) {
     grafico.destroy();
@@ -398,14 +398,14 @@ function renderChart(labels, data, cdi, ipca) {
         {
           label: "Projeção Estimada",
           data: data,
-          borderColor: "#09090b",
+          borderColor: "#0a1b37",
           backgroundColor: gradient,
           fill: true,
           tension: 0.4,
           borderWidth: 4,
           pointRadius: 0,
           pointHoverRadius: 6,
-          pointHoverBackgroundColor: "#09090b",
+          pointHoverBackgroundColor: "#0a1b37",
           pointHoverBorderColor: "#fff",
           pointHoverBorderWidth: 3
         },
@@ -442,8 +442,8 @@ function renderChart(labels, data, cdi, ipca) {
         legend: { display: false },
         tooltip: {
           backgroundColor: "rgba(255, 255, 255, 0.9)",
-          titleColor: "#000",
-          bodyColor: "#000",
+          titleColor: "#0a1b37",
+          bodyColor: "#0a1b37",
           borderColor: "#e1e8f0",
           borderWidth: 1,
           padding: 12,

@@ -924,8 +924,8 @@ async function abrirResumoVisualLGPD() {
             <tr>
               <td><strong>${nomeCliente}</strong></td>
               <td>${regimeBens}</td>
-              <td style="font-weight: 600; color: #09090b;">${pat}</td>
-              <td style="font-weight: 600; color: #09090b;">${prej}</td>
+              <td style="font-weight: 600; color: #0a1b37;">${pat}</td>
+              <td style="font-weight: 600; color: #0a1b37;">${prej}</td>
               <td>${dataCriacao}</td>
             </tr>
           `;

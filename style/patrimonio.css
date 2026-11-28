@@ -174,7 +174,7 @@
 
 /* ==========================================================================
    SEÇÃO EMPRESAS / HOLDING — DESIGN PREMIUM ACCORDION & GESTÃO DINÂMICA
-   (PALETA PADRÃO DO SISTEMA: #09090b / #71717a / #f4f4f5 / #ffffff)
+   (PALETA PADRÃO DO SISTEMA: #0a1b37 / #64748b / #f1f5f9 / #ffffff)
    ========================================================================== */
 
 .area-empresas-container {
@@ -187,8 +187,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: #fafafa;
-  border: 1px solid #e4e4e7;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   margin-bottom: 14px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
@@ -205,13 +205,13 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-muted, #71717a);
+  color: var(--text-muted, #64748b);
 }
 
 .empresas-resumo-valor {
   font-size: 17px;
   font-weight: 800;
-  color: var(--primary, #09090b);
+  color: var(--primary, #0a1b37);
   letter-spacing: -0.02em;
 }
 
@@ -221,8 +221,8 @@
   padding: 4px 10px;
   border-radius: 20px;
   background: #ffffff;
-  color: #52525b;
-  border: 1px solid #e4e4e7;
+  color: #475569;
+  border: 1px solid #e2e8f0;
 }
 
 /* Lista de Acordeão */
@@ -236,7 +236,7 @@
 /* Card Individual de Empresa */
 .empresa-accordion-card {
   background: #ffffff;
-  border: 1px solid #e4e4e7;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   overflow: hidden;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -244,11 +244,11 @@
 }
 
 .empresa-accordion-card:hover {
-  border-color: #a1a1aa;
+  border-color: #94a3b8;
 }
 
 .empresa-accordion-card.is-open {
-  border-color: var(--primary, #09090b);
+  border-color: var(--primary, #0a1b37);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
 }
 
@@ -266,7 +266,7 @@
 }
 
 .empresa-card-header:hover {
-  background: #fafafa;
+  background: #f8fafc;
 }
 
 .empresa-header-left {
@@ -281,8 +281,8 @@
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: #f4f4f5;
-  color: var(--primary, #09090b);
+  background: #f1f5f9;
+  color: var(--primary, #0a1b37);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -299,7 +299,7 @@
   margin: 0;
   font-size: 13px;
   font-weight: 700;
-  color: var(--primary, #09090b);
+  color: var(--primary, #0a1b37);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -307,7 +307,7 @@
 
 .empresa-header-sub {
   font-size: 11px;
-  color: var(--text-muted, #71717a);
+  color: var(--text-muted, #64748b);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -329,34 +329,34 @@
 .empresa-chip-fatia {
   font-size: 13px;
   font-weight: 700;
-  color: var(--primary, #09090b);
+  color: var(--primary, #0a1b37);
 }
 
 .empresa-chip-pct {
   font-size: 10px;
   font-weight: 600;
-  color: var(--text-muted, #71717a);
+  color: var(--text-muted, #64748b);
 }
 
 .empresa-chevron {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-muted, #71717a);
+  color: var(--text-muted, #64748b);
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .empresa-accordion-card.is-open .empresa-chevron {
   transform: rotate(180deg);
-  color: var(--primary, #09090b);
+  color: var(--primary, #0a1b37);
 }
 
 /* Corpo do Card (Colapsável) */
 .empresa-card-body {
   display: none;
   padding: 16px;
-  border-top: 1px solid #f4f4f5;
-  background: #fafafa;
+  border-top: 1px solid #f1f5f9;
+  background: #f8fafc;
 }
 
 .empresa-accordion-card.is-open .empresa-card-body {
@@ -379,8 +379,8 @@
 .empresa-badge-auto {
   font-size: 10px;
   font-weight: 600;
-  color: #71717a;
-  background: #e4e4e7;
+  color: #64748b;
+  background: #e2e8f0;
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -402,7 +402,7 @@
   position: absolute;
   right: 12px;
   font-weight: 600;
-  color: var(--text-muted, #71717a);
+  color: var(--text-muted, #64748b);
   font-size: 13px;
   pointer-events: none;
 }
@@ -418,7 +418,7 @@
   justify-content: space-between;
   margin-top: 14px;
   padding-top: 12px;
-  border-top: 1px dashed #e4e4e7;
+  border-top: 1px dashed #e2e8f0;
 }
 
 .empresa-share-stat {
@@ -431,13 +431,13 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   font-weight: 600;
-  color: var(--text-muted, #71717a);
+  color: var(--text-muted, #64748b);
 }
 
 .empresa-share-stat strong {
   font-size: 14px;
   font-weight: 800;
-  color: var(--primary, #09090b);
+  color: var(--primary, #0a1b37);
 }
 
 .btn-excluir-empresa {
@@ -469,9 +469,9 @@
   justify-content: center;
   gap: 6px;
   background: #ffffff;
-  border: 1px dashed #d4d4d8;
+  border: 1px dashed #cbd5e1;
   border-radius: 10px;
-  color: var(--primary, #09090b);
+  color: var(--primary, #0a1b37);
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
@@ -481,8 +481,8 @@
 }
 
 .btn-adicionar-empresa:hover {
-  background: #f4f4f5;
-  border-color: var(--primary, #09090b);
+  background: #f1f5f9;
+  border-color: var(--primary, #0a1b37);
   transform: translateY(-1px);
 }
 
@@ -506,8 +506,8 @@
   justify-content: center;
   gap: 10px;
   background: #ffffff;
-  color: #18181b;
-  border: 1.5px solid #e4e4e7;
+  color: #0f274a;
+  border: 1.5px solid #e2e8f0;
   padding: 15px 32px;
   border-radius: 100px;
   font-family: 'Outfit', 'Inter', sans-serif;
@@ -521,8 +521,8 @@
 
 .btn-toggle-graficos:hover {
   transform: translateY(-2px);
-  background: #f4f4f5;
-  border-color: #a1a1aa;
+  background: #f1f5f9;
+  border-color: #94a3b8;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
 }
 
@@ -532,8 +532,8 @@
 
 .btn-toggle-graficos.ativo {
   background: #f8fafc;
-  border-color: #09090b;
-  color: #09090b;
+  border-color: #0a1b37;
+  color: #0a1b37;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
@@ -696,10 +696,10 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: #f4f4f5;
+  background: #f1f5f9;
   padding: 6px;
   border-radius: 16px;
-  border: 1px solid #e4e4e7;
+  border: 1px solid #e2e8f0;
   margin-bottom: 24px;
   flex-wrap: wrap;
 }
@@ -733,19 +733,19 @@
 .tab-btn-titulo {
   font-size: 13.5px;
   font-weight: 600;
-  color: #52525b;
+  color: #475569;
   transition: color 0.2s ease;
 }
 
 .tab-btn-patrimonio.active .tab-btn-titulo {
-  color: #09090b;
+  color: #0a1b37;
   font-weight: 700;
 }
 
 .tab-btn-badge-valor {
   font-size: 11.5px;
   font-weight: 700;
-  color: #71717a;
+  color: #64748b;
   background: rgba(0, 0, 0, 0.04);
   padding: 2px 10px;
   border-radius: 20px;
@@ -753,7 +753,7 @@
 }
 
 .tab-btn-patrimonio.active .tab-btn-badge-valor {
-  background: #09090b;
+  background: #0a1b37;
   color: #ffffff;
 }
 
@@ -814,7 +814,7 @@
   justify-content: space-between;
   margin-top: 28px;
   padding-top: 20px;
-  border-top: 1px solid #f4f4f5;
+  border-top: 1px solid #f1f5f9;
   gap: 12px;
 }
 
@@ -830,24 +830,24 @@
   cursor: pointer;
   transition: all 0.15s ease;
   user-select: none;
-  border: 1px solid #e4e4e7;
+  border: 1px solid #e2e8f0;
   background: #ffffff;
-  color: #09090b;
+  color: #0a1b37;
 }
 
 .btn-tab-nav:hover {
-  background: #f4f4f5;
-  border-color: #d4d4d8;
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
 
 .btn-tab-nav.primary {
-  background: #09090b;
+  background: #0a1b37;
   color: #ffffff;
-  border-color: #09090b;
+  border-color: #0a1b37;
 }
 
 .btn-tab-nav.primary:hover {
-  background: #27272a;
+  background: #16386b;
 }
 
 .empresas-holding-header {
@@ -867,16 +867,16 @@
 .empresas-placeholder-card {
   margin-top: 18px;
   padding: 32px 20px;
-  background: #fafafa;
+  background: #f8fafc;
   border-radius: 14px;
-  border: 1.5px dashed #e4e4e7;
+  border: 1.5px dashed #e2e8f0;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: #71717a;
+  color: #64748b;
   flex: 1;
 }
 
@@ -884,12 +884,12 @@
   margin: 0;
   font-size: 13px;
   font-weight: 600;
-  color: #3f3f46;
+  color: #1e3a5f;
 }
 
 .empresas-placeholder-card span {
   font-size: 11.5px;
-  color: #71717a;
+  color: #64748b;
   max-width: 340px;
   line-height: 1.45;
 }
@@ -927,9 +927,9 @@
 }
 
 .btn-toggle-tabela-estate:hover {
-  background: #09090b !important;
+  background: #0a1b37 !important;
   color: #ffffff !important;
-  border-color: #09090b !important;
+  border-color: #0a1b37 !important;
   transform: translateY(-1px) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
 }
@@ -974,8 +974,8 @@
 }
 
 .btn-preset-situs.active {
-  background: #09090b !important;
+  background: #0a1b37 !important;
   color: #ffffff !important;
-  border-color: #09090b !important;
+  border-color: #0a1b37 !important;
   font-weight: 600;
 }

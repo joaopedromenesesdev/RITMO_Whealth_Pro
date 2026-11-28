@@ -7,7 +7,7 @@ function toggleDarkMode() {
 }
 
 function updateChartsTheme(isDark) {
-  const textColor = isDark ? "#e2e8f0" : "#09090b";
+  const textColor = isDark ? "#e2e8f0" : "#0a1b37";
   const gridColor = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)";
 
   if (typeof Chart !== "undefined") {

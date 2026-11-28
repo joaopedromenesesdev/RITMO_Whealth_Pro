@@ -9,9 +9,9 @@
   <meta http-equiv="Content-Security-Policy"
     content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://dogyopoylekiqsahadlc.supabase.co https://*.supabase.co wss://*.supabase.co https://brasilapi.com.br https://olinda.bcb.gov.br https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self';">
 
-  <link rel="stylesheet" href="style/patrimonio.css">
+  <link rel="stylesheet" href="style/patrimonio.css?v=20261127a">
   <link rel="icon" type="image/png" href="img/RITMO.png">
-  <link rel="stylesheet" href="style/style.css?v=20261125a">
+  <link rel="stylesheet" href="style/style.css?v=20261127a">
 
   <!-- Icons (Versão Fixa) -->
   <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"
@@ -25,7 +25,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"
     integrity="sha384-y49Zu59jZHJL/PLKgZPv3k2WI9c0Yp3pWB76V8OBVCb0QBKS8l4Ff3YslzHVX76Y"
     crossorigin="anonymous"></script>
-  <script src="script/global_ui.js?v=20261125a"></script>
+  <script src="script/global_ui.js?v=20261127a"></script>
   <script src="script/state.js?v=20261111b"></script>
 
   <!-- Supabase & Autenticação -->
@@ -205,9 +205,9 @@
               style="display:flex; background:rgba(0,0,0,0.06); border-radius:20px; padding:2px; gap:2px; cursor:pointer; user-select:none;"
               onclick="alternarMoedaOffshore()">
               <span id="toggle_brl"
-                style="padding:3px 12px; border-radius:16px; font-size:12px; font-weight:600; background:#09090b; color:#fff; transition:all .2s;">R$</span>
+                style="padding:3px 12px; border-radius:16px; font-size:12px; font-weight:600; background:#0a1b37; color:#fff; transition:all .2s;">R$</span>
               <span id="toggle_usd"
-                style="padding:3px 12px; border-radius:16px; font-size:12px; font-weight:600; color:#09090b; transition:all .2s;">USD</span>
+                style="padding:3px 12px; border-radius:16px; font-size:12px; font-weight:600; color:#0a1b37; transition:all .2s;">USD</span>
             </div>
           </div>
 
@@ -217,11 +217,11 @@
           </div>
 
           <div id="offshore_badge"
-            style="display:none; margin-top:8px; padding:8px 12px; background:#fafafa; border-radius:10px; border:1px solid #e4e4e7;">
+            style="display:none; margin-top:8px; padding:8px 12px; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0;">
             <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:4px;">
               <span id="offshore_ptax_label" style="font-size:12px; color:#555;">Cotação PTAX: <strong
                   id="offshore_ptax_valor">carregando...</strong></span>
-              <span id="offshore_convertido" style="font-size:13px; font-weight:700; color:#09090b;"></span>
+              <span id="offshore_convertido" style="font-size:13px; font-weight:700; color:#0a1b37;"></span>
             </div>
           </div>
 
@@ -229,10 +229,10 @@
           <div class="input-group" id="grupo_tipo_conta_exterior" style="margin-top: 14px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
               <label for="tipo_conta_exterior"
-                style="margin: 0; font-weight: 500; font-size: 13px; color: #71717a;">Tipos de Conta</label>
+                style="margin: 0; font-weight: 500; font-size: 13px; color: #64748b;">Tipos de Conta</label>
             </div>
             <select id="tipo_conta_exterior" onchange="atualizarRegrasContaExterior(); salvarPatrimonio();"
-              style="width: 100%; padding: 11px 14px; border-radius: 10px; border: 1px solid #e4e4e7; background: #fff; font-family: 'Outfit', sans-serif; font-size: 13.5px; color: #09090b; outline: none; cursor: pointer; margin-top: 0; margin-bottom: 8px;">
+              style="width: 100%; padding: 11px 14px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; font-family: 'Outfit', sans-serif; font-size: 13.5px; color: #0a1b37; outline: none; cursor: pointer; margin-top: 0; margin-bottom: 8px;">
               <option value="individual" selected>Conta Individual</option>
               <option value="tod">Transfer on Death (TOD)</option>
               <option value="tic">Joint Tenants in Common (TIC)</option>
@@ -246,11 +246,11 @@
               <label for="cota_falecido_tic"
                 style="display: flex; justify-content: space-between; align-items: center; margin: 0 0 4px 0; font-weight: 500; font-size: 12.5px; color: #475569;">
                 <span>Cota-parte do titular falecido</span>
-                <span id="label_val_cota_tic" style="font-weight: 700; color: #0f172a;">50%</span>
+                <span id="label_val_cota_tic" style="font-weight: 700; color: #0a1b37;">50%</span>
               </label>
               <input type="number" id="cota_falecido_tic" min="1" max="100" value="50"
                 oninput="if (document.getElementById('label_val_cota_tic')) document.getElementById('label_val_cota_tic').innerText = this.value + '%'; window.atualizarDiagnosticoEstateTaxUI(); salvarPatrimonio();"
-                style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; font-size: 13px; color: #09090b; outline: none;">
+                style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; font-size: 13px; color: #0a1b37; outline: none;">
             </div>
 
             <!-- Card de Regras Sucessórias da Conta no Exterior -->
@@ -270,17 +270,17 @@
 
             <!-- MAPEAMENTO DE ATIVOS SEM ESTATE TAX (BTG PACTUAL PÁG. 4) -->
             <div id="bloco_ativos_sem_estate_tax"
-              style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #e4e4e7;">
+              style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #e2e8f0;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                 <label for="qtd_ativos_sem_estate_tax"
-                  style="margin: 0; font-weight: 500; font-size: 13px; color: #71717a;">
+                  style="margin: 0; font-weight: 500; font-size: 13px; color: #64748b;">
                   Quantos ativos sem taxa de Estate Tax o usuário possui?
                 </label>
               </div>
               <div class="input-box" style="margin-bottom: 8px;">
                 <input type="number" id="qtd_ativos_sem_estate_tax" min="0" max="9" value="0" placeholder="0"
                   oninput="window.renderizarInputsAtivosSemEstateTax(null, true); salvarPatrimonio();"
-                  style="width: 100%; padding: 11px 14px; border-radius: 10px; border: 1px solid #e4e4e7; background: #fff; font-family: 'Outfit', sans-serif; font-size: 13.5px; color: #09090b; outline: none;">
+                  style="width: 100%; padding: 11px 14px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; font-family: 'Outfit', sans-serif; font-size: 13.5px; color: #0a1b37; outline: none;">
               </div>
 
               <!-- Pílula compacta de resumo dos ativos isentos configurados -->
@@ -288,7 +288,7 @@
                 <div style="display: flex; flex-direction: column; gap: 3px; flex: 1;">
                   <div style="display: flex; align-items: center; gap: 6px;">
                     <span id="badge_qtd_ativos_isentos" class="badge-qtd-ativos-isentos">0 ativos</span>
-                    <strong style="font-size: 12px; color: #0f172a;">Ativos Isentos Mapeados</strong>
+                    <strong style="font-size: 12px; color: #0a1b37;">Ativos Isentos Mapeados</strong>
                   </div>
                   <div id="texto_resumo_ativos_isentos" style="font-size: 11.5px; color: #64748b; line-height: 1.35;">
                     Nenhum ativo selecionado.</div>
@@ -305,10 +305,10 @@
 
               <!-- Rateio Proporcional em Ativos US Situs (Ações/ETFs EUA) -->
               <div id="grupo_rateio_us_situs"
-                style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #e4e4e7;">
+                style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #e2e8f0;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                   <label for="percentual_us_situs"
-                    style="margin: 0; font-weight: 500; font-size: 13px; color: #71717a;">
+                    style="margin: 0; font-weight: 500; font-size: 13px; color: #64748b;">
                     Parcela em Ativos US Situs (Ações / ETFs nos EUA)
                   </label>
                   <span id="label_val_perc_us_situs" style="font-size: 12px; font-weight: 700; color: #dc2626;">100%
@@ -318,7 +318,7 @@
                   <div class="input-box" style="position: relative; flex: 1;">
                     <input type="number" id="percentual_us_situs" min="0" max="100" step="any" value="100"
                       placeholder="100" oninput="window.definirPercentualUSSitus(this.value)"
-                      style="width: 100%; padding: 8px 30px 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; font-family: 'Outfit', sans-serif; font-size: 13.5px; font-weight: 600; color: #09090b; outline: none;">
+                      style="width: 100%; padding: 8px 30px 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; font-family: 'Outfit', sans-serif; font-size: 13.5px; font-weight: 600; color: #0a1b37; outline: none;">
                     <span
                       style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 12.5px; font-weight: 700; color: #94a3b8; pointer-events: none;">%</span>
                   </div>
@@ -476,10 +476,10 @@
               </p>
             </div>
             <div class="empresas-toggle-wrapper">
-              <label for="tem_empresas" style="margin: 0; font-weight: 600; font-size: 13px; color: #09090b;">Possui
+              <label for="tem_empresas" style="margin: 0; font-weight: 600; font-size: 13px; color: #0a1b37;">Possui
                 empresas?</label>
               <select id="tem_empresas"
-                style="min-width: 120px; padding: 8px 12px; border-radius: 10px; border: 1px solid #e4e4e7; background: #fff; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer;">
+                style="min-width: 120px; padding: 8px 12px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer;">
                 <option value="">Selecione</option>
                 <option value="nao">Não</option>
                 <option value="sim">Sim</option>
@@ -490,7 +490,7 @@
           <!-- Placeholder card elegante quando 'Não' ou 'Selecione' -->
           <div id="empresas_placeholder_info" class="empresas-placeholder-card">
             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
-              stroke="#a1a1aa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
               <path d="M9 22v-4h6v4" />
               <path d="M8 6h.01" />
@@ -604,7 +604,7 @@
       <div class="modal-ativos-header">
         <div>
           <h3 id="modal_ativos_titulo"
-            style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a; font-family: 'Outfit', sans-serif;">
+            style="margin: 0; font-size: 16px; font-weight: 700; color: #0a1b37; font-family: 'Outfit', sans-serif;">
             Ativos Isentos de US Estate Tax
           </h3>
           <p style="margin: 3px 0 0 0; font-size: 12px; color: #64748b;">
@@ -644,7 +644,7 @@
   </div>
 
   <script src="script/tributario_engine.js?v=20261111b"></script>
-  <script src="script/patrimonio.js?v=20261111b"></script>
+  <script src="script/patrimonio.js?v=20261127a"></script>
 </body>
 
 </html>

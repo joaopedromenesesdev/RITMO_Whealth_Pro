@@ -1,11 +1,11 @@
 :root {
-      --bg-main: #f8fafc;
+      --bg-main: #f1f5f9;
       --card-bg: #ffffff;
-      --text-dark: #0f172a;
+      --text-dark: #0a1b37;
       --text-muted: #64748b;
-      --primary: #09090b;
+      --primary: #0a1b37;
       --border: #e2e8f0;
-      --accent: #2563eb;
+      --accent: #1d4ed8;
     }
 
     * {
@@ -171,7 +171,7 @@
     }
 
     .btn-back:hover {
-      background: #27272a;
+      background: #16386b;
     }
 
     @media (max-width: 640px) {
@@ -208,7 +208,7 @@
         display: none !important;
       }
       .header-top-bar {
-        border-bottom: 2px solid #000;
+        border-bottom: 2px solid #0a1b37;
         margin-bottom: 20px;
         padding-bottom: 12px;
       }
@@ -216,7 +216,7 @@
         page-break-after: avoid;
       }
       .highlight-box {
-        border-left: 4px solid #000;
+        border-left: 4px solid #0a1b37;
         background: #f8fafc;
       }
     }

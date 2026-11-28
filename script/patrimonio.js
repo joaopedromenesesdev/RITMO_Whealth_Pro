@@ -582,8 +582,8 @@ async function alternarMoedaOffshore() {
   if (offshoreEmUSD) {
     // Ativa modo USD
     toggleBRL.style.background = "";
-    toggleBRL.style.color = "#09090b";
-    toggleUSD.style.background = "#09090b";
+    toggleBRL.style.color = "#0a1b37";
+    toggleUSD.style.background = "#0a1b37";
     toggleUSD.style.color = "#fff";
     prefix.textContent = "$";
     badge.style.display = "block";
@@ -602,10 +602,10 @@ async function alternarMoedaOffshore() {
     }
   } else {
     // Volta para modo BRL
-    toggleBRL.style.background = "#09090b";
+    toggleBRL.style.background = "#0a1b37";
     toggleBRL.style.color = "#fff";
     toggleUSD.style.background = "";
-    toggleUSD.style.color = "#09090b";
+    toggleUSD.style.color = "#0a1b37";
     prefix.textContent = "R$";
     badge.style.display = "none";
     input.value = "";

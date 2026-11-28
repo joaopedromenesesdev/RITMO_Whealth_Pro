@@ -122,7 +122,7 @@ function renderizarBannerAuditoriaMaster() {
     const banner = document.createElement("div");
     banner.id = "master-audit-readonly-banner";
     banner.style.cssText = `
-        background: #09090b;
+        background: #0a1b37;
         color: #ffffff;
         padding: 10px 24px;
         font-size: 13px;
@@ -135,10 +135,10 @@ function renderizarBannerAuditoriaMaster() {
     `;
     banner.innerHTML = `
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            <span style="background: #27272a; color: #fafafa; font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.04em;">VISUALIZAÇÃO MASTER (SOMENTE LEITURA)</span>
-            <span style="color: #d4d4d8;">Inspecionando simulação do Assessor: <strong style="color: #ffffff;">${esc(nomeAssessor)}</strong> — O auto-salvamento está desativado para preservar os dados originais.</span>
+            <span style="background: #16386b; color: #f8fafc; font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.04em;">VISUALIZAÇÃO MASTER (SOMENTE LEITURA)</span>
+            <span style="color: #cbd5e1;">Inspecionando simulação do Assessor: <strong style="color: #ffffff;">${esc(nomeAssessor)}</strong> — O auto-salvamento está desativado para preservar os dados originais.</span>
         </div>
-        <button type="button" onclick="sessionStorage.clear(); window.location.href='index.html';" style="background: #ffffff; color: #09090b; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;">
+        <button type="button" onclick="sessionStorage.clear(); window.location.href='index.html';" style="background: #ffffff; color: #0a1b37; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;">
             Voltar ao Meu Dashboard
         </button>
     `;
@@ -170,14 +170,14 @@ window.confirmarAcaoCustom = function({
     if (overlay) overlay.remove();
 
     const isInfo = tipo === "info" || somenteAviso;
-    const strokeColor = isInfo ? "#09090b" : "#ef4444";
+    const strokeColor = isInfo ? "#0a1b37" : "#ef4444";
     const iconSvg = isInfo
       ? `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`
       : `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
 
     const iconBg = isInfo ? "rgba(0, 0, 0, 0.06)" : "#fef2f2";
     const btnClass = isInfo ? "btn-cancel-modal" : "btn-danger-modal";
-    const btnConfirmStyle = isInfo ? "background: #09090b; color: #fff; border-color: #09090b;" : "";
+    const btnConfirmStyle = isInfo ? "background: #0a1b37; color: #fff; border-color: #0a1b37;" : "";
 
     overlay = document.createElement("div");
     overlay.id = "custom-confirm-overlay";
@@ -1464,7 +1464,7 @@ window.renderizarTabelaUsuariosMaster = function() {
                 ${qtdVendas > 0 ? `<span class="master-sale-count-vol">${esc(volVendas)}</span>` : ""}
               </button>
             </td>
-            <td style="font-weight: 600; color: #09090b;">${esc(patTotal)}</td>
+            <td style="font-weight: 600; color: #0a1b37;">${esc(patTotal)}</td>
             <td style="text-align: right;">
               <button type="button" class="master-btn-table-action" data-action="ver-relatorios-usuario" data-user-id="${safeIdAttr}" data-user-name="${safeNomeAttr}">
                 Ver Relatórios (${qtdRelatorios})
@@ -1541,13 +1541,13 @@ window.renderizarTabelaRelatoriosMaster = function() {
           <tr>
             <td>
               <div class="master-client-cell-wrap">
-                <strong style="color: #09090b;">${esc(nomeCliente)}</strong>
+                <strong style="color: #0a1b37;">${esc(nomeCliente)}</strong>
                 ${badgeVendaHtml}
               </div>
             </td>
             <td><span class="master-advisor-pill">${esc(nomeAssessor)}</span></td>
             <td style="color: #64748b; font-size: 12.5px;">${esc(dataStr || "—")}</td>
-            <td style="font-weight: 600; color: #09090b;">${esc(pat)}</td>
+            <td style="font-weight: 600; color: #0a1b37;">${esc(pat)}</td>
             <td style="font-weight: 600; color: #dc2626;">${esc(prej)}</td>
             <td style="text-align: right;">
               <div class="master-report-actions">
@@ -1634,7 +1634,7 @@ window.renderizarTabelaVendasMaster = function() {
           <tr>
             <td>
               <div class="master-client-cell-wrap">
-                <strong style="color: #09090b;">${esc(v.nomeCliente || "Cliente")}</strong>
+                <strong style="color: #0a1b37;">${esc(v.nomeCliente || "Cliente")}</strong>
                 <span class="master-origin-pill ${isVinculada ? 'is-report' : 'is-standalone'}">
                   ${isVinculada ? 'Relatório' : 'Avulsa'}
                 </span>
@@ -2549,7 +2549,7 @@ function _renderizarModalListaVendas() {
           <tr>
             <td>
               <div class="master-client-cell-wrap">
-                <strong style="color: #09090b;">${esc(v.nomeCliente || "Cliente")}</strong>
+                <strong style="color: #0a1b37;">${esc(v.nomeCliente || "Cliente")}</strong>
                 <span class="master-origin-pill ${isVinculada ? 'is-report' : 'is-standalone'}">
                   ${isVinculada ? 'Relatório' : 'Avulsa'}
                 </span>
