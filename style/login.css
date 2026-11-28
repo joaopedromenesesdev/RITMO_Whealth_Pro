@@ -67,17 +67,17 @@ body {
 }
 
 .login-logo-img {
-  height: 44px;
+  height: 34px;
   width: auto;
   object-fit: contain;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .login-logo-text {
   font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
-  font-size: 15px;
+  font-size: 20px;
   font-weight: 700;
-  letter-spacing: 3px;
+  letter-spacing: 3.5px;
   text-transform: uppercase;
   color: #0a1b37;
 }
